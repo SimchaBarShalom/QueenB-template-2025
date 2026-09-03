@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const { Prisma } = require("@prisma/client");
 require("dotenv").config();
 
 const app = express();
@@ -34,8 +35,30 @@ app.get("/", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Something went wrong!" });
+  console.error(err);
+
+  if (err instanceof Prisma.PrismaClientInitializationError) {
+    return res.status(503).json({
+      error:
+        "Cannot connect to the database. Check that PostgreSQL is running and that DATABASE_URL in server/.env is correct.",
+    });
+  }
+
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    if (err.code === "P2021") {
+      return res.status(500).json({
+        error: "Database tables are missing. Run `npm run prisma:migrate` from the server folder.",
+      });
+    }
+
+    if (err.code === "P2022") {
+      return res.status(500).json({
+        error: "Database columns are missing. Run `npm run prisma:migrate` from the server folder.",
+      });
+    }
+  }
+
+  return res.status(500).json({ error: "Something went wrong. Check the server terminal for details." });
 });
 
 // 404 handler

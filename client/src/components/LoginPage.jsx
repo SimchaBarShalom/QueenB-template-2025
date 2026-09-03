@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import AuthForm from "./AuthForm";
+import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
 const initialValues = {
   email: "",
@@ -28,8 +29,7 @@ function LoginPage({ onLogin }) {
       onLogin(response.data.user);
       navigate("/profile");
     } catch (requestError) {
-      const message = requestError.response?.data?.error || "הכניסה נכשלה. בדקי את הפרטים ונסי שוב.";
-      setError(message);
+      setError(getRequestErrorMessage(requestError, "הכניסה נכשלה. בדקי את הפרטים ונסי שוב."));
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import AuthForm from "./AuthForm";
+import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
 const initialValues = {
   firstName: "",
@@ -42,11 +43,7 @@ function RegisterPage({ role, onRegister }) {
       onRegister(response.data.user);
       navigate("/profile");
     } catch (requestError) {
-      const errors = requestError.response?.data?.errors;
-      const message =
-        requestError.response?.data?.error ||
-        (Array.isArray(errors) ? errors.join(". ") : "ההרשמה נכשלה. בדקי את הפרטים ונסי שוב.");
-      setError(message);
+      setError(getRequestErrorMessage(requestError, "ההרשמה נכשלה. בדקי את הפרטים ונסי שוב."));
     } finally {
       setLoading(false);
     }
