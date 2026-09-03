@@ -1,0 +1,44 @@
+const REQUEST_STATUSES = [
+  "REQUESTED",
+  "REJECTED_BY_MENTOR",
+  "SLOTS_OFFERED",
+  "MORE_SLOTS_REQUESTED",
+  "MATCHED",
+  "RESCHEDULE_REQUESTED",
+  "RESCHEDULED",
+  "CANCELLED",
+  "COMPLETED",
+  "NO_SHOW",
+  "FEEDBACK_PENDING",
+  "FEEDBACK_COMPLETE",
+];
+
+const ACTIVE_REQUEST_STATUSES = [
+  "REQUESTED",
+  "SLOTS_OFFERED",
+  "MORE_SLOTS_REQUESTED",
+  "MATCHED",
+  "RESCHEDULE_REQUESTED",
+  "RESCHEDULED",
+  "FEEDBACK_PENDING",
+];
+
+const CAPACITY_STATUSES = [
+  "MATCHED",
+  "RESCHEDULE_REQUESTED",
+  "RESCHEDULED",
+  "COMPLETED",
+  "FEEDBACK_PENDING",
+  "FEEDBACK_COMPLETE",
+];
+
+function isParticipant(meeting, userId) {
+  return meeting.mentorId === userId || meeting.menteeId === userId;
+}
+
+module.exports = {
+  REQUEST_STATUSES,
+  ACTIVE_REQUEST_STATUSES,
+  CAPACITY_STATUSES,
+  isParticipant,
+};

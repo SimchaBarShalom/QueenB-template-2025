@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MENTEE
+  MENTOR
+  ADMIN
+}
+
+enum MeetingStatus {
+  REQUESTED
+  REJECTED_BY_MENTOR
+  SLOTS_OFFERED
+  MORE_SLOTS_REQUESTED
+  MATCHED
+  RESCHEDULE_REQUESTED
+  RESCHEDULED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+  FEEDBACK_PENDING
+  FEEDBACK_COMPLETE
+}
+
+model User {
+  id              Int      @id @default(autoincrement())
+  name            String
+  email           String   @unique
+  passwordHash    String
+  role            Role
+  stack           String?
+  workplace       String?
+  yearsExperience Int?
+  photoUrl        String?
+  githubUrl       String?
+  linkedinUrl     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  mentorProfile          MentorProfile?
+  mentorRequests         MentoringRequest[]      @relation("MentorRequests")
+  menteeRequests         MentoringRequest[]      @relation("MenteeRequests")
+  mentorMeetings         Meeting[]               @relation("MentorMeetings")
+  menteeMeetings         Meeting[]               @relation("MenteeMeetings")
+  attendanceConfirmations AttendanceConfirmation[]
+  feedback               Feedback[]
+}
+
+model MentorProfile {
+  id                     Int      @id @default(autoincrement())
+  userId                 Int      @unique
+  background             String
+  topics                 String
+  meetingCapacity        Int
+  meetingDurationMinutes Int
+  meetingLink            String
+  isActive               Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MentoringRequest {
+  id                  Int           @id @default(autoincrement())
+  mentorId            Int
+  menteeId            Int
+  status              MeetingStatus @default(REQUESTED)
+  message             String?
+  extraSlotsRequested Boolean       @default(false)
+  rescheduleUsed      Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  mentor       User          @relation("MentorRequests", fields: [mentorId], references: [id])
+  mentee       User          @relation("MenteeRequests", fields: [menteeId], references: [id])
+  offeredSlots OfferedSlot[]
+  meeting      Meeting?
+}
+
+model OfferedSlot {
+  id        Int      @id @default(autoincrement())
+  requestId Int
+  startsAt  DateTime
+  endsAt    DateTime
+  selected  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  request MentoringRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model Meeting {
+  id          Int           @id @default(autoincrement())
+  requestId   Int           @unique
+  mentorId    Int
+  menteeId    Int
+  startsAt    DateTime
+  endsAt      DateTime
+  meetingLink String
+  status      MeetingStatus
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  request                 MentoringRequest        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  mentor                  User                    @relation("MentorMeetings", fields: [mentorId], references: [id])
+  mentee                  User                    @relation("MenteeMeetings", fields: [menteeId], references: [id])
+  attendanceConfirmations AttendanceConfirmation[]
+  feedback                Feedback[]
+}
+
+model AttendanceConfirmation {
+  id        Int      @id @default(autoincrement())
+  meetingId Int
+  userId    Int
+  happened  Boolean
+  createdAt DateTime @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  meetingId Int
+  userId    Int
+  rating    Int
+  text      String
+  createdAt DateTime @default(now())
+
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, userId])
+}
