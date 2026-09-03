@@ -3,9 +3,13 @@ const router = express.Router();
 const { getAllUsers } = require("../services/usersService");
 
 // GET /api/users - Get all users
-router.get("/", (req, res) => {
-  const users = getAllUsers();
-  res.json(users);
+router.get("/", async (req, res, next) => {
+  try {
+    const users = await getAllUsers();
+    res.json(users);
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

@@ -1,8 +1,12 @@
-const { users } = require("../data/usersData");
+const prisma = require("../lib/prisma");
+const { sanitizeUser } = require("./authService");
 
-function getAllUsers() {
-  // In a real application, this would fetch data from a database
-  return users;
+async function getAllUsers() {
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "asc" },
+  });
+
+  return users.map(sanitizeUser);
 }
 
 

@@ -1,12 +1,14 @@
 # QueenB - Full Stack Task Management Application
 A template for building a full-stack web application using modern technologies - fork this repository to get started quickly.
 
-Built with Node.js, Express, React, and Material UI.
+Built with Node.js, Express, React, Material UI, PostgreSQL, and Prisma.
 
 ## 🚀 Features
 
 - **Modern UI**: Beautiful, responsive interface built with Material UI
 - **RESTful API**: Well-structured backend API with Express.js
+- **PostgreSQL data layer**: Prisma schema, migration, and seed data
+- **Basic authentication**: Registration and login with hashed passwords
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 
 ## 🛠️ Tech Stack
@@ -16,6 +18,8 @@ Built with Node.js, Express, React, and Material UI.
 - **Node.js** - Runtime environment
 - **Express.js** - Web framework
 - **CORS** - Cross-origin resource sharing
+- **Prisma** - PostgreSQL ORM and migration tooling
+- **bcryptjs** - Password hashing
 - **Nodemon** - Development auto-restart
 
 ### Frontend
@@ -31,6 +35,7 @@ Built with Node.js, Express, React, and Material UI.
 QueenB/
 ├── server/                 # Backend application
 │   ├── routes/            # API route handlers
+│   ├── prisma/            # Prisma schema, migrations, and seed script
 │   ├── index.js           # Server entry point
 │   ├── package.json       # Server dependencies
 │   └── .env.example       # Environment variables template
@@ -51,6 +56,7 @@ QueenB/
 
 - Node.js (version 14 or higher)
 - npm or yarn package manager
+- PostgreSQL database
 
 ### Installation
 
@@ -101,9 +107,25 @@ and then share the repository with the rest of the team.
    ```bash
    cd server
    cp .env.example .env
-   # Edit .env file with your configuration if needed
+   # Edit DATABASE_URL in .env for your local PostgreSQL database
    cd ..
    ```
+
+5. **Set up the database**
+
+   ```bash
+   cd server
+   npm run prisma:generate
+   npm run prisma:migrate
+   npm run prisma:seed
+   cd ..
+   ```
+
+   Seed users:
+
+   - Admin: `admin@queenb.org` / `Admin123!`
+   - Mentor: `mentor@queenb.org` / `Mentor123!`
+   - Mentee: `mentee@queenb.org` / `Mentee123!`
 
 ### Running the Application
 
@@ -155,6 +177,11 @@ This will start:
 
 - `GET /api/health` - Server health check
 
+### Auth Endpoints
+
+- `POST /api/auth/register` - Register a Mentee or Mentor user
+- `POST /api/auth/login` - Log in with email and password
+
 
 ## 🔧 Development
 
@@ -166,6 +193,9 @@ This will start:
 - `npm run install-all` - Install dependencies for both client and server
 - `npm run build` - Build the React client for production
 - `npm start` - Start the production server
+- `cd server && npm run prisma:generate` - Generate Prisma Client
+- `cd server && npm run prisma:migrate` - Run database migrations
+- `cd server && npm run prisma:seed` - Seed Admin, Mentor, and Mentee users
 
 ### Key Features
 
