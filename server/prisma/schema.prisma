@@ -1,18 +1,15 @@
 // ============================================================================
 // Queens Match - MVP database schema
 // ============================================================================
-// Prisma version note: no "prisma" or "@prisma/client" entry was found in
-// server/package.json, server/package-lock.json, the root package files, or
-// any node_modules folder in this repo - Prisma is not installed yet. The
-// syntax below (generator provider "prisma-client-js", url = env(...)) is the
-// standard, version-stable syntax that has worked unchanged across Prisma
-// 3.x-6.x, so it should not require changes once Prisma is actually added as
-// a dependency. Re-confirm once that happens.
+// Prisma version: server/package.json pins prisma / @prisma/client to
+// 6.19.3. The generator/datasource syntax below is compatible with that
+// version.
 // ============================================================================
 
 generator client {
   provider = "prisma-client-js"
 }
+
 
 datasource db {
   provider = "postgresql"

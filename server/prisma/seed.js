@@ -1,53 +1,90 @@
 const bcrypt = require("bcryptjs");
-const { PrismaClient, Role } = require("@prisma/client");
+const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
-const seedUsers = [
-  {
-    email: "admin@queenb.org",
-    firstName: "Admin",
-    lastName: "QueenB",
-    role: Role.ADMIN,
-    password: "Admin123!",
-  },
-  {
-    email: "mentor@queenb.org",
-    firstName: "Mentor",
-    lastName: "Example",
-    role: Role.MENTOR,
-    password: "Mentor123!",
-  },
-  {
-    email: "mentee@queenb.org",
-    firstName: "Mentee",
-    lastName: "Example",
-    role: Role.MENTEE,
-    password: "Mentee123!",
-  },
-];
+const DEV_PASSWORD = "Password123!";
 
 async function main() {
-  for (const user of seedUsers) {
-    const passwordHash = await bcrypt.hash(user.password, 10);
+  const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
 
-    await prisma.user.upsert({
-      where: { email: user.email },
-      update: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        passwordHash,
+  const regularUser = await prisma.user.upsert({
+    where: { email: "member@queenb.org" },
+    update: {},
+    create: {
+      email: "member@queenb.org",
+      passwordHash,
+      fullName: "Community Member",
+    },
+  });
+
+  const adminUser = await prisma.user.upsert({
+    where: { email: "admin@queenb.org" },
+    update: { isAdmin: true },
+    create: {
+      email: "admin@queenb.org",
+      passwordHash,
+      fullName: "QueenB Admin",
+      isAdmin: true,
+    },
+  });
+
+  const mentorUser = await prisma.user.upsert({
+    where: { email: "mentor@queenb.org" },
+    update: {},
+    create: {
+      email: "mentor@queenb.org",
+      passwordHash,
+      fullName: "Example Mentor",
+      jobTitle: "Senior Software Engineer",
+      workplace: "QueenB Tech",
+      yearsOfExperience: 8,
+    },
+  });
+
+  const technologies = await Promise.all(
+    ["JavaScript", "Python", "React", "Node.js", "PostgreSQL"].map((name) =>
+      prisma.technology.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      })
+    )
+  );
+
+  const mentoringTopics = await Promise.all(
+    ["Mock Interview", "Career Planning", "CV Review"].map((name) =>
+      prisma.mentoringTopic.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      })
+    )
+  );
+
+  await prisma.mentorProfile.upsert({
+    where: { userId: mentorUser.id },
+    update: {},
+    create: {
+      userId: mentorUser.id,
+      background:
+        "8 years of experience building web applications; happy to mentor on frontend and backend fundamentals.",
+      meetingCapacity: 4,
+      meetingDurationMinutes: 45,
+      mentoringTopics: {
+        connect: mentoringTopics.map((topic) => ({ id: topic.id })),
       },
-      create: {
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        passwordHash,
+    },
+  });
+
+  await prisma.user.update({
+    where: { id: regularUser.id },
+    data: {
+      technologies: {
+        connect: technologies.slice(0, 2).map((tech) => ({ id: tech.id })),
       },
-    });
-  }
+    },
+  });
 }
 
 main()
