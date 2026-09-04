@@ -1,24 +1,22 @@
 const bcrypt = require("bcryptjs");
-const { Role } = require("@prisma/client");
 const prisma = require("../lib/prisma");
 
-const VALID_ROLES = [Role.MENTEE, Role.MENTOR];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function sanitizeUser(user) {
   return {
     id: user.id,
     email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    role: user.role,
+    fullName: user.fullName,
+    isAdmin: user.isAdmin,
+    mentorProfile: user.mentorProfile || null,
     createdAt: user.createdAt,
   };
 }
 
 function validateRegistrationInput(input) {
   const errors = [];
-  const { email, password, firstName, lastName, role } = input;
+  const { email, password, firstName, lastName } = input;
 
   if (!firstName || firstName.trim().length < 2) {
     errors.push("First name must be at least 2 characters");
@@ -34,10 +32,6 @@ function validateRegistrationInput(input) {
 
   if (!password || password.length < 8) {
     errors.push("Password must be at least 8 characters");
-  }
-
-  if (!VALID_ROLES.includes(role)) {
-    errors.push("Role must be MENTEE or MENTOR");
   }
 
   return errors;
@@ -65,9 +59,10 @@ async function registerUser(input) {
     data: {
       email: input.email.trim().toLowerCase(),
       passwordHash,
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      role: input.role,
+      fullName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+    },
+    include: {
+      mentorProfile: true,
     },
   });
 
@@ -77,6 +72,9 @@ async function registerUser(input) {
 async function loginUser(input) {
   const user = await prisma.user.findUnique({
     where: { email: input.email.trim().toLowerCase() },
+    include: {
+      mentorProfile: true,
+    },
   });
 
   if (!user) {
