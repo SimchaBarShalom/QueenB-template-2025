@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider, CssBaseline } from "@mui/material";
-import theme from "./theme";
+import getTheme from "./theme";
+import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import AppLayout from "./components/AppLayout";
 import HomePage from "./components/HomePage";
 import LoginPage from "./components/LoginPage";
@@ -9,7 +10,9 @@ import RegisterPage from "./components/RegisterPage";
 import ProfilePage from "./components/ProfilePage";
 import RoleAreaPage from "./components/RoleAreaPage";
 
-function App() {
+function ThemedApp() {
+  const { direction } = useLanguage();
+  const theme = useMemo(() => getTheme(direction), [direction]);
   const [currentUser, setCurrentUser] = useState(() => {
     const savedUser = window.localStorage.getItem("queensMatchUser");
     return savedUser ? JSON.parse(savedUser) : null;
@@ -59,4 +62,11 @@ function App() {
   );
 }
 
+function App() {
+  return (
+    <LanguageProvider>
+      <ThemedApp />
+    </LanguageProvider>
+  );
+}
 export default App;
