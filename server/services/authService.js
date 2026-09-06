@@ -4,19 +4,35 @@ const prisma = require("../lib/prisma");
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function sanitizeUser(user) {
+  const mentorProfile = user.mentorProfile
+    ? {
+        id: user.mentorProfile.id,
+        background: user.mentorProfile.background,
+        meetingCapacity: user.mentorProfile.meetingCapacity,
+        meetingDurationMinutes: user.mentorProfile.meetingDurationMinutes,
+        mentoringTopics: (user.mentorProfile.mentoringTopics || []).map((topic) => topic.name),
+      }
+    : null;
+
   return {
     id: user.id,
     email: user.email,
     fullName: user.fullName,
+    jobTitle: user.jobTitle || null,
+    workplace: user.workplace || null,
+    yearsOfExperience: user.yearsOfExperience ?? null,
+    githubUrl: user.githubUrl || null,
+    linkedinUrl: user.linkedinUrl || null,
+    technologies: (user.technologies || []).map((tech) => tech.name),
     isAdmin: user.isAdmin,
-    mentorProfile: user.mentorProfile || null,
+    mentorProfile,
     createdAt: user.createdAt,
   };
 }
 
 function validateRegistrationInput(input) {
   const errors = [];
-  const { email, password, firstName, lastName } = input;
+  const { email, password, firstName, lastName, wantsToBeMentor } = input;
 
   if (!firstName || firstName.trim().length < 2) {
     errors.push("First name must be at least 2 characters");
@@ -33,6 +49,26 @@ function validateRegistrationInput(input) {
   if (!password || password.length < 8) {
     errors.push("Password must be at least 8 characters");
   }
+
+  if (wantsToBeMentor) {
+  const {
+    mentoringTopics,
+    meetingCapacity,
+    meetingDurationMinutes,
+  } = input;
+
+  if (!Array.isArray(mentoringTopics) || mentoringTopics.length === 0) {
+    errors.push("At least one mentoring topic is required for mentors");
+  }
+
+  if (!meetingCapacity || Number(meetingCapacity) <= 0) {
+    errors.push("Meeting capacity is required for mentors");
+  }
+
+  if (!meetingDurationMinutes || Number(meetingDurationMinutes) <= 0) {
+    errors.push("Meeting duration is required for mentors");
+  }
+}
 
   return errors;
 }
@@ -52,18 +88,75 @@ function validateLoginInput(input) {
   return errors;
 }
 
+const USER_INCLUDE = {
+  technologies: true,
+  mentorProfile: { include: { mentoringTopics: true } },
+};
+
 async function registerUser(input) {
   const passwordHash = await bcrypt.hash(input.password, 10);
 
+  const technologies = Array.isArray(input.technologies)
+    ? input.technologies.map((name) => name.trim()).filter(Boolean)
+    : [];
+
+  const wantsToBeMentor = Boolean(input.wantsToBeMentor);
+
+  const data = {
+    email: input.email.trim().toLowerCase(),
+    passwordHash,
+    fullName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+    yearsOfExperience: input.yearsOfExperience ? Number(input.yearsOfExperience) : null,
+    githubUrl: input.githubUrl?.trim() || null,
+    linkedinUrl: input.linkedinUrl?.trim() || null,
+    technologies: technologies.length
+      ? { connectOrCreate: technologies.map((name) => ({ where: { name }, create: { name } })) }
+      : undefined,
+  };
+if (wantsToBeMentor) {
+  const jobTitle = input.jobTitle?.trim() || null;
+  const workplace = input.workplace?.trim() || null;
+
+  const mentoringTopics = input.mentoringTopics
+    .map((name) => name.trim())
+    .filter(Boolean);
+
+  data.jobTitle = jobTitle;
+  data.workplace = workplace;
+
+  let background = "לא צוין";
+
+  if (jobTitle && workplace) {
+    background = `${jobTitle} — ${workplace}`;
+  } else if (jobTitle) {
+    background = jobTitle;
+  } else if (workplace) {
+    background = workplace;
+  }
+
+  data.mentorProfile = {
+    create: {
+      background,
+      meetingCapacity: Number(input.meetingCapacity),
+      meetingDurationMinutes: Number(input.meetingDurationMinutes),
+
+      mentoringTopics: {
+        connectOrCreate: mentoringTopics.map((name) => ({
+          where: { name },
+          create: { name },
+        })),
+      },
+    },
+  };
+  }
+else if (input.jobTitle || input.workplace) {
+    data.jobTitle = input.jobTitle?.trim() || null;
+    data.workplace = input.workplace?.trim() || null;
+  }
+
   const user = await prisma.user.create({
-    data: {
-      email: input.email.trim().toLowerCase(),
-      passwordHash,
-      fullName: `${input.firstName.trim()} ${input.lastName.trim()}`,
-    },
-    include: {
-      mentorProfile: true,
-    },
+    data,
+    include: USER_INCLUDE,
   });
 
   return sanitizeUser(user);
@@ -72,9 +165,7 @@ async function registerUser(input) {
 async function loginUser(input) {
   const user = await prisma.user.findUnique({
     where: { email: input.email.trim().toLowerCase() },
-    include: {
-      mentorProfile: true,
-    },
+    include: USER_INCLUDE,
   });
 
   if (!user) {

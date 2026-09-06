@@ -1,3 +1,10 @@
+html {
+  scroll-behavior: smooth;
+  /* Reserves the scrollbar's width permanently so opening a dialog (which
+     hides the page scrollbar) never shifts the page content sideways. */
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   direction: rtl;
@@ -20,4 +27,11 @@ code {
 a {
   color: inherit;
   text-decoration: none;
+}
+html,
+body,
+#root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }

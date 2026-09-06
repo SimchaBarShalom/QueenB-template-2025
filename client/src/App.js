@@ -1,14 +1,19 @@
 import React, { useMemo, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { CacheProvider } from "@emotion/react";
 import { ThemeProvider, CssBaseline } from "@mui/material";
 import getTheme from "./theme";
+import { rtlCache, ltrCache } from "./rtlCache";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
 import AppLayout from "./components/AppLayout";
 import HomePage from "./components/HomePage";
-import LoginPage from "./components/LoginPage";
-import RegisterPage from "./components/RegisterPage";
+import LoginDialog from "./components/LoginDialog";
+import RegisterDialog from "./components/RegisterDialog";
 import ProfilePage from "./components/ProfilePage";
 import RoleAreaPage from "./components/RoleAreaPage";
+import MenteeDashboard from "./components/MenteeDashboard";
+import MentorSearchPage from "./components/MentorSearchPage";
+import MenteeMeetingsPage from "./components/MenteeMeetingsPage";
 
 function ThemedApp() {
   const { direction } = useLanguage();
@@ -17,48 +22,59 @@ function ThemedApp() {
     const savedUser = window.localStorage.getItem("queensMatchUser");
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  // "login" | "register" | null - which auth dialog (if any) is open. Both
+  // dialogs are rendered once here so they can be triggered from the public
+  // navbar and swapped between ("צור חשבון" / "כניסה" links) without routing.
+  const [authDialog, setAuthDialog] = useState(null);
 
-  const auth = useMemo(
-    () => ({
-      currentUser,
-      setCurrentUser: (user) => {
-        setCurrentUser(user);
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    window.localStorage.setItem("queensMatchUser", JSON.stringify(user));
+  };
 
-        if (user) {
-          window.localStorage.setItem("queensMatchUser", JSON.stringify(user));
-        } else {
-          window.localStorage.removeItem("queensMatchUser");
-        }
-      },
-    }),
-    [currentUser]
-  );
+  const handleLogout = () => {
+    setCurrentUser(null);
+    window.localStorage.removeItem("queensMatchUser");
+  };
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Router>
-        <AppLayout currentUser={auth.currentUser} onLogout={() => auth.setCurrentUser(null)}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage onLogin={auth.setCurrentUser} />} />
-            <Route
-              path="/register/mentee"
-              element={<RegisterPage role="MENTEE" onRegister={auth.setCurrentUser} />}
-            />
-            <Route
-              path="/register/mentor"
-              element={<RegisterPage role="MENTOR" onRegister={auth.setCurrentUser} />}
-            />
-            <Route path="/profile" element={<ProfilePage user={auth.currentUser} />} />
-            <Route path="/mentee" element={<RoleAreaPage role="MENTEE" />} />
-            <Route path="/mentor" element={<RoleAreaPage role="MENTOR" />} />
-            <Route path="/admin" element={<RoleAreaPage role="ADMIN" />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </AppLayout>
-      </Router>
-    </ThemeProvider>
+    <CacheProvider value={direction === "rtl" ? rtlCache : ltrCache}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Router>
+          <AppLayout
+            currentUser={currentUser}
+            onLogout={handleLogout}
+            onOpenLogin={() => setAuthDialog("login")}
+            onOpenRegister={() => setAuthDialog("register")}
+          >
+            <Routes>
+              <Route path="/" element={<HomePage onOpenRegister={() => setAuthDialog("register")} />} />
+              <Route path="/profile" element={<ProfilePage user={currentUser} />} />
+              <Route path="/mentee" element={<MenteeDashboard currentUser={currentUser} />} />
+              <Route path="/mentee/mentors" element={<MentorSearchPage />} />
+              <Route path="/mentee/meetings" element={<MenteeMeetingsPage />} />
+              <Route path="/mentor" element={<RoleAreaPage role="MENTOR" />} />
+              <Route path="/admin" element={<RoleAreaPage role="ADMIN" />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </AppLayout>
+
+          <LoginDialog
+            open={authDialog === "login"}
+            onClose={() => setAuthDialog(null)}
+            onLogin={handleAuthSuccess}
+            onSwitchToRegister={() => setAuthDialog("register")}
+          />
+          <RegisterDialog
+            open={authDialog === "register"}
+            onClose={() => setAuthDialog(null)}
+            onRegister={handleAuthSuccess}
+            onSwitchToLogin={() => setAuthDialog("login")}
+          />
+        </Router>
+      </ThemeProvider>
+    </CacheProvider>
   );
 }
 

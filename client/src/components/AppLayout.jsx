@@ -1,28 +1,28 @@
 import React from "react";
-import { Box, Container } from "@mui/material";
+import { useLocation } from "react-router-dom";
+import { Box } from "@mui/material";
 import Navbar from "./Navbar";
+import MenteeNavbar from "./MenteeNavbar";
 import { useLanguage } from "../i18n/LanguageContext";
 
-function AppLayout({ children, currentUser, onLogout }) {
+function AppLayout({ children, currentUser, onLogout, onOpenLogin, onOpenRegister }) {
   const { direction } = useLanguage();
+  const location = useLocation();
+
+  // Every authenticated area (mentee/mentor/admin/profile) shares the same
+  // authenticated navbar shell; only the public homepage shows the marketing
+  // navbar with login/register triggers.
+  const showAuthenticatedNavbar = Boolean(currentUser) && location.pathname !== "/";
 
   return (
-    <Box
-      sx={{ minHeight: "100vh", bgcolor: "background.default" }}
-      dir={direction}
-    >
-      <Navbar
-        currentUser={currentUser}
-        onLogout={onLogout}
-      />
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }} dir={direction}>
+      {showAuthenticatedNavbar ? (
+        <MenteeNavbar currentUser={currentUser} onLogout={onLogout} />
+      ) : (
+        <Navbar onOpenLogin={onOpenLogin} onOpenRegister={onOpenRegister} />
+      )}
 
-      <Container
-        component="main"
-        maxWidth="lg"
-        sx={{ py: { xs: 4, md: 6 } }}
-      >
-        {children}
-      </Container>
+      <Box component="main">{children}</Box>
     </Box>
   );
 }
