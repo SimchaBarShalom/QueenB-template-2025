@@ -6,6 +6,7 @@ const {
   offerMentoringRequestSlots,
   rejectMentoringRequest,
   cancelMentoringRequest,
+  declineOfferedSlots,
 } = require("../services/mentoringRequestsService");
 const authenticate = require("../middleware/authenticate");
 
@@ -36,7 +37,7 @@ router.post("/", async (req, res, next) => {
 
     return res.status(201).json(request);
   } catch (error) {
-    next(error);
+    return handleServiceError(error, res, next);
   }
 });
 
@@ -88,6 +89,27 @@ router.post("/:requestId/slots", authenticate, async (req, res, next) => {
   }
 });
 
+router.patch("/:requestId/decline-slots", async (req, res, next) => {
+  try {
+    const { menteeId } = req.body;
+
+    if (!menteeId) {
+      return res.status(400).json({
+        error: "menteeId is required",
+      });
+    }
+
+    const request = await declineOfferedSlots({
+      requestId: req.params.requestId,
+      menteeId,
+    });
+
+    return res.json(request);
+  } catch (error) {
+    return handleServiceError(error, res, next);
+  }
+});
+
 router.patch("/:requestId/cancel", async (req, res, next) => {
   try {
     const { menteeId } = req.body;
@@ -105,7 +127,7 @@ router.patch("/:requestId/cancel", async (req, res, next) => {
 
     return res.json(request);
   } catch (error) {
-    next(error);
+    return handleServiceError(error, res, next);
   }
 });
 

@@ -67,6 +67,7 @@ function getMentorName(request) {
 
 function MenteeMeetingsPage() {
   const [requests, setRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState("scheduled-section");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
@@ -123,12 +124,7 @@ function MenteeMeetingsPage() {
 
     setRequests((current) =>
       current.map((item) =>
-        item.id === request.id
-          ? {
-              ...item,
-              status: response.data.status,
-            }
-          : item
+        item.id === request.id ? { ...item, ...response.data } : item
       )
     );
   } catch (requestError) {
@@ -136,6 +132,34 @@ function MenteeMeetingsPage() {
     setError("ביטול הבקשה נכשל.");
   }
 };
+
+  const handleTimesDontWork = async (request) => {
+    const isSecondDecline = request.extraSlotsUsed;
+    const confirmed = window.confirm(
+      isSecondDecline
+        ? "דחיית הזמנים פעם נוספת תסגור את הבקשה ולא תאפשר לקבוע פגישה עם המנטורית עד סוף החודש. להמשיך?"
+        : "לדחות את הזמנים שהוצעו ולבקש מהמנטורית זמנים חדשים?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setError("");
+      const response = await axios.patch(
+        `/api/mentoring-requests/${request.id}/decline-slots`,
+        { menteeId }
+      );
+
+      setRequests((current) =>
+        current.map((item) =>
+          item.id === request.id ? { ...item, ...response.data } : item
+        )
+      );
+    } catch (requestError) {
+      console.error(requestError);
+      setError("עדכון הבקשה נכשל.");
+    }
+  };
 
   const waitingForMentorSlots = requests
     .filter(
@@ -159,11 +183,15 @@ function MenteeMeetingsPage() {
     .map((request) => {
       const latestRound =
         request.schedulingRounds?.[0];
+      const extraSlotsUsed = (request.schedulingRounds || []).some(
+        (round) => round.type === "EXTRA_SLOTS"
+      );
 
       return {
         id: request.id,
         mentorName: getMentorName(request),
         topic: getTopic(request),
+        extraSlotsUsed,
         requestDate: formatDate(request.createdAt),
         respondedDate: formatDate(
           latestRound?.createdAt ||
@@ -285,8 +313,9 @@ function MenteeMeetingsPage() {
           {SECTION_TABS.map((tab) => (
             <Button
               key={tab.id}
-              component="a"
-              href={`#${tab.id}`}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              variant={activeTab === tab.id ? "contained" : "text"}
               size="small"
               sx={{ borderRadius: 999 }}
             >
@@ -295,13 +324,10 @@ function MenteeMeetingsPage() {
           ))}
         </Stack>
 
+        {activeTab === "completed-section" && (
         <Box
           component="section"
           id="completed-section"
-          sx={{
-            scrollMarginTop: 140,
-            mb: 6,
-          }}
         >
           <Typography
             variant="h5"
@@ -327,14 +353,12 @@ function MenteeMeetingsPage() {
             )}
           </Stack>
         </Box>
+        )}
 
+        {activeTab === "scheduled-section" && (
         <Box
           component="section"
           id="scheduled-section"
-          sx={{
-            scrollMarginTop: 140,
-            mb: 6,
-          }}
         >
           <Typography
             variant="h5"
@@ -361,14 +385,12 @@ function MenteeMeetingsPage() {
             )}
           </Stack>
         </Box>
+        )}
 
+        {activeTab === "waiting-mentor-section" && (
         <Box
           component="section"
           id="waiting-mentor-section"
-          sx={{
-            scrollMarginTop: 140,
-            mb: 6,
-          }}
         >
           <Typography
             variant="h5"
@@ -396,11 +418,12 @@ function MenteeMeetingsPage() {
             )}
           </Stack>
         </Box>
+        )}
 
+        {activeTab === "waiting-mentee-section" && (
         <Box
           component="section"
           id="waiting-mentee-section"
-          sx={{ scrollMarginTop: 140 }}
         >
           <Typography
             variant="h5"
@@ -424,6 +447,7 @@ function MenteeMeetingsPage() {
                     key={request.id}
                     request={request}
                     onChooseTime={notReady}
+                    onTimesDontWork={handleTimesDontWork}
                     onCancel={handleCancelRequest}
                   />
                 )
@@ -431,6 +455,7 @@ function MenteeMeetingsPage() {
             )}
           </Stack>
         </Box>
+        )}
       </Container>
 
       <ComingSoonSnackbar

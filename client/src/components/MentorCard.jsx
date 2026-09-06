@@ -7,6 +7,7 @@ import { queenbColors } from "../theme";
 const STATUS_LABELS = {
   pending: "ממתין למענה",
   scheduled: "נקבעה פגישה",
+  blocked: "לא ניתן לקבוע החודש",
 };
 
 // requestStatus is "none" | "pending" | "scheduled", scoped to this

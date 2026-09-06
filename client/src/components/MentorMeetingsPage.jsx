@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -16,6 +16,8 @@ import {
 } from "../services/mentorMeetingsService";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 import {
+  MentorMonthlyBlockCard,
+  MentorOfferedSlotsCard,
   MentorPastMeetingCard,
   MentorPendingRequestCard,
   MentorUpcomingMeetingCard,
@@ -25,7 +27,9 @@ import OfferSlotsDialog from "./OfferSlotsDialog";
 const SECTION_TABS = [
   { id: "past-section", label: "פגישות שהתקיימו" },
   { id: "upcoming-section", label: "פגישות קרובות" },
-  { id: "pending-section", label: "בקשות והצעות זמנים" },
+  { id: "pending-section", label: "בקשות שממתינות לך" },
+  { id: "offered-section", label: "זמנים שהצעת" },
+  { id: "closed-section", label: "בקשות שנסגרו" },
 ];
 
 function formatDate(value) {
@@ -57,8 +61,11 @@ function toMeetingView(request, meeting) {
   };
 }
 
-function toPendingRequestView(request) {
+function toRequestView(request) {
   const latestRound = request.schedulingRounds?.[0];
+  const needsNewSlots =
+    request.status === "WAITING_FOR_MENTOR_SLOTS" &&
+    (request.schedulingRounds || []).length > 0;
 
   return {
     id: request.id,
@@ -66,6 +73,7 @@ function toPendingRequestView(request) {
     menteeName: request.mentee?.fullName || "חניכה",
     topic: getTopic(request),
     requestDate: formatDate(request.createdAt),
+    needsNewSlots,
     offeredSlots: (latestRound?.offeredSlots || []).map((slot) => ({
       id: slot.id,
       date: formatDate(slot.startTime),
@@ -75,12 +83,32 @@ function toPendingRequestView(request) {
   };
 }
 
+function isCancelledThisMonth(request) {
+  const updatedAt = new Date(request.updatedAt);
+  const now = new Date();
+  return (
+    updatedAt.getFullYear() === now.getFullYear() &&
+    updatedAt.getMonth() === now.getMonth()
+  );
+}
+
+function hasExtraSlotsRound(request) {
+  return (request.schedulingRounds || []).some((round) => round.type === "EXTRA_SLOTS");
+}
+
+// 404/409 mean the request was already handled (or removed) since the page
+// loaded, so the card on screen no longer reflects the server.
+function isStaleRequestError(error) {
+  return [404, 409].includes(error.response?.status);
+}
+
 function EmptyState({ children }) {
   return <Typography color="text.secondary">{children}</Typography>;
 }
 
 function MentorMeetingsPage({ currentUser }) {
   const [requests, setRequests] = useState([]);
+  const [activeTab, setActiveTab] = useState("upcoming-section");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [action, setAction] = useState(null);
@@ -91,25 +119,31 @@ function MentorMeetingsPage({ currentUser }) {
     message: "",
   });
 
-  useEffect(() => {
-    async function loadRequests() {
-      try {
-        setLoading(true);
-        setError("");
-        setRequests(await getMentorMeetingRequests());
-      } catch (requestError) {
-        setError(
-          getRequestErrorMessage(requestError, "לא הצלחנו לטעון את הפגישות והבקשות.")
-        );
-      } finally {
-        setLoading(false);
-      }
+  const loadRequests = useCallback(async ({ withSpinner = false } = {}) => {
+    try {
+      if (withSpinner) setLoading(true);
+      setError("");
+      setRequests(await getMentorMeetingRequests());
+    } catch (requestError) {
+      setError(
+        getRequestErrorMessage(requestError, "לא הצלחנו לטעון את הפגישות והבקשות.")
+      );
+    } finally {
+      if (withSpinner) setLoading(false);
     }
-
-    loadRequests();
   }, []);
 
-  const { pastMeetings, upcomingMeetings, pendingRequests } = useMemo(() => {
+  useEffect(() => {
+    loadRequests({ withSpinner: true });
+  }, [loadRequests]);
+
+  const {
+    pastMeetings,
+    upcomingMeetings,
+    pendingRequests,
+    offeredRequests,
+    monthlyBlocks,
+  } = useMemo(() => {
     const now = Date.now();
     const past = [];
     const upcoming = [];
@@ -118,7 +152,7 @@ function MentorMeetingsPage({ currentUser }) {
       (request.meetings || []).forEach((meeting) => {
         const view = toMeetingView(request, meeting);
 
-        if (["COMPLETED", "NOT_COMPLETED"].includes(meeting.status)) {
+        if (meeting.status === "COMPLETED") {
           past.push(view);
         } else if (
           ["SCHEDULED", "ATTENDANCE_CONFIRMED"].includes(meeting.status) &&
@@ -133,12 +167,20 @@ function MentorMeetingsPage({ currentUser }) {
       pastMeetings: past.sort((first, second) => second.timestamp - first.timestamp),
       upcomingMeetings: upcoming.sort((first, second) => first.timestamp - second.timestamp),
       pendingRequests: requests
-        .filter((request) =>
-          ["WAITING_FOR_MENTOR_SLOTS", "WAITING_FOR_MENTEE_SELECTION"].includes(
-            request.status
-          )
+        .filter((request) => request.status === "WAITING_FOR_MENTOR_SLOTS")
+        .map(toRequestView),
+      offeredRequests: requests
+        .filter((request) => request.status === "WAITING_FOR_MENTEE_SELECTION")
+        .map(toRequestView),
+      monthlyBlocks: requests
+        .filter(
+          (request) =>
+            request.status === "CANCELLED" &&
+            hasExtraSlotsRound(request) &&
+            (request.notifications || []).length > 0 &&
+            isCancelledThisMonth(request)
         )
-        .map(toPendingRequestView),
+        .map(toRequestView),
     };
   }, [requests]);
 
@@ -164,6 +206,7 @@ function MentorMeetingsPage({ currentUser }) {
         "error",
         getRequestErrorMessage(requestError, "דחיית הבקשה נכשלה.")
       );
+      if (isStaleRequestError(requestError)) await loadRequests();
     } finally {
       setAction(null);
     }
@@ -182,6 +225,12 @@ function MentorMeetingsPage({ currentUser }) {
         "error",
         getRequestErrorMessage(requestError, "שליחת הזמנים נכשלה.")
       );
+
+      if (isStaleRequestError(requestError)) {
+        setSlotRequest(null);
+        await loadRequests();
+      }
+
       return false;
     } finally {
       setAction(null);
@@ -228,8 +277,9 @@ function MentorMeetingsPage({ currentUser }) {
           {SECTION_TABS.map((tab) => (
             <Button
               key={tab.id}
-              component="a"
-              href={`#${tab.id}`}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              variant={activeTab === tab.id ? "contained" : "text"}
               size="small"
               sx={{ borderRadius: 999 }}
             >
@@ -238,7 +288,8 @@ function MentorMeetingsPage({ currentUser }) {
           ))}
         </Stack>
 
-        <Box component="section" id="past-section" sx={{ scrollMarginTop: 140, mb: 6 }}>
+        {activeTab === "past-section" && (
+        <Box component="section" id="past-section">
           <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
             פגישות שהתקיימו
           </Typography>
@@ -252,8 +303,10 @@ function MentorMeetingsPage({ currentUser }) {
             )}
           </Stack>
         </Box>
+        )}
 
-        <Box component="section" id="upcoming-section" sx={{ scrollMarginTop: 140, mb: 6 }}>
+        {activeTab === "upcoming-section" && (
+        <Box component="section" id="upcoming-section">
           <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
             פגישות קרובות
           </Typography>
@@ -267,10 +320,12 @@ function MentorMeetingsPage({ currentUser }) {
             )}
           </Stack>
         </Box>
+        )}
 
-        <Box component="section" id="pending-section" sx={{ scrollMarginTop: 140 }}>
+        {activeTab === "pending-section" && (
+        <Box component="section" id="pending-section">
           <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-            בקשות והצעות זמנים
+            בקשות שממתינות לך
           </Typography>
           <Stack spacing={2}>
             {pendingRequests.length === 0 ? (
@@ -288,6 +343,41 @@ function MentorMeetingsPage({ currentUser }) {
             )}
           </Stack>
         </Box>
+        )}
+
+        {activeTab === "offered-section" && (
+        <Box component="section" id="offered-section">
+          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+            זמנים שהצעת
+          </Typography>
+          <Stack spacing={2}>
+            {offeredRequests.length === 0 ? (
+              <EmptyState>אין הצעות זמנים שממתינות לבחירת חניכה.</EmptyState>
+            ) : (
+              offeredRequests.map((request) => (
+                <MentorOfferedSlotsCard key={request.id} request={request} />
+              ))
+            )}
+          </Stack>
+        </Box>
+        )}
+
+        {activeTab === "closed-section" && (
+          <Box component="section" id="closed-section">
+            <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
+              בקשות שנסגרו החודש
+            </Typography>
+            <Stack spacing={2}>
+              {monthlyBlocks.length === 0 ? (
+                <EmptyState>אין בקשות שנסגרו החודש.</EmptyState>
+              ) : (
+                monthlyBlocks.map((notice) => (
+                  <MentorMonthlyBlockCard key={notice.id} notice={notice} />
+                ))
+              )}
+            </Stack>
+          </Box>
+        )}
       </Container>
 
       <OfferSlotsDialog

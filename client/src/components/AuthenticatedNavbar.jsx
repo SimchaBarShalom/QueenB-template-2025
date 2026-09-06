@@ -2,6 +2,7 @@ import React from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { AppBar, Box, Button, Stack, Toolbar } from "@mui/material";
 import UserMenu from "./UserMenu";
+import MessagesMenu from "./MessagesMenu";
 import QueensMatchLogo from "./QueensMatchLogo";
 import { getDefaultAreaPath, isMentorUser } from "../utils/areaRouting";
 
@@ -57,6 +58,7 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
           </Stack>
 
           <Box sx={{ flexGrow: 1 }} />
+          <MessagesMenu currentUser={currentUser} />
           <UserMenu currentUser={currentUser} onLogout={onLogout} />
         </Box>
       </Toolbar>

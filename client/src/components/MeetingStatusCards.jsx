@@ -138,7 +138,12 @@ export function PendingSlotsMeetingCard({ request, onCancel }) {
   );
 }
 
-export function SlotsToChooseMeetingCard({ request, onChooseTime, onCancel }) {
+export function SlotsToChooseMeetingCard({
+  request,
+  onChooseTime,
+  onTimesDontWork,
+  onCancel,
+}) {
   return (
     <CardShell>
       <Typography variant="h6" component="h3">
@@ -149,7 +154,7 @@ export function SlotsToChooseMeetingCard({ request, onChooseTime, onCancel }) {
         תאריך הבקשה: {request.requestDate} | תאריך המענה: {request.respondedDate}
       </InfoRow>
 
-      <Stack direction="row" spacing={1.5} sx={{ mt: 1 }}>
+      <Stack direction="row" spacing={1.5} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
         <Button
           size="small"
           variant="contained"
@@ -157,6 +162,14 @@ export function SlotsToChooseMeetingCard({ request, onChooseTime, onCancel }) {
           sx={{ borderRadius: 999 }}
         >
           בחירת מועד
+        </Button>
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => onTimesDontWork(request)}
+          sx={{ borderRadius: 999 }}
+        >
+          {request.extraSlotsUsed ? "הזמנים לא מתאימים" : "בקשת זמנים חדשים"}
         </Button>
         <Button
           size="small"
