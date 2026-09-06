@@ -2,10 +2,22 @@ const express = require("express");
 const {
   createMentoringRequest,
   getMentoringRequestsByMentee,
+  getMentoringRequestsByMentorUser,
+  offerMentoringRequestSlots,
+  rejectMentoringRequest,
   cancelMentoringRequest,
 } = require("../services/mentoringRequestsService");
+const authenticate = require("../middleware/authenticate");
 
 const router = express.Router();
+
+function handleServiceError(error, res, next) {
+  if (error.statusCode) {
+    return res.status(error.statusCode).json({ error: error.message });
+  }
+
+  return next(error);
+}
 
 router.post("/", async (req, res, next) => {
   try {
@@ -28,6 +40,15 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+router.get("/mentor/me", authenticate, async (req, res, next) => {
+  try {
+    const requests = await getMentoringRequestsByMentorUser(req.auth.userId);
+    return res.json(requests);
+  } catch (error) {
+    return handleServiceError(error, res, next);
+  }
+});
+
 router.get("/mentee/:menteeId", async (req, res, next) => {
   try {
     const requests = await getMentoringRequestsByMentee(
@@ -37,6 +58,33 @@ router.get("/mentee/:menteeId", async (req, res, next) => {
     return res.json(requests);
   } catch (error) {
     next(error);
+  }
+});
+
+router.patch("/:requestId/reject", authenticate, async (req, res, next) => {
+  try {
+    const request = await rejectMentoringRequest({
+      requestId: req.params.requestId,
+      userId: req.auth.userId,
+    });
+
+    return res.json(request);
+  } catch (error) {
+    return handleServiceError(error, res, next);
+  }
+});
+
+router.post("/:requestId/slots", authenticate, async (req, res, next) => {
+  try {
+    const request = await offerMentoringRequestSlots({
+      requestId: req.params.requestId,
+      userId: req.auth.userId,
+      slots: req.body.slots,
+    });
+
+    return res.status(201).json(request);
+  } catch (error) {
+    return handleServiceError(error, res, next);
   }
 });
 
