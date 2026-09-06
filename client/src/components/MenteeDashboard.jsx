@@ -84,6 +84,7 @@ function formatTime(dateValue) {
     minute: "2-digit",
   });
 }
+
 const ACTIVE_STATUSES = [
   "WAITING_FOR_MENTOR_SLOTS",
   "WAITING_FOR_MENTEE_SELECTION",
@@ -132,8 +133,6 @@ function MenteeDashboard({ currentUser }) {
     loadDashboard();
   }, [menteeId]);
 
-
-
   const activeRequestsCount = useMemo(() => {
     return requests.filter((request) =>
       ACTIVE_STATUSES.includes(request.status)
@@ -167,32 +166,35 @@ function MenteeDashboard({ currentUser }) {
     return meetings[0] || null;
   }, [requests]);
 
-  const getRequestStatus = useCallback((mentorProfileId) => {
-    const mentorRequests = requests.filter(
-      (request) =>
-        request.mentorProfileId === mentorProfileId &&
-        ACTIVE_STATUSES.includes(request.status)
-    );
+  const getRequestStatus = useCallback(
+    (mentorProfileId) => {
+      const mentorRequests = requests.filter(
+        (request) =>
+          request.mentorProfileId === mentorProfileId &&
+          ACTIVE_STATUSES.includes(request.status)
+      );
 
-    const scheduledRequest = mentorRequests.find(
-      (request) =>
-        request.status === "MATCHED" ||
-        request.status === "ATTENDANCE_CONFIRMED"
-    );
+      const scheduledRequest = mentorRequests.find(
+        (request) =>
+          request.status === "MATCHED" ||
+          request.status === "ATTENDANCE_CONFIRMED"
+      );
 
-    if (scheduledRequest) {
-      return "scheduled";
-    }
+      if (scheduledRequest) {
+        return "scheduled";
+      }
 
-    if (mentorRequests.length > 0) {
-      return "pending";
-    }
+      if (mentorRequests.length > 0) {
+        return "pending";
+      }
 
-    return "none";
-}, [requests]);
+      return "none";
+    },
+    [requests]
+  );
 
   const suggestedMentors = useMemo(() => {
-    return mentors.slice(0, 3).map((mentor) => ({
+    return mentors.slice(0, 2).map((mentor) => ({
       ...mentor,
       requestStatus: getRequestStatus(
         mentor.mentorProfileId
@@ -237,8 +239,51 @@ function MenteeDashboard({ currentUser }) {
   }
 
   return (
-    <Box sx={{ py: { xs: 3, md: 5 } }}>
-      <Container maxWidth="lg">
+    <Box
+      sx={{
+        position: "relative",
+
+        width: "100%",
+        maxWidth: "100%",
+
+        minHeight: "calc(100vh - 76px)",
+
+        overflowX: "hidden",
+        overflowY: "visible",
+
+        py: {
+          xs: 3,
+          md: 5,
+        },
+
+        background: `
+          radial-gradient(
+            circle at 10% 18%,
+            rgba(231, 49, 122, 0.08),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at 88% 72%,
+            rgba(190, 126, 222, 0.09),
+            transparent 30%
+          ),
+          linear-gradient(
+            135deg,
+            #fff9fb 0%,
+            #fdeef4 48%,
+            #fff7fa 100%
+          )
+        `,
+      }}
+    >
+
+      <Container
+        maxWidth="lg"
+        sx={{
+          position: "relative",
+          zIndex: 1,
+        }}
+      >
         <Typography
           variant="h4"
           component="h1"
@@ -330,24 +375,36 @@ function MenteeDashboard({ currentUser }) {
           </Button>
         </Stack>
 
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="baseline"
-          sx={{ mb: 2.5 }}
+        <Box
+          sx={{
+            mb: 2.5,
+            width: "100%",
+            textAlign: "left",
+          }}
         >
-          <Typography variant="h5" component="h2">
+          <Typography
+            variant="h5"
+            component="h2"
+            sx={{
+              mb: 0.5,
+              fontWeight: 700,
+            }}
+          >
             מנטוריות שאולי יתאימו לך
           </Typography>
 
           <Button
             component={RouterLink}
             to="/mentee/mentors"
-            sx={{ fontWeight: 600 }}
+            sx={{
+              fontWeight: 600,
+              px: 0,
+              minWidth: 0,
+            }}
           >
             לכל המנטוריות
           </Button>
-        </Stack>
+        </Box>
 
         {suggestedMentors.length === 0 ? (
           <Typography color="text.secondary">
@@ -357,11 +414,12 @@ function MenteeDashboard({ currentUser }) {
           <Box
             sx={{
               display: "grid",
+
               gridTemplateColumns: {
                 xs: "1fr",
-                sm: "1fr 1fr",
-                md: "repeat(3, 1fr)",
+                sm: "repeat(3, minmax(0, 1fr))",
               },
+
               gap: 3,
             }}
           >
