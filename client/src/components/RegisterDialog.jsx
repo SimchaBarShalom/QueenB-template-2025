@@ -26,7 +26,7 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import PasswordRequirements from "./PasswordRequirements";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 import { getDefaultAreaPath } from "../utils/areaRouting";
-import { splitFullName } from "../utils/nameUtils";
+import { isValidFullName, splitFullName } from "../utils/nameUtils";
 import { isPasswordValid } from "../utils/passwordValidation";
 import QueensMatchLogo from "./QueensMatchLogo";
 import { queenbColors } from "../theme";
@@ -113,8 +113,8 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
   const validate = () => {
     const nextErrors = {};
 
-    if (!values.fullName.trim() || values.fullName.trim().length < 2) {
-      nextErrors.fullName = "יש להזין שם מלא";
+    if (!isValidFullName(values.fullName)) {
+      nextErrors.fullName = "יש להזין שם פרטי ושם משפחה, לפחות 2 תווים בכל אחד";
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
@@ -178,7 +178,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
 
     try {
       const response = await axios.post("/api/auth/register", payload);
-      onRegister(response.data.user);
+      onRegister(response.data.user, response.data.token);
       handleClose();
       navigate(getDefaultAreaPath(response.data.user));
     } catch (requestError) {

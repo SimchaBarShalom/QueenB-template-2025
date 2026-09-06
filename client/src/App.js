@@ -20,14 +20,21 @@ function ThemedApp() {
   const theme = useMemo(() => getTheme(direction), [direction]);
   const [currentUser, setCurrentUser] = useState(() => {
     const savedUser = window.localStorage.getItem("queensMatchUser");
-    return savedUser ? JSON.parse(savedUser) : null;
+    const savedToken = window.localStorage.getItem("queensMatchToken");
+    return savedUser && savedToken ? JSON.parse(savedUser) : null;
   });
   // "login" | "register" | null - which auth dialog (if any) is open. Both
   // dialogs are rendered once here so they can be triggered from the public
   // navbar and swapped between ("צור חשבון" / "כניסה" links) without routing.
   const [authDialog, setAuthDialog] = useState(null);
 
-  const handleAuthSuccess = (user) => {
+  const handleAuthSuccess = (user, token) => {
+    setCurrentUser(user);
+    window.localStorage.setItem("queensMatchUser", JSON.stringify(user));
+    window.localStorage.setItem("queensMatchToken", token);
+  };
+
+  const handleUserUpdated = (user) => {
     setCurrentUser(user);
     window.localStorage.setItem("queensMatchUser", JSON.stringify(user));
   };
@@ -35,6 +42,7 @@ function ThemedApp() {
   const handleLogout = () => {
     setCurrentUser(null);
     window.localStorage.removeItem("queensMatchUser");
+    window.localStorage.removeItem("queensMatchToken");
   };
 
   return (
@@ -50,7 +58,10 @@ function ThemedApp() {
           >
             <Routes>
               <Route path="/" element={<HomePage onOpenRegister={() => setAuthDialog("register")} />} />
-              <Route path="/profile" element={<ProfilePage user={currentUser} />} />
+              <Route
+                path="/profile"
+                element={<ProfilePage user={currentUser} onUserUpdated={handleUserUpdated} />}
+              />
               <Route path="/mentee" element={<MenteeDashboard currentUser={currentUser} />} />
               <Route path="/mentee/mentors" element={<MentorSearchPage />} />
               <Route path="/mentee/meetings" element={<MenteeMeetingsPage />} />
