@@ -15,6 +15,7 @@ jest.mock("../lib/prisma", () => ({
     count: jest.fn(),
     findMany: jest.fn(),
     findUnique: jest.fn(),
+    update: jest.fn(),
     updateMany: jest.fn(),
   },
   mentoringRequest: {
@@ -27,6 +28,7 @@ jest.mock("../lib/prisma", () => ({
     findMany: jest.fn(),
     upsert: jest.fn(),
     deleteMany: jest.fn(),
+    updateMany: jest.fn(),
   },
   $transaction: jest.fn(),
 }));
@@ -273,5 +275,73 @@ describe("adminService", () => {
     ]));
     expect(result.mentorLoad).toEqual([{ mentorProfileId: 4, fullName: "Mentor", completed: 1 }]);
     expect(result).not.toHaveProperty("feedbackAnswers");
+  });
+
+  it("stores alert metadata without resolving the alert", async () => {
+    const materializedAt = new Date();
+    const staleMeeting = {
+      id: 7,
+      updatedAt: materializedAt,
+      request: {
+        mentee: { id: 2, fullName: "Mentee", email: "mentee@example.com" },
+        mentorProfile: {
+          id: 3,
+          isActive: true,
+          user: { id: 4, fullName: "Mentor", email: "mentor@example.com" },
+          mentoringTopics: [],
+        },
+        status: "COMPLETED",
+      },
+      attendanceConfirmations: [],
+      outcomeConfirmations: [],
+      feedback: [],
+      requestId: 1,
+      attemptNumber: 1,
+      scheduledStart: new Date(),
+      scheduledEnd: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+      status: "COMPLETED",
+      createdAt: new Date(),
+    };
+    prisma.mentorProfile.findMany.mockResolvedValue([]);
+    prisma.meeting.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([staleMeeting])
+      .mockResolvedValueOnce([]);
+    prisma.mentoringRequest.findMany.mockResolvedValue([]);
+    prisma.user.findUnique.mockResolvedValue({ id: 1, isAdmin: true });
+    prisma.adminAlertResolution.upsert.mockResolvedValue({ alertKey: "MISSING_FEEDBACK:7", priority: "high" });
+
+    await adminService.updateAlertMetadata("MISSING_FEEDBACK:7", { priority: "high", assignedAdminId: 1, notes: "Follow up" }, 1);
+
+    expect(prisma.adminAlertResolution.upsert.mock.calls[0][0].create.materializedAt).toEqual(new Date(0));
+    expect(prisma.adminAlertResolution.upsert.mock.calls[0][0].create).toEqual(
+      expect.objectContaining({ priority: "high", assignedAdminId: 1, notes: "Follow up" })
+    );
+  });
+
+  it("bulk previews meeting status updates with skipped records", async () => {
+    prisma.meeting.findMany.mockResolvedValue([
+      { id: 1, status: "SCHEDULED", request: { mentee: { fullName: "Mentee" }, mentorProfile: { user: { fullName: "Mentor" } } } },
+      { id: 2, status: "COMPLETED", request: { mentee: { fullName: "Done" }, mentorProfile: { user: { fullName: "Mentor" } } } },
+    ]);
+
+    const result = await adminService.bulkUpdateMeetingStatuses({ meetingIds: [1, 2, 99], status: "CANCELLED", preview: true });
+
+    expect(result.eligibleCount).toBe(1);
+    expect(result.skipped).toEqual([
+      { id: 2, reason: "פגישות סופיות לא משתנות בפעולת אצווה." },
+      { id: 99, reason: "הפגישה לא נמצאה." },
+    ]);
+  });
+
+  it("bulk previews alert operations with skipped stale keys", async () => {
+    prisma.mentorProfile.findMany.mockResolvedValue([]);
+    prisma.meeting.findMany.mockResolvedValueOnce([{ id: 5, updatedAt: new Date(), request: { mentee: { fullName: "Mentee" }, mentorProfile: { user: { fullName: "Mentor" } } } }]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    prisma.mentoringRequest.findMany.mockResolvedValue([]);
+
+    const result = await adminService.bulkUpdateAlerts({ alertKeys: ["NO_SHOW:5", "NO_SHOW:99"], action: "resolve", preview: true }, 1);
+
+    expect(result.eligibleCount).toBe(1);
+    expect(result.skipped).toEqual([{ key: "NO_SHOW:99", reason: "ההתראה לא נמצאה או כבר לא קיימת." }]);
   });
 });

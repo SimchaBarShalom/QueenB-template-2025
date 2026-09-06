@@ -38,6 +38,14 @@ router.get("/users", async (req, res, next) => {
   }
 });
 
+router.get("/assignees", async (req, res, next) => {
+  try {
+    return res.json(await adminService.listAdminAssignees());
+  } catch (error) {
+    return handleAdminError(error, next, res);
+  }
+});
+
 router.get("/users/:id", async (req, res, next) => {
   try {
     return res.json(await adminService.getAdminUserDetail(req.params.id, req.user.id));
@@ -102,6 +110,14 @@ router.patch("/meetings/:id/status", async (req, res, next) => {
   }
 });
 
+router.post("/meetings/bulk-status", async (req, res, next) => {
+  try {
+    return res.json(await adminService.bulkUpdateMeetingStatuses(req.body));
+  } catch (error) {
+    return handleAdminError(error, next, res);
+  }
+});
+
 router.patch("/meetings/:id/schedule", async (req, res, next) => {
   try {
     return res.json(await adminService.updateMeetingSchedule(req.params.id, req.body));
@@ -137,6 +153,22 @@ router.patch("/alerts/:alertKey/resolve", async (req, res, next) => {
 router.patch("/alerts/:alertKey/unresolve", async (req, res, next) => {
   try {
     return res.json(await adminService.unresolveAlert(req.params.alertKey));
+  } catch (error) {
+    return handleAdminError(error, next, res);
+  }
+});
+
+router.patch("/alerts/:alertKey/metadata", async (req, res, next) => {
+  try {
+    return res.json(await adminService.updateAlertMetadata(req.params.alertKey, req.body, req.user.id));
+  } catch (error) {
+    return handleAdminError(error, next, res);
+  }
+});
+
+router.post("/alerts/bulk", async (req, res, next) => {
+  try {
+    return res.json(await adminService.bulkUpdateAlerts(req.body, req.user.id));
   } catch (error) {
     return handleAdminError(error, next, res);
   }

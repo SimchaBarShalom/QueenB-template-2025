@@ -10,6 +10,8 @@ const ACTIVE_REQUEST_STATUSES = [
 const ACTIVE_MEETING_STATUSES = ["SCHEDULED", "ATTENDANCE_CONFIRMED"];
 const FINAL_MEETING_STATUSES = ["COMPLETED", "NOT_COMPLETED", "CANCELLED"];
 const EDITABLE_MEETING_STATUSES = ["SCHEDULED", "ATTENDANCE_CONFIRMED"];
+const BULK_MEETING_STATUSES = ["COMPLETED", "NOT_COMPLETED", "CANCELLED"];
+const ALERT_PRIORITIES = ["low", "normal", "high", "urgent"];
 
 const USER_SUMMARY_SELECT = {
   id: true,
@@ -111,6 +113,21 @@ function normalizeDate(value, label) {
     throw statusError(`${label} must be a valid date`);
   }
   return date;
+}
+
+function normalizeIdList(value, label) {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw statusError(`${label} must be a non-empty array`);
+  }
+
+  return [...new Set(value.map((item) => parseId(item, label)))];
+}
+
+function meetingStatusSkipReason(meeting, status) {
+  if (!BULK_MEETING_STATUSES.includes(status)) return "סטטוס יעד לא נתמך.";
+  if (meeting.status === status) return "הפגישה כבר בסטטוס הזה.";
+  if (FINAL_MEETING_STATUSES.includes(meeting.status)) return "פגישות סופיות לא משתנות בפעולת אצווה.";
+  return null;
 }
 
 function serializeMentorProfile(profile) {
@@ -659,6 +676,51 @@ async function updateMeetingStatus(meetingId, status) {
   });
 }
 
+async function bulkUpdateMeetingStatuses(input = {}) {
+  const ids = normalizeIdList(input.meetingIds, "meetingIds");
+  const status = input.status;
+  if (!BULK_MEETING_STATUSES.includes(status)) {
+    throw statusError("Unsupported meeting status");
+  }
+
+  const meetings = await prisma.meeting.findMany({
+    where: { id: { in: ids } },
+    include: MEETING_INCLUDE,
+  });
+  const meetingById = new Map(meetings.map((meeting) => [meeting.id, meeting]));
+  const eligible = [];
+  const skipped = [];
+
+  ids.forEach((id) => {
+    const meeting = meetingById.get(id);
+    if (!meeting) {
+      skipped.push({ id, reason: "הפגישה לא נמצאה." });
+      return;
+    }
+    const reason = meetingStatusSkipReason(meeting, status);
+    if (reason) skipped.push({ id, reason });
+    else eligible.push(meeting);
+  });
+
+  if (input.preview) {
+    return {
+      preview: true,
+      status,
+      eligibleCount: eligible.length,
+      skipped,
+      eligible: eligible.map((meeting) => ({ id: meeting.id, mentorName: meeting.request.mentorProfile.user.fullName, menteeName: meeting.request.mentee.fullName })),
+    };
+  }
+
+  const updated = [];
+  for (const meeting of eligible) {
+    // Reuse the single-record lifecycle logic so request status rules stay authoritative.
+    updated.push(await updateMeetingStatus(meeting.id, status));
+  }
+
+  return { preview: false, status, updatedCount: updated.length, skipped, meetings: updated };
+}
+
 async function updateMeetingSchedule(meetingId, input = {}) {
   const id = parseId(meetingId);
   const scheduledStart = normalizeDate(input.scheduledStart, "scheduledStart");
@@ -860,6 +922,10 @@ async function getAdminAlerts(query = {}) {
   const rawAlerts = await buildRawAlerts();
   const resolutions = await prisma.adminAlertResolution.findMany({
     where: { alertKey: { in: rawAlerts.map((alert) => alert.key) } },
+    include: {
+      resolvedBy: { select: { id: true, fullName: true } },
+      assignedAdmin: { select: { id: true, fullName: true } },
+    },
   });
   const resolutionByKey = new Map(resolutions.map((resolution) => [resolution.alertKey, resolution]));
 
@@ -871,6 +937,12 @@ async function getAdminAlerts(query = {}) {
       resolved,
       resolvedAt: resolved ? resolution.resolvedAt : null,
       resolvedById: resolved ? resolution.resolvedById : null,
+      resolvedByName: resolved ? resolution.resolvedBy?.fullName || null : null,
+      priority: resolution?.priority || "normal",
+      assignedAdminId: resolution?.assignedAdminId || null,
+      assignedAdminName: resolution?.assignedAdmin?.fullName || null,
+      notes: resolution?.notes || "",
+      queueUpdatedAt: resolution?.queueUpdatedAt || resolution?.updatedAt || null,
     };
   });
 
@@ -882,7 +954,31 @@ async function getAdminAlerts(query = {}) {
   });
 }
 
-async function resolveAlert(alertKeyValue, currentAdminId) {
+async function upsertAlertQueueRecord(alert, currentAdminId, data = {}) {
+  const { materializedAt, ...restData } = data;
+  return prisma.adminAlertResolution.upsert({
+    where: { alertKey: alert.key },
+    update: {
+      alertType: alert.type,
+      entityType: alert.entityType,
+      entityId: alert.entityId,
+      ...(materializedAt ? { materializedAt } : {}),
+      queueUpdatedAt: new Date(),
+      ...restData,
+    },
+    create: {
+      alertKey: alert.key,
+      alertType: alert.type,
+      entityType: alert.entityType,
+      entityId: alert.entityId,
+      materializedAt: materializedAt || new Date(0),
+      resolvedById: restData.resolvedById || currentAdminId,
+      ...restData,
+    },
+  });
+}
+
+async function findRawAlert(alertKeyValue) {
   const alerts = await buildRawAlerts();
   const alert = alerts.find((item) => item.key === alertKeyValue);
 
@@ -890,45 +986,104 @@ async function resolveAlert(alertKeyValue, currentAdminId) {
     throw statusError("Alert not found", 404);
   }
 
-  return prisma.adminAlertResolution.upsert({
-    where: { alertKey: alert.key },
-    update: {
-      alertType: alert.type,
-      entityType: alert.entityType,
-      entityId: alert.entityId,
-      materializedAt: alert.materializedAt,
-      resolvedById: currentAdminId,
-      resolvedAt: new Date(),
-    },
-    create: {
-      alertKey: alert.key,
-      alertType: alert.type,
-      entityType: alert.entityType,
-      entityId: alert.entityId,
-      materializedAt: alert.materializedAt,
-      resolvedById: currentAdminId,
-    },
+  return alert;
+}
+
+async function resolveAlert(alertKeyValue, currentAdminId) {
+  const alert = await findRawAlert(alertKeyValue);
+  return upsertAlertQueueRecord(alert, currentAdminId, {
+    materializedAt: alert.materializedAt,
+    resolvedById: currentAdminId,
+    resolvedAt: new Date(),
   });
 }
 
 async function unresolveAlert(alertKeyValue) {
-  await prisma.adminAlertResolution.deleteMany({ where: { alertKey: alertKeyValue } });
+  await prisma.adminAlertResolution.updateMany({
+    where: { alertKey: alertKeyValue },
+    data: { materializedAt: new Date(0), queueUpdatedAt: new Date() },
+  });
   return { alertKey: alertKeyValue };
+}
+
+async function updateAlertMetadata(alertKeyValue, input = {}, currentAdminId) {
+  const alert = await findRawAlert(alertKeyValue);
+  const data = {};
+
+  if (input.priority !== undefined) {
+    if (!ALERT_PRIORITIES.includes(input.priority)) throw statusError("Unsupported alert priority");
+    data.priority = input.priority;
+  }
+
+  if (input.assignedAdminId !== undefined) {
+    const assignedAdminId = input.assignedAdminId === null || input.assignedAdminId === "" ? null : parseId(input.assignedAdminId, "assignedAdminId");
+    if (assignedAdminId) {
+      const admin = await prisma.user.findUnique({ where: { id: assignedAdminId }, select: { id: true, isAdmin: true } });
+      if (!admin?.isAdmin) throw statusError("Assigned user must be an admin");
+    }
+    data.assignedAdminId = assignedAdminId;
+  }
+
+  if (input.notes !== undefined) {
+    data.notes = normalizeOptionalString(input.notes);
+  }
+
+  return upsertAlertQueueRecord(alert, currentAdminId, data);
+}
+
+async function bulkUpdateAlerts(input = {}, currentAdminId) {
+  const alertKeys = Array.isArray(input.alertKeys) ? [...new Set(input.alertKeys.map((key) => String(key).trim()).filter(Boolean))] : [];
+  if (!alertKeys.length) throw statusError("alertKeys must be a non-empty array");
+  if (!["resolve", "reopen"].includes(input.action)) throw statusError("Unsupported alert action");
+
+  const rawAlerts = await buildRawAlerts();
+  const rawByKey = new Map(rawAlerts.map((alert) => [alert.key, alert]));
+  const eligible = [];
+  const skipped = [];
+
+  alertKeys.forEach((key) => {
+    const alert = rawByKey.get(key);
+    if (!alert) skipped.push({ key, reason: "ההתראה לא נמצאה או כבר לא קיימת." });
+    else eligible.push(alert);
+  });
+
+  if (input.preview) {
+    return { preview: true, action: input.action, eligibleCount: eligible.length, skipped, eligible: eligible.map((alert) => ({ key: alert.key, title: alert.title })) };
+  }
+
+  for (const alert of eligible) {
+    if (input.action === "resolve") await resolveAlert(alert.key, currentAdminId);
+    else await unresolveAlert(alert.key);
+  }
+
+  return { preview: false, action: input.action, updatedCount: eligible.length, skipped };
+}
+
+async function listAdminAssignees() {
+  return prisma.user.findMany({
+    where: { isAdmin: true },
+    select: { id: true, fullName: true, email: true },
+    orderBy: { fullName: "asc" },
+  });
 }
 
 module.exports = {
   cancelAdminRequest,
+  bulkUpdateAlerts,
+  bulkUpdateMeetingStatuses,
   getAdminAnalytics,
   getAdminAlerts,
   getAdminMeetingDetail,
   getAdminSummary,
   getAdminUserDetail,
+  listAdminAssignees,
   listAdminMeetings,
   listAdminUsers,
   resolveAlert,
   setMentorVisibility,
   setUserAdminStatus,
   unresolveAlert,
+  updateAlertMetadata,
   updateMeetingSchedule,
   updateMeetingStatus,
   updateMentorProfile,

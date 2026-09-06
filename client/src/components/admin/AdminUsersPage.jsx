@@ -4,11 +4,11 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   FormControl,
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   Stack,
   Switch,
@@ -24,6 +24,7 @@ import {
 import apiClient from "../../api/client";
 import AdminConfirmDialog from "./AdminConfirmDialog";
 import AdminLayout from "./AdminLayout";
+import { AdminPageHeader, AdminSurface } from "./AdminPrimitives";
 import { AdminEmpty, AdminError, AdminLoading } from "./AdminState";
 
 function CapabilityChips({ user }) {
@@ -45,6 +46,7 @@ function AdminUsersPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [pendingAction, setPendingAction] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   async function loadUsers() {
     try {
@@ -54,6 +56,7 @@ function AdminUsersPage() {
         params: { search: search || undefined, capability: capability || undefined },
       });
       setUsers(response.data);
+      setSelectedIds([]);
     } catch (requestError) {
       console.error(requestError);
       setError("לא הצלחנו לטעון משתמשות.");
@@ -141,13 +144,50 @@ function AdminUsersPage() {
     }
   };
 
+  const selectedUsers = users.filter((user) => selectedIds.includes(user.id));
+  const mentorSelection = selectedUsers.filter((user) => user.mentorProfile);
+  const adminSelection = selectedUsers.filter((user) => !user.isAdmin);
+
+  const toggleSelected = (id) => {
+    setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+
+  const runBulkMentorVisibility = (isActive) => {
+    setPendingAction({
+      title: isActive ? "להציג מנטוריות נבחרות?" : "להסתיר מנטוריות נבחרות?",
+      description: `${mentorSelection.length} מנטוריות יעודכנו. משתמשות שאינן מנטוריות ידולגו.`,
+      confirmLabel: isActive ? "הצגה" : "הסתרה",
+      confirmColor: isActive ? "primary" : "error",
+      run: async () => {
+        const targets = mentorSelection;
+        for (const user of targets) {
+          await updateMentorVisibility(user, isActive);
+        }
+        setSelectedIds([]);
+      },
+    });
+  };
+
+  const runBulkMakeAdmin = () => {
+    setPendingAction({
+      title: "להוסיף הרשאת מנהלת?",
+      description: `${adminSelection.length} משתמשות יקבלו גישה לאזור הניהול.`,
+      confirmLabel: "הוספת הרשאה",
+      run: async () => {
+        const targets = adminSelection;
+        for (const user of targets) {
+          await updateAdmin(user, true);
+        }
+        setSelectedIds([]);
+      },
+    });
+  };
+
   if (loading) return <AdminLoading />;
 
   return (
     <AdminLayout>
-      <Typography variant="h4" component="h1" sx={{ mb: 3, fontWeight: 800 }}>
-        משתמשות
-      </Typography>
+      <AdminPageHeader title="משתמשות" subtitle="חיפוש, הרשאות מנהלת ונראות מנטוריות בחיפוש." breadcrumbs={[{ label: "משתמשות" }]} />
       <AdminError message={error} />
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -155,7 +195,7 @@ function AdminUsersPage() {
         </Alert>
       )}
 
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+      <AdminSurface sx={{ p: 2, mb: 2 }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
           <TextField label="חיפוש" value={search} onChange={(event) => setSearch(event.target.value)} fullWidth />
           <FormControl sx={{ minWidth: 180 }}>
@@ -171,15 +211,30 @@ function AdminUsersPage() {
             סינון
           </Button>
         </Stack>
-      </Paper>
+      </AdminSurface>
+
+      {selectedIds.length > 0 && (
+        <AdminSurface sx={{ p: 1.5, mb: 2 }}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1} justifyContent="space-between" alignItems={{ md: "center" }}>
+            <Typography sx={{ fontWeight: 700 }}>{selectedIds.length} נבחרו</Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+              <Button size="small" variant="outlined" disabled={!adminSelection.length} onClick={runBulkMakeAdmin}>הוספת הרשאת מנהלת</Button>
+              <Button size="small" variant="outlined" disabled={!mentorSelection.length} onClick={() => runBulkMentorVisibility(true)}>הצגה בחיפוש</Button>
+              <Button size="small" color="error" variant="outlined" disabled={!mentorSelection.length} onClick={() => runBulkMentorVisibility(false)}>הסתרה מחיפוש</Button>
+            </Stack>
+          </Stack>
+        </AdminSurface>
+      )}
 
       {users.length === 0 ? (
         <AdminEmpty title="אין משתמשות להצגה" subtitle="נסי לשנות את הסינון." />
       ) : (
-        <Paper sx={{ borderRadius: 2, overflowX: "auto" }}>
+        <>
+        <AdminSurface sx={{ overflowX: "auto", display: { xs: "none", md: "block" } }}>
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox" />
                 <TableCell>שם</TableCell>
                 <TableCell>אימייל</TableCell>
                 <TableCell>יכולות</TableCell>
@@ -191,6 +246,9 @@ function AdminUsersPage() {
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.id}>
+                  <TableCell padding="checkbox">
+                    <Checkbox checked={selectedIds.includes(user.id)} onChange={() => toggleSelected(user.id)} />
+                  </TableCell>
                   <TableCell>{user.fullName}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
@@ -228,7 +286,33 @@ function AdminUsersPage() {
               ))}
             </TableBody>
           </Table>
-        </Paper>
+        </AdminSurface>
+        <Stack spacing={1.5} sx={{ display: { xs: "flex", md: "none" } }}>
+          {users.map((user) => (
+            <AdminSurface key={user.id} sx={{ p: 2 }}>
+              <Stack spacing={1.5}>
+                <Stack direction="row" justifyContent="space-between" spacing={1}>
+                  <Box>
+                    <Typography sx={{ fontWeight: 800 }}>{user.fullName}</Typography>
+                    <Typography variant="body2" color="text.secondary">{user.email}</Typography>
+                  </Box>
+                  <Checkbox checked={selectedIds.includes(user.id)} onChange={() => toggleSelected(user.id)} />
+                </Stack>
+                <CapabilityChips user={user} />
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2">מנהלת</Typography>
+                  <Switch checked={user.isAdmin} disabled={user.isAdmin && !user.permissions.canRemoveAdmin} onChange={(event) => requestAdminChange(user, event.target.checked)} />
+                </Stack>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2">נראות מנטורית</Typography>
+                  {user.mentorProfile ? <Switch checked={user.mentorProfile.isActive} onChange={(event) => requestMentorVisibilityChange(user, event.target.checked)} /> : <Typography variant="body2" color="text.secondary">לא מנטורית</Typography>}
+                </Stack>
+                <Button component={RouterLink} to={`/admin/users/${user.id}`} size="small" sx={{ alignSelf: "flex-start" }}>פרטים</Button>
+              </Stack>
+            </AdminSurface>
+          ))}
+        </Stack>
+        </>
       )}
 
       <AdminConfirmDialog

@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import {
   Alert,
+  Box,
   Button,
+  Checkbox,
   Chip,
   FormControl,
   InputLabel,
   MenuItem,
-  Paper,
   Select,
   Stack,
   Switch,
@@ -22,6 +23,7 @@ import {
 import apiClient from "../../api/client";
 import AdminConfirmDialog from "./AdminConfirmDialog";
 import AdminLayout from "./AdminLayout";
+import { AdminPageHeader, AdminSurface } from "./AdminPrimitives";
 import { AdminEmpty, AdminError, AdminLoading } from "./AdminState";
 import { formatDateTime, getMeetingStatusColor, MEETING_STATUS_LABELS } from "./adminFormatters";
 
@@ -43,6 +45,7 @@ function AdminMeetingsPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [pendingAction, setPendingAction] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   async function loadMeetings(nextFilters = filters) {
     try {
@@ -60,6 +63,7 @@ function AdminMeetingsPage() {
         },
       });
       setMeetings(response.data);
+      setSelectedIds([]);
     } catch (requestError) {
       console.error(requestError);
       setError("לא הצלחנו לטעון פגישות.");
@@ -133,13 +137,36 @@ function AdminMeetingsPage() {
     }
   };
 
+  const toggleSelected = (id) => {
+    setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
+
+  const requestBulkStatusUpdate = async (status) => {
+    try {
+      setError("");
+      const preview = await apiClient.post("/api/admin/meetings/bulk-status", { meetingIds: selectedIds, status, preview: true });
+      setPendingAction({
+        title: "עדכון סטטוס באצווה",
+        description: `${preview.data.eligibleCount} פגישות יעודכנו ל-${MEETING_STATUS_LABELS[status]}. ${preview.data.skipped.length} ידולגו.`,
+        confirmLabel: "עדכון פגישות",
+        confirmColor: status === "CANCELLED" ? "error" : status === "NOT_COMPLETED" ? "warning" : "primary",
+        run: async () => {
+          const response = await apiClient.post("/api/admin/meetings/bulk-status", { meetingIds: selectedIds, status });
+          setSuccess(`${response.data.updatedCount} פגישות עודכנו. ${response.data.skipped.length} דולגו.`);
+          await loadMeetings(filters);
+        },
+      });
+    } catch (requestError) {
+      console.error(requestError);
+      setError(requestError.response?.data?.error || "הכנת פעולת האצווה נכשלה.");
+    }
+  };
+
   if (loading) return <AdminLoading />;
 
   return (
     <AdminLayout>
-      <Typography variant="h4" component="h1" sx={{ mb: 3, fontWeight: 800 }}>
-        פגישות
-      </Typography>
+      <AdminPageHeader title="פגישות" subtitle="איתור פגישות בעייתיות, עדכון סטטוסים וכניסה מהירה לפרטי פגישה." breadcrumbs={[{ label: "פגישות" }]} />
       <AdminError message={error} />
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -147,7 +174,7 @@ function AdminMeetingsPage() {
         </Alert>
       )}
 
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+      <AdminSurface sx={{ p: 2, mb: 2 }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2} flexWrap="wrap" rowGap={2}>
           <FormControl sx={{ minWidth: 180 }}>
             <InputLabel>סטטוס</InputLabel>
@@ -176,15 +203,30 @@ function AdminMeetingsPage() {
             סינון
           </Button>
         </Stack>
-      </Paper>
+      </AdminSurface>
+
+      {selectedIds.length > 0 && (
+        <AdminSurface sx={{ p: 1.5, mb: 2 }}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1} justifyContent="space-between" alignItems={{ md: "center" }}>
+            <Typography sx={{ fontWeight: 700 }}>{selectedIds.length} פגישות נבחרו</Typography>
+            <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+              <Button size="small" variant="outlined" onClick={() => requestBulkStatusUpdate("COMPLETED")}>סימון כהושלמו</Button>
+              <Button size="small" variant="outlined" color="warning" onClick={() => requestBulkStatusUpdate("NOT_COMPLETED")}>סימון כלא הושלמו</Button>
+              <Button size="small" variant="outlined" color="error" onClick={() => requestBulkStatusUpdate("CANCELLED")}>ביטול</Button>
+            </Stack>
+          </Stack>
+        </AdminSurface>
+      )}
 
       {meetings.length === 0 ? (
         <AdminEmpty title="אין פגישות להצגה" subtitle="נסי לשנות את הסינון." />
       ) : (
-        <Paper sx={{ borderRadius: 2, overflowX: "auto" }}>
+        <>
+        <AdminSurface sx={{ overflowX: "auto", display: { xs: "none", md: "block" } }}>
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox" />
                 <TableCell>מועד</TableCell>
                 <TableCell>מנטורית</TableCell>
                 <TableCell>חניכה</TableCell>
@@ -196,6 +238,9 @@ function AdminMeetingsPage() {
             <TableBody>
               {meetings.map((meeting) => (
                 <TableRow key={meeting.id}>
+                  <TableCell padding="checkbox">
+                    <Checkbox checked={selectedIds.includes(meeting.id)} onChange={() => toggleSelected(meeting.id)} />
+                  </TableCell>
                   <TableCell>{formatDateTime(meeting.scheduledStart)}</TableCell>
                   <TableCell>{meeting.mentor.fullName}</TableCell>
                   <TableCell>{meeting.mentee.fullName}</TableCell>
@@ -223,7 +268,33 @@ function AdminMeetingsPage() {
               ))}
             </TableBody>
           </Table>
-        </Paper>
+        </AdminSurface>
+        <Stack spacing={1.5} sx={{ display: { xs: "flex", md: "none" } }}>
+          {meetings.map((meeting) => (
+            <AdminSurface key={meeting.id} sx={{ p: 2 }}>
+              <Stack spacing={1.25}>
+                <Stack direction="row" justifyContent="space-between" spacing={1}>
+                  <Box>
+                    <Typography sx={{ fontWeight: 800 }}>{formatDateTime(meeting.scheduledStart)}</Typography>
+                    <Typography variant="body2" color="text.secondary">{meeting.mentor.fullName} / {meeting.mentee.fullName}</Typography>
+                  </Box>
+                  <Checkbox checked={selectedIds.includes(meeting.id)} onChange={() => toggleSelected(meeting.id)} />
+                </Stack>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Chip label={MEETING_STATUS_LABELS[meeting.status] || meeting.status} color={getMeetingStatusColor(meeting.status)} size="small" />
+                  <Typography variant="body2" color="text.secondary">פידבק {meeting.feedbackStatus.count}/2</Typography>
+                </Stack>
+                <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
+                  <Button component={RouterLink} to={`/admin/meetings/${meeting.id}`} size="small">פרטים</Button>
+                  <Button size="small" disabled={meeting.status === "COMPLETED"} onClick={() => requestStatusUpdate(meeting, "COMPLETED")}>הושלמה</Button>
+                  <Button size="small" disabled={meeting.status === "NOT_COMPLETED"} onClick={() => requestStatusUpdate(meeting, "NOT_COMPLETED")}>לא הושלמה</Button>
+                  <Button size="small" color="error" disabled={meeting.status === "CANCELLED"} onClick={() => requestStatusUpdate(meeting, "CANCELLED")}>ביטול</Button>
+                </Stack>
+              </Stack>
+            </AdminSurface>
+          ))}
+        </Stack>
+        </>
       )}
 
       <AdminConfirmDialog
