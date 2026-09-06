@@ -4,7 +4,9 @@ async function getAllMentors() {
   const mentors = await prisma.user.findMany({
     where: {
       mentorProfile: {
-        isNot: null,
+        is: {
+          isActive: true,
+        },
       },
     },
 

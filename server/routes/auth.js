@@ -5,6 +5,7 @@ const {
   validateRegistrationInput,
   validateLoginInput,
 } = require("../services/authService");
+const { requireAuth, signAuthToken } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.post("/register", async (req, res, next) => {
     }
 
     const user = await registerUser(req.body);
-    return res.status(201).json({ user });
+    return res.status(201).json({ user, token: signAuthToken(user) });
   } catch (error) {
     if (error.code === "P2002") {
       return res.status(409).json({ error: "Email already exists" });
@@ -41,10 +42,14 @@ router.post("/login", async (req, res, next) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    return res.json({ user });
+    return res.json({ user, token: signAuthToken(user) });
   } catch (error) {
     return next(error);
   }
+});
+
+router.get("/me", requireAuth, async (req, res) => {
+  return res.json({ user: req.user });
 });
 
 module.exports = router;
