@@ -15,6 +15,33 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.fc {
+  font-family: "Rubik", "Assistant", "Arial", sans-serif;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.fc .fc-button-primary {
+  background-color: #E6317A;
+  border-color: #E6317A;
+}
+
+.fc .fc-button-primary:hover,
+.fc .fc-button-primary:focus {
+  background-color: #c91e63;
+  border-color: #c91e63;
+}
+
+.fc .fc-event {
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 1px 3px;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;

@@ -178,7 +178,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
 
     try {
       const response = await axios.post("/api/auth/register", payload);
-      onRegister(response.data.user);
+      onRegister(response.data.user, response.data.token);
       handleClose();
       navigate(getDefaultAreaPath(response.data.user));
     } catch (requestError) {

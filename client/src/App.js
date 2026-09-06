@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { CacheProvider } from "@emotion/react";
-import { ThemeProvider, CssBaseline } from "@mui/material";
+import { Box, CircularProgress, ThemeProvider, CssBaseline } from "@mui/material";
 import getTheme from "./theme";
 import { rtlCache, ltrCache } from "./rtlCache";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
+import apiClient, { clearAuth, getStoredToken, getStoredUser, storeAuth } from "./api/client";
 import AppLayout from "./components/AppLayout";
 import HomePage from "./components/HomePage";
 import LoginDialog from "./components/LoginDialog";
@@ -14,27 +15,94 @@ import RoleAreaPage from "./components/RoleAreaPage";
 import MenteeDashboard from "./components/MenteeDashboard";
 import MentorSearchPage from "./components/MentorSearchPage";
 import MenteeMeetingsPage from "./components/MenteeMeetingsPage";
+import AdminDashboardPage from "./components/admin/AdminDashboardPage";
+import AdminUsersPage from "./components/admin/AdminUsersPage";
+import AdminUserDetailsPage from "./components/admin/AdminUserDetailsPage";
+import AdminMeetingsPage from "./components/admin/AdminMeetingsPage";
+import AdminMeetingDetailsPage from "./components/admin/AdminMeetingDetailsPage";
+import AdminCalendarPage from "./components/admin/AdminCalendarPage";
+import AdminAlertsPage from "./components/admin/AdminAlertsPage";
+import { getDefaultAreaPath } from "./utils/areaRouting";
+
+function RequireAuth({ currentUser, authLoading, children }) {
+  if (authLoading) {
+    return (
+      <Box sx={{ py: 8, display: "flex", justifyContent: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!currentUser) {
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
+function RequireAdmin({ currentUser, authLoading, children }) {
+  if (authLoading) {
+    return (
+      <Box sx={{ py: 8, display: "flex", justifyContent: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!currentUser) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (!currentUser.isAdmin) {
+    return <Navigate to={getDefaultAreaPath(currentUser)} replace />;
+  }
+
+  return children;
+}
 
 function ThemedApp() {
   const { direction } = useLanguage();
   const theme = useMemo(() => getTheme(direction), [direction]);
-  const [currentUser, setCurrentUser] = useState(() => {
-    const savedUser = window.localStorage.getItem("queensMatchUser");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [currentUser, setCurrentUser] = useState(() => getStoredUser());
+  const [authLoading, setAuthLoading] = useState(Boolean(getStoredToken()));
   // "login" | "register" | null - which auth dialog (if any) is open. Both
   // dialogs are rendered once here so they can be triggered from the public
   // navbar and swapped between ("צור חשבון" / "כניסה" links) without routing.
   const [authDialog, setAuthDialog] = useState(null);
 
-  const handleAuthSuccess = (user) => {
+  useEffect(() => {
+    async function restoreSession() {
+      const token = getStoredToken();
+      if (!token) {
+        setAuthLoading(false);
+        return;
+      }
+
+      try {
+        const response = await apiClient.get("/api/auth/me");
+        const user = response.data.user;
+        setCurrentUser(user);
+        window.localStorage.setItem("queensMatchUser", JSON.stringify(user));
+      } catch (error) {
+        console.error(error);
+        clearAuth();
+        setCurrentUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    }
+
+    restoreSession();
+  }, []);
+
+  const handleAuthSuccess = (user, token) => {
     setCurrentUser(user);
-    window.localStorage.setItem("queensMatchUser", JSON.stringify(user));
+    storeAuth({ user, token });
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
-    window.localStorage.removeItem("queensMatchUser");
+    clearAuth();
   };
 
   return (
@@ -50,12 +118,102 @@ function ThemedApp() {
           >
             <Routes>
               <Route path="/" element={<HomePage onOpenRegister={() => setAuthDialog("register")} />} />
-              <Route path="/profile" element={<ProfilePage user={currentUser} />} />
-              <Route path="/mentee" element={<MenteeDashboard currentUser={currentUser} />} />
-              <Route path="/mentee/mentors" element={<MentorSearchPage />} />
-              <Route path="/mentee/meetings" element={<MenteeMeetingsPage />} />
-              <Route path="/mentor" element={<RoleAreaPage role="MENTOR" />} />
-              <Route path="/admin" element={<RoleAreaPage role="ADMIN" />} />
+              <Route
+                path="/profile"
+                element={
+                  <RequireAuth currentUser={currentUser} authLoading={authLoading}>
+                    <ProfilePage user={currentUser} />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/mentee"
+                element={
+                  <RequireAuth currentUser={currentUser} authLoading={authLoading}>
+                    <MenteeDashboard currentUser={currentUser} />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/mentee/mentors"
+                element={
+                  <RequireAuth currentUser={currentUser} authLoading={authLoading}>
+                    <MentorSearchPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/mentee/meetings"
+                element={
+                  <RequireAuth currentUser={currentUser} authLoading={authLoading}>
+                    <MenteeMeetingsPage />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/mentor"
+                element={
+                  <RequireAuth currentUser={currentUser} authLoading={authLoading}>
+                    <RoleAreaPage role="MENTOR" />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <RequireAdmin currentUser={currentUser} authLoading={authLoading}>
+                    <AdminDashboardPage />
+                  </RequireAdmin>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <RequireAdmin currentUser={currentUser} authLoading={authLoading}>
+                    <AdminUsersPage />
+                  </RequireAdmin>
+                }
+              />
+              <Route
+                path="/admin/users/:id"
+                element={
+                  <RequireAdmin currentUser={currentUser} authLoading={authLoading}>
+                    <AdminUserDetailsPage />
+                  </RequireAdmin>
+                }
+              />
+              <Route
+                path="/admin/meetings"
+                element={
+                  <RequireAdmin currentUser={currentUser} authLoading={authLoading}>
+                    <AdminMeetingsPage />
+                  </RequireAdmin>
+                }
+              />
+              <Route
+                path="/admin/meetings/:id"
+                element={
+                  <RequireAdmin currentUser={currentUser} authLoading={authLoading}>
+                    <AdminMeetingDetailsPage />
+                  </RequireAdmin>
+                }
+              />
+              <Route
+                path="/admin/calendar"
+                element={
+                  <RequireAdmin currentUser={currentUser} authLoading={authLoading}>
+                    <AdminCalendarPage />
+                  </RequireAdmin>
+                }
+              />
+              <Route
+                path="/admin/alerts"
+                element={
+                  <RequireAdmin currentUser={currentUser} authLoading={authLoading}>
+                    <AdminAlertsPage />
+                  </RequireAdmin>
+                }
+              />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppLayout>
