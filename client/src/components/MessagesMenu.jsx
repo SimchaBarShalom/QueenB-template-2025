@@ -16,9 +16,33 @@ import { isMentorUser } from "../utils/areaRouting";
 
 function messageFromRequest(request) {
   const rounds = request.schedulingRounds || [];
-  const latestNotification = request.notifications?.[0];
+  const matchedNotification = request.notifications?.find(
+    (notification) => notification.type === "MEETING_MATCHED"
+  );
+  const latestNotification = request.notifications?.find(
+    (notification) => notification.type === "RESCHEDULE_REQUIRED"
+  );
   const latestRound = rounds[0];
   const menteeName = request.mentee?.fullName || "החניכה";
+
+  if (matchedNotification) {
+    const meeting = request.meetings?.find((item) =>
+      ["SCHEDULED", "ATTENDANCE_CONFIRMED"].includes(item.status)
+    );
+    const date = meeting
+      ? new Date(meeting.scheduledStart).toLocaleString("he-IL", {
+          dateStyle: "short",
+          timeStyle: "short",
+        })
+      : "";
+
+    return {
+      id: `notification:${matchedNotification.id}`,
+      title: "נקבעה פגישה חדשה",
+      text: `${menteeName} בחרה מועד${date ? `: ${date}` : ""}.`,
+      createdAt: matchedNotification.createdAt,
+    };
+  }
 
   if (
     latestNotification &&

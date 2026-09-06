@@ -23,6 +23,12 @@ import {
   MentorUpcomingMeetingCard,
 } from "./MentorMeetingCards";
 import OfferSlotsDialog from "./OfferSlotsDialog";
+import FeedbackDialog from "./FeedbackDialog";
+import {
+  confirmMeetingOutcome,
+  offerRescheduleSlots,
+  submitMeetingFeedback,
+} from "../services/meetingsService";
 
 const SECTION_TABS = [
   { id: "past-section", label: "פגישות שהתקיימו" },
@@ -48,9 +54,10 @@ function getTopic(request) {
   return topics.length > 0 ? topics.map((topic) => topic.name).join(", ") : "מנטורינג";
 }
 
-function toMeetingView(request, meeting) {
+function toMeetingView(request, meeting, currentUserId) {
   return {
     id: meeting.id,
+    requestId: request.id,
     menteeName: request.mentee?.fullName || "חניכה",
     topic: getTopic(request),
     date: formatDate(meeting.scheduledStart),
@@ -58,6 +65,16 @@ function toMeetingView(request, meeting) {
     endTime: formatTime(meeting.scheduledEnd),
     status: meeting.status,
     timestamp: new Date(meeting.scheduledStart).getTime(),
+    endTimestamp: new Date(meeting.scheduledEnd).getTime(),
+    rescheduleUsed: (request.schedulingRounds || []).some(
+      (round) => round.type === "RESCHEDULE_BEFORE_MEETING"
+    ),
+    feedbackSubmitted: (meeting.feedback || []).some(
+      (feedback) => feedback.authorId === currentUserId
+    ),
+    outcomeSubmitted: (meeting.outcomeConfirmations || []).some(
+      (confirmation) => confirmation.userId === currentUserId
+    ),
   };
 }
 
@@ -113,6 +130,8 @@ function MentorMeetingsPage({ currentUser }) {
   const [error, setError] = useState("");
   const [action, setAction] = useState(null);
   const [slotRequest, setSlotRequest] = useState(null);
+  const [rescheduleMeeting, setRescheduleMeeting] = useState(null);
+  const [feedbackMeeting, setFeedbackMeeting] = useState(null);
   const [notification, setNotification] = useState({
     open: false,
     severity: "success",
@@ -150,10 +169,14 @@ function MentorMeetingsPage({ currentUser }) {
 
     requests.forEach((request) => {
       (request.meetings || []).forEach((meeting) => {
-        const view = toMeetingView(request, meeting);
+        const view = toMeetingView(request, meeting, currentUser.id);
+        const endedUnconfirmed =
+          ["SCHEDULED", "ATTENDANCE_CONFIRMED"].includes(meeting.status) &&
+          view.endTimestamp < now &&
+          !view.outcomeSubmitted;
 
-        if (meeting.status === "COMPLETED") {
-          past.push(view);
+        if (meeting.status === "COMPLETED" || endedUnconfirmed) {
+          past.push({ ...view, needsConfirmation: endedUnconfirmed });
         } else if (
           ["SCHEDULED", "ATTENDANCE_CONFIRMED"].includes(meeting.status) &&
           view.timestamp >= now
@@ -177,12 +200,14 @@ function MentorMeetingsPage({ currentUser }) {
           (request) =>
             request.status === "CANCELLED" &&
             hasExtraSlotsRound(request) &&
-            (request.notifications || []).length > 0 &&
+            (request.notifications || []).some(
+              (notification) => notification.type === "RESCHEDULE_REQUIRED"
+            ) &&
             isCancelledThisMonth(request)
         )
         .map(toRequestView),
     };
-  }, [requests]);
+  }, [currentUser.id, requests]);
 
   const replaceRequest = (updatedRequest) => {
     setRequests((current) =>
@@ -231,6 +256,66 @@ function MentorMeetingsPage({ currentUser }) {
         await loadRequests();
       }
 
+      return false;
+    } finally {
+      setAction(null);
+    }
+  };
+
+  const handleReschedule = async (slots) => {
+    if (!rescheduleMeeting) return false;
+
+    try {
+      setAction({ requestId: rescheduleMeeting.requestId, type: "reschedule" });
+      await offerRescheduleSlots(rescheduleMeeting.requestId, slots);
+      await loadRequests();
+      showNotification("success", "הזמנים החדשים נשלחו לחניכה.");
+      return true;
+    } catch (requestError) {
+      showNotification(
+        "error",
+        getRequestErrorMessage(requestError, "שינוי מועד הפגישה נכשל.")
+      );
+      return false;
+    } finally {
+      setAction(null);
+    }
+  };
+
+  const handleOutcome = async (meeting, occurred) => {
+    try {
+      setAction({ meetingId: meeting.id, type: "outcome" });
+      await confirmMeetingOutcome(meeting.id, occurred);
+      await loadRequests();
+      if (occurred) {
+        setFeedbackMeeting(meeting);
+      } else {
+        showNotification("success", "הפגישה סומנה כלא התקיימה.");
+      }
+    } catch (requestError) {
+      showNotification(
+        "error",
+        getRequestErrorMessage(requestError, "עדכון תוצאת הפגישה נכשל.")
+      );
+    } finally {
+      setAction(null);
+    }
+  };
+
+  const handleFeedback = async (feedback) => {
+    if (!feedbackMeeting) return false;
+
+    try {
+      setAction({ meetingId: feedbackMeeting.id, type: "feedback" });
+      await submitMeetingFeedback(feedbackMeeting.id, feedback);
+      await loadRequests();
+      showNotification("success", "המשוב נשמר.");
+      return true;
+    } catch (requestError) {
+      showNotification(
+        "error",
+        getRequestErrorMessage(requestError, "שמירת המשוב נכשלה.")
+      );
       return false;
     } finally {
       setAction(null);
@@ -298,7 +383,13 @@ function MentorMeetingsPage({ currentUser }) {
               <EmptyState>אין עדיין היסטוריית פגישות.</EmptyState>
             ) : (
               pastMeetings.map((meeting) => (
-                <MentorPastMeetingCard key={meeting.id} meeting={meeting} />
+                <MentorPastMeetingCard
+                  key={meeting.id}
+                  meeting={meeting}
+                  loading={action?.meetingId === meeting.id}
+                  onConfirm={handleOutcome}
+                  onFeedback={setFeedbackMeeting}
+                />
               ))
             )}
           </Stack>
@@ -315,7 +406,11 @@ function MentorMeetingsPage({ currentUser }) {
               <EmptyState>אין פגישות מתוכננות כרגע.</EmptyState>
             ) : (
               upcomingMeetings.map((meeting) => (
-                <MentorUpcomingMeetingCard key={meeting.id} meeting={meeting} />
+                <MentorUpcomingMeetingCard
+                  key={meeting.id}
+                  meeting={meeting}
+                  onReschedule={setRescheduleMeeting}
+                />
               ))
             )}
           </Stack>
@@ -387,6 +482,24 @@ function MentorMeetingsPage({ currentUser }) {
         loading={action?.type === "slots"}
         onClose={() => setSlotRequest(null)}
         onSubmit={handleOfferSlots}
+      />
+
+      <OfferSlotsDialog
+        open={Boolean(rescheduleMeeting)}
+        request={{ menteeName: rescheduleMeeting?.menteeName }}
+        durationMinutes={currentUser.mentorProfile.meetingDurationMinutes}
+        loading={action?.type === "reschedule"}
+        title="שינוי מועד והצעת זמנים"
+        submitLabel="שליחת זמנים חדשים"
+        onClose={() => setRescheduleMeeting(null)}
+        onSubmit={handleReschedule}
+      />
+
+      <FeedbackDialog
+        open={Boolean(feedbackMeeting)}
+        loading={action?.type === "feedback"}
+        onClose={() => setFeedbackMeeting(null)}
+        onSubmit={handleFeedback}
       />
 
       <Snackbar

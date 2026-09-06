@@ -18,22 +18,60 @@ function InfoRow({ children }) {
   );
 }
 
-export function MentorPastMeetingCard({ meeting }) {
+export function MentorPastMeetingCard({ meeting, loading, onConfirm, onFeedback }) {
   return (
     <CardShell>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h6">{meeting.menteeName}</Typography>
-        <Chip size="small" color="success" label="התקיימה" />
+        <Chip
+          size="small"
+          color={meeting.needsConfirmation ? "default" : "success"}
+          label={meeting.needsConfirmation ? "ממתינה לאישור" : "התקיימה"}
+        />
       </Stack>
       <InfoRow>
         {meeting.date} | {meeting.startTime}–{meeting.endTime}
       </InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{meeting.topic}</Typography>
+      {meeting.needsConfirmation ? (
+        <Stack direction="row" spacing={1} sx={{ pt: 0.5 }}>
+          <Button
+            variant="contained"
+            size="small"
+            disabled={loading}
+            onClick={() => onConfirm(meeting, true)}
+          >
+            התקיימה
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            disabled={loading}
+            onClick={() => onConfirm(meeting, false)}
+          >
+            לא התקיימה
+          </Button>
+        </Stack>
+      ) : meeting.feedbackSubmitted ? (
+        <Typography variant="body2" color="success.main" sx={{ fontWeight: 700 }}>
+          המשוב הוגש
+        </Typography>
+      ) : (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => onFeedback(meeting)}
+          sx={{ alignSelf: "flex-start" }}
+        >
+          הוספת משוב
+        </Button>
+      )}
     </CardShell>
   );
 }
 
-export function MentorUpcomingMeetingCard({ meeting }) {
+export function MentorUpcomingMeetingCard({ meeting, onReschedule }) {
   return (
     <CardShell>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -44,6 +82,16 @@ export function MentorUpcomingMeetingCard({ meeting }) {
         {meeting.date} | {meeting.startTime}–{meeting.endTime}
       </InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{meeting.topic}</Typography>
+      {!meeting.rescheduleUsed && (
+        <Button
+          size="small"
+          variant="outlined"
+          onClick={() => onReschedule(meeting)}
+          sx={{ alignSelf: "flex-start" }}
+        >
+          שינוי מועד
+        </Button>
+      )}
     </CardShell>
   );
 }

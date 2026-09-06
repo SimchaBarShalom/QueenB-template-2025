@@ -11,6 +11,7 @@ const MENTEE_EMAILS = [
   "yael@queenb.org",
   "tamar@queenb.org",
   "maya@queenb.org",
+  "ronit@queenb.org",
 ];
 
 function hoursFromNow(hours) {
@@ -204,6 +205,14 @@ async function main() {
     yearsOfExperience: 0,
     technologies: [technologies[0]],
   });
+  const ronit = await upsertMentee({
+    email: "ronit@queenb.org",
+    fullName: "Ronit Bar",
+    jobTitle: "Junior Backend Developer",
+    workplace: "Community Lab",
+    yearsOfExperience: 1,
+    technologies: [technologies[1], technologies[3]],
+  });
 
   await replaceDemoRequests(mentorProfile.id);
 
@@ -290,6 +299,13 @@ async function main() {
           status: "SCHEDULED",
         },
       },
+      notifications: {
+        create: {
+          recipientId: mentorUser.id,
+          type: "MEETING_MATCHED",
+          channel: "IN_APP",
+        },
+      },
     },
   });
 
@@ -358,7 +374,24 @@ async function main() {
     },
   });
 
-  console.log("Seeded mentor@queenb.org with 6 mentee requests.");
+  const outcomeStart = hoursFromNow(-4);
+  await prisma.mentoringRequest.create({
+    data: {
+      menteeId: ronit.id,
+      mentorProfileId: mentorProfile.id,
+      status: "MATCHED",
+      meetings: {
+        create: {
+          attemptNumber: 1,
+          scheduledStart: outcomeStart,
+          scheduledEnd: minutesFrom(outcomeStart, durationMinutes),
+          status: "SCHEDULED",
+        },
+      },
+    },
+  });
+
+  console.log("Seeded mentor@queenb.org with 7 mentee requests.");
   console.log(`All seeded accounts use password: ${DEV_PASSWORD}`);
 }
 

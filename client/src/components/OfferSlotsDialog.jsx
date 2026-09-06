@@ -20,7 +20,16 @@ function localDateTimeMinimum() {
   return localTime.toISOString().slice(0, 16);
 }
 
-function OfferSlotsDialog({ open, request, durationMinutes, loading, onClose, onSubmit }) {
+function OfferSlotsDialog({
+  open,
+  request,
+  durationMinutes,
+  loading,
+  title = "קבלה והצעת זמנים",
+  submitLabel = "שליחת זמנים",
+  onClose,
+  onSubmit,
+}) {
   const [startTimes, setStartTimes] = useState([""]);
   const [error, setError] = useState("");
 
@@ -71,7 +80,7 @@ function OfferSlotsDialog({ open, request, durationMinutes, loading, onClose, on
   return (
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="sm" fullWidth>
       <Box component="form" onSubmit={handleSubmit}>
-        <DialogTitle>קבלה והצעת זמנים</DialogTitle>
+        <DialogTitle>{title}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography color="text.secondary">
@@ -123,7 +132,7 @@ function OfferSlotsDialog({ open, request, durationMinutes, loading, onClose, on
             ביטול
           </Button>
           <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? "שומרת..." : "שליחת זמנים"}
+            {loading ? "שומרת..." : submitLabel}
           </Button>
         </DialogActions>
       </Box>

@@ -4,6 +4,8 @@ const {
   getMentoringRequestsByMentee,
   getMentoringRequestsByMentorUser,
   offerMentoringRequestSlots,
+  selectMentoringRequestSlot,
+  offerRescheduleSlots,
   rejectMentoringRequest,
   cancelMentoringRequest,
   declineOfferedSlots,
@@ -78,6 +80,34 @@ router.patch("/:requestId/reject", authenticate, async (req, res, next) => {
 router.post("/:requestId/slots", authenticate, async (req, res, next) => {
   try {
     const request = await offerMentoringRequestSlots({
+      requestId: req.params.requestId,
+      userId: req.auth.userId,
+      slots: req.body.slots,
+    });
+
+    return res.status(201).json(request);
+  } catch (error) {
+    return handleServiceError(error, res, next);
+  }
+});
+
+router.post("/:requestId/select-slot", authenticate, async (req, res, next) => {
+  try {
+    const request = await selectMentoringRequestSlot({
+      requestId: req.params.requestId,
+      userId: req.auth.userId,
+      slotId: req.body.slotId,
+    });
+
+    return res.status(201).json(request);
+  } catch (error) {
+    return handleServiceError(error, res, next);
+  }
+});
+
+router.post("/:requestId/reschedule-slots", authenticate, async (req, res, next) => {
+  try {
+    const request = await offerRescheduleSlots({
       requestId: req.params.requestId,
       userId: req.auth.userId,
       slots: req.body.slots,

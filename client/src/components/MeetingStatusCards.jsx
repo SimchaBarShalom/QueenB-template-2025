@@ -24,7 +24,7 @@ function InfoRow({ children }) {
   );
 }
 
-export function CompletedMeetingCard({ meeting, onAddFeedback }) {
+export function CompletedMeetingCard({ meeting, loading, onConfirm, onAddFeedback }) {
   return (
     <CardShell>
       <Typography variant="h6" component="h3">
@@ -35,39 +35,63 @@ export function CompletedMeetingCard({ meeting, onAddFeedback }) {
       </InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{meeting.topic}</Typography>
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1.5}
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        justifyContent="space-between"
-        sx={{ mt: 1, pt: 1.5, borderTop: "1px solid #f6d3e0" }}
-      >
-        {meeting.feedbackSubmitted ? (
-          <Stack direction="row" spacing={0.75} alignItems="center">
-            <CheckCircleIcon sx={{ fontSize: 18, color: "success.main" }} />
-            <Typography variant="body2" sx={{ color: "success.main", fontWeight: 700 }}>
-              המשוב הוגש
-            </Typography>
-          </Stack>
-        ) : (
-          <>
+      {meeting.needsConfirmation ? (
+        <Stack direction="row" spacing={1.5} sx={{ mt: 1, pt: 1.5, borderTop: "1px solid #f6d3e0" }}>
+          <Button
+            size="small"
+            variant="contained"
+            disabled={loading}
+            onClick={() => onConfirm(meeting, true)}
+            sx={{ borderRadius: 999 }}
+          >
+            התקיימה
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            color="error"
+            disabled={loading}
+            onClick={() => onConfirm(meeting, false)}
+            sx={{ borderRadius: 999 }}
+          >
+            לא התקיימה
+          </Button>
+        </Stack>
+      ) : (
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          justifyContent="space-between"
+          sx={{ mt: 1, pt: 1.5, borderTop: "1px solid #f6d3e0" }}
+        >
+          {meeting.feedbackSubmitted ? (
             <Stack direction="row" spacing={0.75} alignItems="center">
-              <RadioButtonUncheckedIcon sx={{ fontSize: 18, color: "text.disabled" }} />
-              <Typography variant="body2" color="text.secondary">
-                טרם הוגש משוב
+              <CheckCircleIcon sx={{ fontSize: 18, color: "success.main" }} />
+              <Typography variant="body2" sx={{ color: "success.main", fontWeight: 700 }}>
+                המשוב הוגש
               </Typography>
             </Stack>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={() => onAddFeedback(meeting)}
-              sx={{ borderRadius: 999 }}
-            >
-              הוספת משוב
-            </Button>
-          </>
-        )}
-      </Stack>
+          ) : (
+            <>
+              <Stack direction="row" spacing={0.75} alignItems="center">
+                <RadioButtonUncheckedIcon sx={{ fontSize: 18, color: "text.disabled" }} />
+                <Typography variant="body2" color="text.secondary">
+                  טרם הוגש משוב
+                </Typography>
+              </Stack>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => onAddFeedback(meeting)}
+                sx={{ borderRadius: 999 }}
+              >
+                הוספת משוב
+              </Button>
+            </>
+          )}
+        </Stack>
+      )}
     </CardShell>
   );
 }

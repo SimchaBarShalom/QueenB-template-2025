@@ -22,15 +22,23 @@ const MENTOR_REQUEST_INCLUDE = {
     orderBy: { roundNumber: "desc" },
   },
   meetings: {
+    include: {
+      outcomeConfirmations: {
+        select: { userId: true, occurred: true },
+      },
+      feedback: {
+        select: { authorId: true, answers: true },
+      },
+    },
     orderBy: { scheduledStart: "desc" },
   },
   notifications: {
     where: {
-      type: "RESCHEDULE_REQUIRED",
       channel: "IN_APP",
     },
     select: {
       id: true,
+      type: true,
       createdAt: true,
     },
     orderBy: { createdAt: "desc" },
@@ -149,6 +157,14 @@ async function getMentoringRequestsByMentee(menteeId) {
       },
 
       meetings: {
+        include: {
+          outcomeConfirmations: {
+            select: { userId: true, occurred: true },
+          },
+          feedback: {
+            select: { authorId: true, answers: true },
+          },
+        },
         orderBy: {
           attemptNumber: "desc",
         },
@@ -188,7 +204,7 @@ async function getOwnedPendingRequest(requestId, userId) {
     },
     include: {
       mentorProfile: {
-        select: { id: true, meetingDurationMinutes: true },
+        select: { id: true, meetingDurationMinutes: true, meetingCapacity: true },
       },
       schedulingRounds: {
         select: { roundNumber: true },
@@ -261,6 +277,17 @@ async function rejectMentoringRequest({ requestId, userId }) {
 
 async function offerMentoringRequestSlots({ requestId, userId, slots }) {
   const request = await getOwnedPendingRequest(requestId, userId);
+  const usedCapacity = await prisma.mentoringRequest.count({
+    where: {
+      mentorProfileId: request.mentorProfile.id,
+      status: { in: CAPACITY_STATUSES },
+    },
+  });
+
+  if (usedCapacity >= request.mentorProfile.meetingCapacity) {
+    throw createServiceError("הגעת למכסת הפגישות שלך", 409);
+  }
+
   const normalizedSlots = validateAndNormalizeSlots(
     slots,
     request.mentorProfile.meetingDurationMinutes
@@ -287,6 +314,198 @@ async function offerMentoringRequestSlots({ requestId, userId, slots }) {
         roundNumber,
         type: roundType,
         offeredSlots: { create: normalizedSlots },
+      },
+    });
+  });
+
+  return prisma.mentoringRequest.findUnique({
+    where: { id: request.id },
+    include: MENTOR_REQUEST_INCLUDE,
+  });
+}
+
+const CAPACITY_STATUSES = [
+  "MATCHED",
+  "ATTENDANCE_CONFIRMED",
+  "COMPLETED",
+  "FEEDBACK_COMPLETED",
+];
+
+async function selectMentoringRequestSlot({ requestId, userId, slotId }) {
+  const request = await prisma.mentoringRequest.findFirst({
+    where: {
+      id: Number(requestId),
+      menteeId: Number(userId),
+      status: "WAITING_FOR_MENTEE_SELECTION",
+    },
+    include: {
+      mentorProfile: {
+        select: {
+          id: true,
+          userId: true,
+          meetingCapacity: true,
+        },
+      },
+      schedulingRounds: {
+        include: { offeredSlots: true },
+        orderBy: { roundNumber: "desc" },
+        take: 1,
+      },
+      meetings: {
+        select: { attemptNumber: true },
+        orderBy: { attemptNumber: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!request) {
+    throw createServiceError("This request is not waiting for your time selection", 409);
+  }
+
+  const selectedSlot = request.schedulingRounds[0]?.offeredSlots.find(
+    (slot) => slot.id === Number(slotId)
+  );
+
+  if (!selectedSlot) {
+    throw createServiceError("The selected time is not part of the latest offer", 400);
+  }
+
+  if (selectedSlot.startTime.getTime() <= Date.now()) {
+    throw createServiceError("The selected time is no longer available", 409);
+  }
+
+  return prisma.$transaction(
+    async (transaction) => {
+      const usedCapacity = await transaction.mentoringRequest.count({
+        where: {
+          mentorProfileId: request.mentorProfile.id,
+          status: { in: CAPACITY_STATUSES },
+          id: { not: request.id },
+        },
+      });
+
+      if (usedCapacity >= request.mentorProfile.meetingCapacity) {
+        throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה", 409);
+      }
+
+      const statusUpdate = await transaction.mentoringRequest.updateMany({
+        where: {
+          id: request.id,
+          status: "WAITING_FOR_MENTEE_SELECTION",
+        },
+        data: { status: "MATCHED" },
+      });
+
+      if (statusUpdate.count !== 1) {
+        throw createServiceError("This request was already handled", 409);
+      }
+
+      await transaction.meeting.create({
+        data: {
+          requestId: request.id,
+          selectedSlotId: selectedSlot.id,
+          attemptNumber: (request.meetings[0]?.attemptNumber || 0) + 1,
+          scheduledStart: selectedSlot.startTime,
+          scheduledEnd: selectedSlot.endTime,
+          status: "SCHEDULED",
+        },
+      });
+
+      await transaction.notification.create({
+        data: {
+          recipientId: request.mentorProfile.userId,
+          requestId: request.id,
+          type: "MEETING_MATCHED",
+          channel: "IN_APP",
+        },
+      });
+
+      return transaction.mentoringRequest.findUnique({
+        where: { id: request.id },
+        include: MENTOR_REQUEST_INCLUDE,
+      });
+    },
+    { isolationLevel: "Serializable" }
+  );
+}
+
+async function offerRescheduleSlots({ requestId, userId, slots }) {
+  const request = await prisma.mentoringRequest.findFirst({
+    where: {
+      id: Number(requestId),
+      status: { in: ["MATCHED", "ATTENDANCE_CONFIRMED"] },
+      mentorProfile: { userId: Number(userId) },
+    },
+    include: {
+      mentorProfile: {
+        select: { meetingDurationMinutes: true },
+      },
+      schedulingRounds: {
+        select: { roundNumber: true, type: true },
+        orderBy: { roundNumber: "desc" },
+      },
+      meetings: {
+        where: { status: { in: ["SCHEDULED", "ATTENDANCE_CONFIRMED"] } },
+        orderBy: { attemptNumber: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!request) {
+    throw createServiceError("This meeting cannot be rescheduled", 409);
+  }
+
+  if (request.schedulingRounds.some((round) => round.type === "RESCHEDULE_BEFORE_MEETING")) {
+    throw createServiceError("The meeting has already been rescheduled once", 409);
+  }
+
+  const currentMeeting = request.meetings[0];
+  if (!currentMeeting || currentMeeting.scheduledStart.getTime() <= Date.now()) {
+    throw createServiceError("Only an upcoming meeting can be rescheduled", 409);
+  }
+
+  const normalizedSlots = validateAndNormalizeSlots(
+    slots,
+    request.mentorProfile.meetingDurationMinutes
+  );
+  const roundNumber = (request.schedulingRounds[0]?.roundNumber || 0) + 1;
+
+  await prisma.$transaction(async (transaction) => {
+    const statusUpdate = await transaction.mentoringRequest.updateMany({
+      where: {
+        id: request.id,
+        status: { in: ["MATCHED", "ATTENDANCE_CONFIRMED"] },
+      },
+      data: { status: "WAITING_FOR_MENTEE_SELECTION" },
+    });
+
+    if (statusUpdate.count !== 1) {
+      throw createServiceError("This meeting was already changed", 409);
+    }
+
+    await transaction.meeting.update({
+      where: { id: currentMeeting.id },
+      data: { status: "RESCHEDULED" },
+    });
+
+    await transaction.schedulingRound.create({
+      data: {
+        requestId: request.id,
+        roundNumber,
+        type: "RESCHEDULE_BEFORE_MEETING",
+        offeredSlots: { create: normalizedSlots },
+      },
+    });
+
+    await transaction.notification.create({
+      data: {
+        recipientId: request.menteeId,
+        requestId: request.id,
+        meetingId: currentMeeting.id,
+        type: "RESCHEDULE_REQUIRED",
+        channel: "IN_APP",
       },
     });
   });
@@ -375,6 +594,8 @@ module.exports = {
   getMentoringRequestsByMentee,
   getMentoringRequestsByMentorUser,
   offerMentoringRequestSlots,
+  selectMentoringRequestSlot,
+  offerRescheduleSlots,
   rejectMentoringRequest,
   cancelMentoringRequest,
   declineOfferedSlots,
