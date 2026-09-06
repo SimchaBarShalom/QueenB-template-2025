@@ -216,11 +216,11 @@ function ProfilePage({ user, onUserUpdated }) {
             <Box component="form" onSubmit={handleSubmit} noValidate>
               <Stack spacing={2.5}>
                 <TextField
-                  label="שם מלא"
+                  label="שם מלא (שם פרטי ושם משפחה)"
                   value={values.fullName}
                   onChange={(event) => setField("fullName", event.target.value)}
                   error={Boolean(errors.fullName)}
-                  helperText={errors.fullName}
+                  helperText={errors.fullName || "לדוגמה: נועה כהן — לפחות 2 תווים בכל חלק"}
                   required
                 />
 

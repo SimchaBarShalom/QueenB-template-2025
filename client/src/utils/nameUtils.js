@@ -2,6 +2,8 @@ export function splitFullName(fullName) {
   const trimmed = fullName.trim().replace(/\s+/g, " ");
   const firstSpaceIndex = trimmed.indexOf(" ");
 
+  // Keep a missing last name empty so validation can reject it. Duplicating
+  // the first name here would store invented data and bypass the name policy.
   if (firstSpaceIndex === -1) {
     return { firstName: trimmed, lastName: "" };
   }
