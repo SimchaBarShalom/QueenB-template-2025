@@ -18,6 +18,7 @@ app.use("/api/users", require("./routes/users"));
 app.use("/api/mentors", require("./routes/mentors"));
 app.use("/api/mentoring-requests", require("./routes/mentoringRequests"));
 app.use("/api/meetings", require("./routes/meetings"));
+app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/admin", require("./routes/admin"));
 
 app.get("/api/health", (req, res) => {

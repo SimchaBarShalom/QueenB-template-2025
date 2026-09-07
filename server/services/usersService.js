@@ -141,6 +141,24 @@ function validateProfileInput(input) {
   return errors;
 }
 
+function validateMentorProfileCreationInput(input) {
+  const errors = validateProfileInput(input);
+
+  for (const field of [
+    "fullName",
+    "background",
+    "mentoringTopics",
+    "meetingCapacity",
+    "meetingDurationMinutes",
+  ]) {
+    if (!Object.hasOwn(input || {}, field)) {
+      errors.push(`${field} is required to create a mentor profile`);
+    }
+  }
+
+  return errors;
+}
+
 function optionalText(value) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -162,6 +180,55 @@ async function getAllUsers() {
   });
 
   return users.map(sanitizeUser);
+}
+
+async function createMentorProfile(userId, input) {
+  const existingUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, mentorProfile: { select: { id: true } } },
+  });
+
+  if (!existingUser) {
+    throw createServiceError("Authenticated user no longer exists", 401);
+  }
+
+  if (existingUser.mentorProfile) {
+    throw createServiceError("A mentor profile already exists", 409);
+  }
+
+  const technologies = uniqueStrings(input.technologies || []);
+  const mentoringTopics = uniqueStrings(input.mentoringTopics || []);
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      fullName: input.fullName.trim(),
+      jobTitle: optionalText(input.jobTitle),
+      workplace: optionalText(input.workplace),
+      yearsOfExperience:
+        input.yearsOfExperience === null || input.yearsOfExperience === ""
+          ? null
+          : Number(input.yearsOfExperience),
+      githubUrl: optionalText(input.githubUrl),
+      linkedinUrl: optionalText(input.linkedinUrl),
+      technologies: {
+        set: [],
+        connectOrCreate: technologies.map((name) => ({ where: { name }, create: { name } })),
+      },
+      mentorProfile: {
+        create: {
+          background: input.background.trim(),
+          meetingCapacity: Number(input.meetingCapacity),
+          meetingDurationMinutes: Number(input.meetingDurationMinutes),
+          mentoringTopics: {
+            connectOrCreate: mentoringTopics.map((name) => ({ where: { name }, create: { name } })),
+          },
+        },
+      },
+    },
+    include: USER_INCLUDE,
+  });
+
+  return sanitizeUser(updatedUser);
 }
 
 async function updateMentorProfile(userId, input) {
@@ -235,8 +302,39 @@ async function updateMentorProfile(userId, input) {
   return sanitizeUser(updatedUser);
 }
 
+async function updateUserProfile(userId, input) {
+  const existingUser = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+
+  if (!existingUser) {
+    throw createServiceError("Authenticated user no longer exists", 401);
+  }
+
+  const data = {};
+  if (Object.hasOwn(input, "fullName")) data.fullName = input.fullName.trim();
+  if (Object.hasOwn(input, "jobTitle")) data.jobTitle = optionalText(input.jobTitle);
+  if (Object.hasOwn(input, "workplace")) data.workplace = optionalText(input.workplace);
+  if (Object.hasOwn(input, "yearsOfExperience")) {
+    data.yearsOfExperience = input.yearsOfExperience === null || input.yearsOfExperience === "" ? null : Number(input.yearsOfExperience);
+  }
+  if (Object.hasOwn(input, "githubUrl")) data.githubUrl = optionalText(input.githubUrl);
+  if (Object.hasOwn(input, "linkedinUrl")) data.linkedinUrl = optionalText(input.linkedinUrl);
+  if (Object.hasOwn(input, "technologies")) {
+    const technologies = uniqueStrings(input.technologies);
+    data.technologies = {
+      set: [],
+      connectOrCreate: technologies.map((name) => ({ where: { name }, create: { name } })),
+    };
+  }
+
+  const updatedUser = await prisma.user.update({ where: { id: userId }, data, include: USER_INCLUDE });
+  return sanitizeUser(updatedUser);
+}
+
 module.exports = {
+  createMentorProfile,
   getAllUsers,
   updateMentorProfile,
+  updateUserProfile,
+  validateMentorProfileCreationInput,
   validateProfileInput,
 };
