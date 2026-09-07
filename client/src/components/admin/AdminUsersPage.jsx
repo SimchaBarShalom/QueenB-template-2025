@@ -30,7 +30,7 @@ import { AdminEmpty, AdminError, AdminLoading } from "./AdminState";
 function CapabilityChips({ user }) {
   return (
     <Stack direction="row" spacing={0.5} flexWrap="wrap" rowGap={0.5}>
-      <Chip label="חניכה" size="small" />
+      <Chip label="מנטית" size="small" />
       {user.capabilities.mentor && <Chip label="מנטורית" color="secondary" size="small" />}
       {user.capabilities.admin && <Chip label="מנהלת" color="primary" size="small" />}
     </Stack>
@@ -89,23 +89,6 @@ function AdminUsersPage() {
     }
   };
 
-  const updateMentorVisibility = async (user, isActive) => {
-    try {
-      setError("");
-      setSuccess("");
-      const response = await apiClient.patch(`/api/admin/mentors/${user.mentorProfile.id}/visibility`, { isActive });
-      setUsers((current) =>
-        current.map((item) =>
-          item.id === user.id ? { ...item, mentorProfile: { ...item.mentorProfile, ...response.data } } : item
-        )
-      );
-      setSuccess(isActive ? "המנטורית הופעלה בחיפוש." : "המנטורית הוסתרה מחיפוש.");
-    } catch (requestError) {
-      console.error(requestError);
-      setError("עדכון נראות המנטורית נכשל.");
-    }
-  };
-
   const requestAdminChange = (user, isAdmin) => {
     if (!isAdmin) {
       setPendingAction({
@@ -121,21 +104,6 @@ function AdminUsersPage() {
     updateAdmin(user, true);
   };
 
-  const requestMentorVisibilityChange = (user, isActive) => {
-    if (!isActive) {
-      setPendingAction({
-        title: "להסתיר מנטורית מחיפוש?",
-        description: `${user.fullName} תישאר במערכת, אבל חניכות לא יראו אותה בחיפוש מנטוריות.`,
-        confirmLabel: "הסתרה",
-        confirmColor: "error",
-        run: () => updateMentorVisibility(user, false),
-      });
-      return;
-    }
-
-    updateMentorVisibility(user, true);
-  };
-
   const confirmPendingAction = async () => {
     const action = pendingAction;
     setPendingAction(null);
@@ -145,27 +113,10 @@ function AdminUsersPage() {
   };
 
   const selectedUsers = users.filter((user) => selectedIds.includes(user.id));
-  const mentorSelection = selectedUsers.filter((user) => user.mentorProfile);
   const adminSelection = selectedUsers.filter((user) => !user.isAdmin);
 
   const toggleSelected = (id) => {
     setSelectedIds((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
-  };
-
-  const runBulkMentorVisibility = (isActive) => {
-    setPendingAction({
-      title: isActive ? "להציג מנטוריות נבחרות?" : "להסתיר מנטוריות נבחרות?",
-      description: `${mentorSelection.length} מנטוריות יעודכנו. משתמשות שאינן מנטוריות ידולגו.`,
-      confirmLabel: isActive ? "הצגה" : "הסתרה",
-      confirmColor: isActive ? "primary" : "error",
-      run: async () => {
-        const targets = mentorSelection;
-        for (const user of targets) {
-          await updateMentorVisibility(user, isActive);
-        }
-        setSelectedIds([]);
-      },
-    });
   };
 
   const runBulkMakeAdmin = () => {
@@ -187,7 +138,7 @@ function AdminUsersPage() {
 
   return (
     <AdminLayout>
-      <AdminPageHeader title="משתמשות" subtitle="חיפוש, הרשאות מנהלת ונראות מנטוריות בחיפוש." breadcrumbs={[{ label: "משתמשות" }]} />
+      <AdminPageHeader title="משתמשות" subtitle="חיפוש וניהול הרשאות מנהלת." breadcrumbs={[{ label: "משתמשות" }]} />
       <AdminError message={error} />
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -196,15 +147,15 @@ function AdminUsersPage() {
       )}
 
       <AdminSurface sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-          <TextField label="חיפוש" value={search} onChange={(event) => setSearch(event.target.value)} fullWidth />
-          <FormControl sx={{ minWidth: 180 }}>
-            <InputLabel>יכולת</InputLabel>
-            <Select label="יכולת" value={capability} onChange={(event) => setCapability(event.target.value)}>
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ sm: "center" }}>
+          <TextField size="small" label="חיפוש" placeholder="שם, אימייל, תפקיד או מקום עבודה" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ width: { sm: 250 } }} />
+          <FormControl size="small" sx={{ minWidth: 180 }}>
+            <InputLabel>תפקיד</InputLabel>
+            <Select label="תפקיד" value={capability} onChange={(event) => setCapability(event.target.value)}>
               <MenuItem value="">הכול</MenuItem>
               <MenuItem value="admin">מנהלות</MenuItem>
               <MenuItem value="mentor">מנטוריות</MenuItem>
-              <MenuItem value="mentee">חניכות</MenuItem>
+              <MenuItem value="mentee">מנטיות</MenuItem>
             </Select>
           </FormControl>
           <Button variant="contained" onClick={applyFilters}>
@@ -219,8 +170,6 @@ function AdminUsersPage() {
             <Typography sx={{ fontWeight: 700 }}>{selectedIds.length} נבחרו</Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
               <Button size="small" variant="outlined" disabled={!adminSelection.length} onClick={runBulkMakeAdmin}>הוספת הרשאת מנהלת</Button>
-              <Button size="small" variant="outlined" disabled={!mentorSelection.length} onClick={() => runBulkMentorVisibility(true)}>הצגה בחיפוש</Button>
-              <Button size="small" color="error" variant="outlined" disabled={!mentorSelection.length} onClick={() => runBulkMentorVisibility(false)}>הסתרה מחיפוש</Button>
             </Stack>
           </Stack>
         </AdminSurface>
@@ -237,9 +186,8 @@ function AdminUsersPage() {
                 <TableCell padding="checkbox" />
                 <TableCell>שם</TableCell>
                 <TableCell>אימייל</TableCell>
-                <TableCell>יכולות</TableCell>
+                <TableCell>תפקידים</TableCell>
                 <TableCell>מנהלת</TableCell>
-                <TableCell>נראות מנטורית</TableCell>
                 <TableCell />
               </TableRow>
             </TableHead>
@@ -266,18 +214,6 @@ function AdminUsersPage() {
                     </Tooltip>
                   </TableCell>
                   <TableCell>
-                    {user.mentorProfile ? (
-                      <Switch
-                        checked={user.mentorProfile.isActive}
-                        onChange={(event) => requestMentorVisibilityChange(user, event.target.checked)}
-                      />
-                    ) : (
-                      <Typography color="text.secondary" variant="body2">
-                        לא מנטורית
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
                     <Button component={RouterLink} to={`/admin/users/${user.id}`} size="small">
                       פרטים
                     </Button>
@@ -302,10 +238,6 @@ function AdminUsersPage() {
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography variant="body2">מנהלת</Typography>
                   <Switch checked={user.isAdmin} disabled={user.isAdmin && !user.permissions.canRemoveAdmin} onChange={(event) => requestAdminChange(user, event.target.checked)} />
-                </Stack>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2">נראות מנטורית</Typography>
-                  {user.mentorProfile ? <Switch checked={user.mentorProfile.isActive} onChange={(event) => requestMentorVisibilityChange(user, event.target.checked)} /> : <Typography variant="body2" color="text.secondary">לא מנטורית</Typography>}
                 </Stack>
                 <Button component={RouterLink} to={`/admin/users/${user.id}`} size="small" sx={{ alignSelf: "flex-start" }}>פרטים</Button>
               </Stack>

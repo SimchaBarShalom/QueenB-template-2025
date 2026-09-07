@@ -5,7 +5,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Container,
   Stack,
   Typography,
 } from "@mui/material";
@@ -26,6 +25,7 @@ import {
   submitMeetingFeedback,
 } from "../services/meetingsService";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
+import { AppPage, AppPageHeader, AppSurface } from "./AppPrimitives";
 
 const SECTION_TABS = [
   { id: "completed-section", label: "פגישות שהתקיימו" },
@@ -384,15 +384,8 @@ function MenteeMeetingsPage() {
   }
 
   return (
-    <Box sx={{ py: { xs: 3, md: 5 } }}>
-      <Container maxWidth="md">
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ mb: 3 }}
-        >
-          הפגישות שלי
-        </Typography>
+    <AppPage maxWidth="md">
+        <AppPageHeader title="הפגישות שלי" subtitle="ניהול בקשות, מועדים ומשוב במקום אחד." />
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -400,7 +393,8 @@ function MenteeMeetingsPage() {
           </Alert>
         )}
 
-        <Stack
+        <AppSurface
+          component={Stack}
           direction="row"
           spacing={1}
           flexWrap="wrap"
@@ -409,9 +403,6 @@ function MenteeMeetingsPage() {
             position: "sticky",
             top: { xs: 64, md: 72 },
             zIndex: 1,
-            bgcolor: "#fff",
-            border: "1px solid #f6d3e0",
-            borderRadius: 999,
             p: 1,
             mb: 4,
           }}
@@ -423,12 +414,12 @@ function MenteeMeetingsPage() {
               onClick={() => setActiveTab(tab.id)}
               variant={activeTab === tab.id ? "contained" : "text"}
               size="small"
-              sx={{ borderRadius: 999 }}
+              sx={{ fontWeight: activeTab === tab.id ? 700 : 400 }}
             >
               {tab.label}
             </Button>
           ))}
-        </Stack>
+        </AppSurface>
 
         {activeTab === "completed-section" && (
         <Box
@@ -567,7 +558,7 @@ function MenteeMeetingsPage() {
           </Stack>
         </Box>
         )}
-      </Container>
+
 
       <SelectSlotDialog
         open={Boolean(slotRequest)}
@@ -593,7 +584,7 @@ function MenteeMeetingsPage() {
         message={infoMessage}
         onClose={() => setInfoMessage("")}
       />
-    </Box>
+    </AppPage>
   );
 }
 

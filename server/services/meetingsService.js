@@ -112,7 +112,7 @@ ${mentee.fullName} בחרה מועד לפגישה, והפגישה נקבעה ב�
     results.forEach((result, index) => {
       if (result.status === "rejected") {
         console.error(
-          `שליחת המייל ${index === 0 ? "למנטורית" : "לחניכה"} על קביעת הפגישה נכשלה:`,
+          `שליחת המייל ${index === 0 ? "למנטורית" : "למנטית"} על קביעת הפגישה נכשלה:`,
           result.reason
         );
       }

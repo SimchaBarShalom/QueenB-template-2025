@@ -2,7 +2,6 @@ import React from "react";
 
 import {
   Box,
-  Card,
   Chip,
   IconButton,
   Stack,
@@ -13,6 +12,7 @@ import GitHubIcon from "@mui/icons-material/GitHub";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
 
 import { queenbColors } from "../theme";
+import { AppSurface } from "./AppPrimitives";
 
 // מיפוי בין סטטוס הבקשה לבין הטקסט שיופיע בכפתור.
 // pending = נשלחה בקשה ועדיין מחכים למנטורית.
@@ -26,7 +26,7 @@ const STATUS_LABELS = {
 // קומפוננטה שמציגה כרטיס של מנטורית.
 //
 // mentor = אובייקט עם כל פרטי המנטורית.
-// onRequestClick = פונקציה שמופעלת כאשר החניכה לוחצת על "בקשת פגישה".
+// onRequestClick = פונקציה שמופעלת כאשר המנטית לוחצת על "בקשת פגישה".
 function MentorCard({ mentor, onRequestClick }) {
   // פירוק הפרטים שאנחנו צריכות מתוך אובייקט המנטורית.
   const {
@@ -42,14 +42,12 @@ function MentorCard({ mentor, onRequestClick }) {
 
   return (
     // הכרטיס הראשי של המנטורית.
-    <Card
-      variant="outlined"
+    <AppSurface
       sx={{
         // רווח פנימי בתוך הכרטיס.
         p: 3,
 
         // עיגול הפינות.
-        borderRadius: 3,
 
         // הכרטיס יתפוס את כל הגובה הזמין.
         height: "100%",
@@ -59,7 +57,6 @@ function MentorCard({ mentor, onRequestClick }) {
         flexDirection: "column",
 
         // צבע המסגרת של הכרטיס.
-        borderColor: "#f6d3e0",
       }}
     >
       {/* שם המנטורית */}
@@ -251,10 +248,10 @@ function MentorCard({ mentor, onRequestClick }) {
           </Box>
         )}
       </Box>
-    </Card>
+    </AppSurface>
   );
 }
 
 // ייצוא הקומפוננטה כדי שנוכל להשתמש בה
-// בדף החיפוש ובדשבורד של החניכה.
+// בדף החיפוש ובדשבורד של המנטית.
 export default MentorCard;

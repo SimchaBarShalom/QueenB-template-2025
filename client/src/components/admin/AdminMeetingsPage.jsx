@@ -175,8 +175,8 @@ function AdminMeetingsPage() {
       )}
 
       <AdminSurface sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: "column", md: "row" }} spacing={2} flexWrap="wrap" rowGap={2}>
-          <FormControl sx={{ minWidth: 180 }}>
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={1} alignItems={{ lg: "center" }} sx={{ "& .MuiInputBase-root": { fontSize: "0.875rem" } }}>
+          <FormControl size="small" sx={{ minWidth: 130, flexShrink: 0 }}>
             <InputLabel>סטטוס</InputLabel>
             <Select label="סטטוס" value={filters.status} onChange={(event) => setFilter("status", event.target.value)}>
               <MenuItem value="">הכול</MenuItem>
@@ -187,15 +187,15 @@ function AdminMeetingsPage() {
               ))}
             </Select>
           </FormControl>
-          <TextField label="מזהה מנטורית" value={filters.mentorId} onChange={(event) => setFilter("mentorId", event.target.value)} />
-          <TextField label="מזהה חניכה" value={filters.menteeId} onChange={(event) => setFilter("menteeId", event.target.value)} />
-          <TextField type="date" label="מתאריך" InputLabelProps={{ shrink: true }} value={filters.startDate} onChange={(event) => setFilter("startDate", event.target.value)} />
-          <TextField type="date" label="עד תאריך" InputLabelProps={{ shrink: true }} value={filters.endDate} onChange={(event) => setFilter("endDate", event.target.value)} />
-          <Stack direction="row" spacing={1} alignItems="center">
+          <TextField size="small" label="חיפוש מנטורית" value={filters.mentorId} onChange={(event) => setFilter("mentorId", event.target.value)} sx={{ width: 145, flexShrink: 0 }} />
+          <TextField size="small" label="חיפוש מנטית" value={filters.menteeId} onChange={(event) => setFilter("menteeId", event.target.value)} sx={{ width: 135, flexShrink: 0 }} />
+          <TextField size="small" type="date" label="מתאריך" InputLabelProps={{ shrink: true }} value={filters.startDate} onChange={(event) => setFilter("startDate", event.target.value)} sx={{ width: 135, flexShrink: 0 }} />
+          <TextField size="small" type="date" label="עד תאריך" InputLabelProps={{ shrink: true }} value={filters.endDate} onChange={(event) => setFilter("endDate", event.target.value)} sx={{ width: 135, flexShrink: 0 }} />
+          <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0 }}>
             <Typography variant="body2">חסר פידבק</Typography>
             <Switch checked={filters.missingFeedback} onChange={(event) => setFilter("missingFeedback", event.target.checked)} />
           </Stack>
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0 }}>
             <Typography variant="body2">אי הגעה</Typography>
             <Switch checked={filters.noShow} onChange={(event) => setFilter("noShow", event.target.checked)} />
           </Stack>
@@ -229,7 +229,7 @@ function AdminMeetingsPage() {
                 <TableCell padding="checkbox" />
                 <TableCell>מועד</TableCell>
                 <TableCell>מנטורית</TableCell>
-                <TableCell>חניכה</TableCell>
+                <TableCell>מנטית</TableCell>
                 <TableCell>סטטוס</TableCell>
                 <TableCell>פידבק</TableCell>
                 <TableCell>פעולות</TableCell>

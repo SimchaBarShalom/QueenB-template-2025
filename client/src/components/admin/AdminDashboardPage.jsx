@@ -56,7 +56,7 @@ function AdminDashboardPage() {
 
   return (
     <AdminLayout>
-      <AdminPageHeader title="חדר ניהול" subtitle="תמונת מצב יומית לפגישות, בקשות והתראות שמצריכות טיפול." />
+      <AdminPageHeader title="מסך הבית" subtitle="תמונת מצב יומית לפגישות, בקשות והתראות שמצריכות טיפול." />
       <AdminError message={error} />
       <Grid container spacing={2} sx={{ width: "100%", m: 0 }}>
         {CARDS.map((card) => (
@@ -73,10 +73,10 @@ function AdminDashboardPage() {
                 "&:focus-visible": { outline: "3px solid rgba(230, 49, 122, 0.28)", outlineOffset: 2 },
               }}
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
+              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
                 <Box sx={{ color: "primary.main", display: "flex", p: 0.75, borderRadius: 1, bgcolor: "#fff0f6" }}>{card.icon}</Box>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography dir="ltr" variant="h4" sx={{ fontWeight: 800, lineHeight: 1, textAlign: "right" }}>
+                <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                  <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
                     {summary?.[card.key] ?? 0}
                   </Typography>
                   <Typography color="text.secondary" sx={{ fontWeight: 700, mt: 0.5 }}>{card.label}</Typography>

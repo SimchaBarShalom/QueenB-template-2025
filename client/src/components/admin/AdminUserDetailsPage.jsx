@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link as RouterLink, useParams } from "react-router-dom";
-import { Alert, Button, Chip, Divider, Grid, Paper, Stack, Switch, TextField, Typography } from "@mui/material";
+import { Alert, Button, Chip, Divider, Grid, Paper, Stack, TextField, Typography } from "@mui/material";
 import apiClient from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import { AdminEmpty, AdminError, AdminLoading } from "./AdminState";
@@ -154,7 +154,7 @@ function AdminUserDetailsPage() {
                 </Typography>
                 <Typography color="text.secondary">{user.email}</Typography>
                 <Stack direction="row" spacing={0.5} flexWrap="wrap" rowGap={0.5}>
-                  <Chip label="חניכה" size="small" />
+                  <Chip label="מנטית" size="small" />
                   {user.capabilities.mentor && <Chip label="מנטורית" color="secondary" size="small" />}
                   {user.capabilities.admin && <Chip label="מנהלת" color="primary" size="small" />}
                 </Stack>
@@ -162,7 +162,7 @@ function AdminUserDetailsPage() {
                 <Typography>תפקיד: {user.jobTitle || "לא צוין"}</Typography>
                 <Typography>מקום עבודה: {user.workplace || "לא צוין"}</Typography>
                 <Typography>ניסיון: {user.yearsOfExperience ?? "לא צוין"}</Typography>
-                <Typography>בקשות כחניכה: {detail.counts.requests}</Typography>
+                <Typography>בקשות כמנטית: {detail.counts.requests}</Typography>
                 <Typography>פגישות קשורות: {detail.counts.meetings}</Typography>
               </Stack>
             </Paper>
@@ -258,10 +258,6 @@ function AdminUserDetailsPage() {
                       />
                     </Grid>
                   </Grid>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 2 }}>
-                    <Typography variant="body2">מוצגת בחיפוש</Typography>
-                    <Switch checked={mentorForm.isActive} onChange={(event) => setMentorField("isActive", event.target.checked)} />
-                  </Stack>
                   <Button type="submit" variant="contained" sx={{ mt: 2 }} disabled={savingMentor}>
                     שמירת פרטי מנטורית
                   </Button>

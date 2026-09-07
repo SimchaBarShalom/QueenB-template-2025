@@ -84,7 +84,7 @@ function OfferSlotsDialog({
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography color="text.secondary">
-              הציעי לחניכה {request?.menteeName || ""} זמן אחד או יותר. כל פגישה אורכת{" "}
+              הציעי למנטית {request?.menteeName || ""} זמן אחד או יותר. כל פגישה אורכת{" "}
               {durationMinutes} דקות.
             </Typography>
 

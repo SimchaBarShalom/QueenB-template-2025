@@ -93,7 +93,7 @@ async function sendMentoringRequestEmails({ menteeId, mentorProfileId }) {
 
     if (!mentee || !mentorProfile?.user) {
       console.error(
-        "לא נמצאו פרטי החניכה או המנטורית לצורך שליחת המייל."
+        "לא נמצאו פרטי המנטית או המנטורית לצורך שליחת המייל."
       );
       return;
     }
@@ -161,7 +161,7 @@ ${mentoringTopics}
     results.forEach((result, index) => {
       if (result.status === "rejected") {
         console.error(
-          `שליחת המייל ${index === 0 ? "לחניכה" : "למנטורית"} נכשלה:`,
+          `שליחת המייל ${index === 0 ? "למנטית" : "למנטורית"} נכשלה:`,
           result.reason
         );
       }

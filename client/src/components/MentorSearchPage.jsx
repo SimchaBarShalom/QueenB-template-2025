@@ -9,13 +9,13 @@ import {
   Alert,
   Box,
   CircularProgress,
-  Container,
   MenuItem,
   TextField,
   Typography,
 } from "@mui/material";
 
 import MentorCard from "./MentorCard";
+import { AppPage, AppPageHeader, AppSurface } from "./AppPrimitives";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
 const initialFilters = {
@@ -232,15 +232,8 @@ const getRequestStatus = useCallback((mentorProfileId) => {
   }
 
   return (
-    <Box sx={{ py: { xs: 3, md: 5 } }}>
-      <Container maxWidth="lg">
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ mb: 3 }}
-        >
-          חיפוש מנטוריות
-        </Typography>
+    <AppPage>
+        <AppPageHeader title="חיפוש מנטוריות" subtitle="מצאי מנטורית לפי תפקיד, חברה או תחום מקצועי." />
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -248,7 +241,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
           </Alert>
         )}
 
-        <Box
+        <AppSurface
           sx={{
             display: "grid",
             gridTemplateColumns: {
@@ -257,10 +250,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
             },
             gap: 2,
             mb: 4,
-            bgcolor: "#fff",
-            p: 2.5,
-            borderRadius: 3,
-            border: "1px solid #f6d3e0",
+            p: 2,
           }}
         >
           <TextField
@@ -334,7 +324,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
               </MenuItem>
             ))}
           </TextField>
-        </Box>
+        </AppSurface>
 
         {filteredMentors.length === 0 ? (
           <Typography color="text.secondary">
@@ -363,8 +353,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
             ))}
           </Box>
         )}
-      </Container>
-    </Box>
+    </AppPage>
   );
 }
 

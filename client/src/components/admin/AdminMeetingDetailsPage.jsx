@@ -175,7 +175,7 @@ function AdminMeetingDetailsPage() {
                   {formatDateTime(meeting.scheduledStart)} - {formatDateTime(meeting.scheduledEnd)}
                 </Typography>
                 <Typography>מנטורית: {meeting.mentor.fullName} ({meeting.mentor.email})</Typography>
-                <Typography>חניכה: {meeting.mentee.fullName} ({meeting.mentee.email})</Typography>
+                <Typography>מנטית: {meeting.mentee.fullName} ({meeting.mentee.email})</Typography>
                 <Typography>סטטוס בקשה: {REQUEST_STATUS_LABELS[meeting.requestStatus] || meeting.requestStatus}</Typography>
                 <Divider />
                 <Paper component="form" onSubmit={updateSchedule} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>

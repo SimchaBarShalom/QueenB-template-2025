@@ -11,7 +11,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Container,
   Stack,
   Typography,
 } from "@mui/material";
@@ -22,6 +21,7 @@ import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 
 import MentorCard from "./MentorCard";
 import DashboardSummaryCard from "./DashboardSummaryCard";
+import { AppPage, AppPageHeader, AppSectionTitle } from "./AppPrimitives";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
 function formatDate(dateValue) {
@@ -212,58 +212,8 @@ function MenteeDashboard({ currentUser }) {
   }
 
   return (
-    <Box
-      sx={{
-        position: "relative",
-
-        width: "100%",
-        maxWidth: "100%",
-
-        minHeight: "calc(100vh - 76px)",
-
-        overflowX: "hidden",
-        overflowY: "visible",
-
-        py: {
-          xs: 3,
-          md: 5,
-        },
-
-        background: `
-          radial-gradient(
-            circle at 10% 18%,
-            rgba(231, 49, 122, 0.08),
-            transparent 28%
-          ),
-          radial-gradient(
-            circle at 88% 72%,
-            rgba(190, 126, 222, 0.09),
-            transparent 30%
-          ),
-          linear-gradient(
-            135deg,
-            #fff9fb 0%,
-            #fdeef4 48%,
-            #fff7fa 100%
-          )
-        `,
-      }}
-    >
-
-      <Container
-        maxWidth="lg"
-        sx={{
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ mb: 3 }}
-        >
-          שלום, {currentUser.fullName}
-        </Typography>
+    <AppPage>
+        <AppPageHeader title="מסך הבית" subtitle={`שלום, ${currentUser.fullName}`} />
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -324,7 +274,7 @@ function MenteeDashboard({ currentUser }) {
             component={RouterLink}
             to="/mentee/mentors"
             variant="contained"
-            sx={{ borderRadius: 999, px: 3 }}
+            sx={{ px: 3 }}
           >
             חפשי מנטורית
           </Button>
@@ -333,7 +283,7 @@ function MenteeDashboard({ currentUser }) {
             component={RouterLink}
             to="/mentee/meetings"
             variant="outlined"
-            sx={{ borderRadius: 999, px: 3 }}
+            sx={{ px: 3 }}
           >
             לכל הפגישות
           </Button>
@@ -342,30 +292,19 @@ function MenteeDashboard({ currentUser }) {
             component={RouterLink}
             to="/mentee/meetings#waiting-mentor-section"
             variant="outlined"
-            sx={{ borderRadius: 999, px: 3 }}
+            sx={{ px: 3 }}
           >
             הציגי בקשות
           </Button>
+
+          {!currentUser.isAdmin && !currentUser.mentorProfile && (
+            <Button component={RouterLink} to="/profile" variant="outlined" sx={{ px: 3 }}>
+              הצטרפי כמנטורית
+            </Button>
+          )}
         </Stack>
 
-        <Box
-          sx={{
-            mb: 2.5,
-            width: "100%",
-            textAlign: "left",
-          }}
-        >
-          <Typography
-            variant="h5"
-            component="h2"
-            sx={{
-              mb: 0.5,
-              fontWeight: 700,
-            }}
-          >
-            מנטוריות שאולי יתאימו לך
-          </Typography>
-
+        <AppSectionTitle title="מנטוריות שאולי יתאימו לך" action={
           <Button
             component={RouterLink}
             to="/mentee/mentors"
@@ -377,7 +316,7 @@ function MenteeDashboard({ currentUser }) {
           >
             לכל המנטוריות
           </Button>
-        </Box>
+        } />
 
         {suggestedMentors.length === 0 ? (
           <Typography color="text.secondary">
@@ -405,8 +344,7 @@ function MenteeDashboard({ currentUser }) {
             ))}
           </Box>
         )}
-      </Container>
-    </Box>
+    </AppPage>
   );
 }
 

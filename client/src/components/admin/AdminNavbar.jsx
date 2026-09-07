@@ -19,16 +19,15 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import GroupsIcon from "@mui/icons-material/Groups";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import QueensMatchLogo from "../QueensMatchLogo";
 import UserMenu from "../UserMenu";
+import MessagesMenu from "../MessagesMenu";
 
 const NAV_ITEMS = [
-  { path: "/admin", label: "סקירה", icon: <DashboardIcon fontSize="small" />, exact: true },
+  { path: "/admin", label: "מסך הבית", icon: <DashboardIcon fontSize="small" />, exact: true },
   { path: "/admin/users", label: "משתמשות", icon: <GroupsIcon fontSize="small" /> },
   { path: "/admin/meetings", label: "פגישות", icon: <EventNoteIcon fontSize="small" /> },
   { path: "/admin/calendar", label: "לוח שנה", icon: <CalendarMonthIcon fontSize="small" /> },
-  { path: "/admin/alerts", label: "התראות", icon: <NotificationsActiveIcon fontSize="small" /> },
 ];
 
 function AdminNavbar({ currentUser, onLogout }) {
@@ -45,11 +44,11 @@ function AdminNavbar({ currentUser, onLogout }) {
             width: "100%",
             maxWidth: 1180,
             mx: "auto",
-            paddingInlineStart: { xs: 5, md: 4 },
+            paddingInlineStart: { xs: 2, md: 4 },
             paddingInlineEnd: { xs: 2, md: 4 },
             display: "flex",
             alignItems: "center",
-            gap: { xs: 1, md: 2 },
+            gap: { xs: 1, md: 3 },
           }}
         >
           <Box component={RouterLink} to="/admin" sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
@@ -76,7 +75,7 @@ function AdminNavbar({ currentUser, onLogout }) {
                   sx={{
                     minHeight: 40,
                     px: 1.5,
-                    fontWeight: selected ? 800 : 700,
+                    fontWeight: selected ? 700 : 400,
                     whiteSpace: "nowrap",
                     color: selected ? "primary.main" : "text.primary",
                     bgcolor: selected ? "#fff0f6" : "transparent",
@@ -93,6 +92,7 @@ function AdminNavbar({ currentUser, onLogout }) {
           </Stack>
 
           <Box sx={{ flexGrow: { xs: 1, md: 0 } }} />
+          <MessagesMenu currentUser={currentUser} />
           <Box sx={{ display: { xs: "none", sm: "block" } }}>
             <UserMenu currentUser={currentUser} onLogout={onLogout} />
           </Box>
@@ -133,7 +133,7 @@ function AdminNavbar({ currentUser, onLogout }) {
                   }}
                 >
                   <ListItemIcon sx={{ minWidth: 34, color: "inherit" }}>{item.icon}</ListItemIcon>
-                  <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: selected ? 800 : 700 }} />
+                  <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: selected ? 700 : 400 }} />
                 </ListItemButton>
               );
             })}
