@@ -1,7 +1,5 @@
-// A single account can carry mentee + mentor + admin capabilities at once
-// (see server/prisma/schema.prisma). These helpers centralize how the
-// frontend decides "which area" a user lands in / can switch to, so that
-// logic isn't duplicated between the auth dialogs and the user menu.
+// Mentor capability has precedence in the MVP: mentors use the mentor-only
+// experience and cannot switch into mentee routes.
 
 export function isMentorUser(user) {
   return Boolean(user?.mentorProfile);
@@ -17,7 +15,11 @@ export function getDefaultAreaPath(user) {
 }
 
 export const AREA_DEFINITIONS = [
-  { path: "/mentee", label: "עברי לאזור חניכה", available: () => true },
+  {
+    path: "/mentee",
+    label: "עברי לאזור חניכה",
+    available: (user) => !isMentorUser(user),
+  },
   { path: "/mentor", label: "עברי לאזור מנטורית", available: (user) => isMentorUser(user) },
   { path: "/admin", label: "עברי לאזור ניהול", available: (user) => Boolean(user?.isAdmin) },
 ];

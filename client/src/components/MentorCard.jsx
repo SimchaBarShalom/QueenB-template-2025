@@ -20,6 +20,7 @@ import { queenbColors } from "../theme";
 const STATUS_LABELS = {
   pending: "ממתין למענה",
   scheduled: "הפגישה נקבעה",
+  blocked: "לא ניתן לקבוע החודש",
 };
 
 // קומפוננטה שמציגה כרטיס של מנטורית.

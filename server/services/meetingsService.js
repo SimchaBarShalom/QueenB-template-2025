@@ -1,50 +1,56 @@
 const prisma = require("../lib/prisma");
 const { sendEmail } = require("./emailService");
 
-// ============================================================
-// שליחת מיילים למנטורית ולחניכה לאחר שהחניכה בחרה מועד
-// ונקבעה פגישה.
-//
-// שולחים את שני המיילים במקביל עם Promise.allSettled,
-// כדי שכישלון של מייל אחד לא ימנע את שליחת השני,
-// ובעיקר - לא יבטל את ה-Meeting שכבר נוצר ב-Database.
-// אם מייל כלשהו נכשל, רק מדפיסים שגיאה ל-console.
-// ============================================================
-async function sendMeetingScheduledEmails({
-  mentor,
-  mentee,
-  meeting,
-}) {
+function createServiceError(message, statusCode) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+const CAPACITY_STATUSES = [
+  "MATCHED",
+  "ATTENDANCE_CONFIRMED",
+  "COMPLETED",
+  "FEEDBACK_COMPLETED",
+];
+
+const MEETING_INCLUDE = {
+  request: {
+    include: {
+      mentee: { select: { id: true, fullName: true } },
+      mentorProfile: {
+        include: {
+          user: { select: { id: true, fullName: true } },
+          mentoringTopics: true,
+        },
+      },
+    },
+  },
+  outcomeConfirmations: true,
+  feedback: true,
+};
+
+async function sendMeetingScheduledEmails({ mentor, mentee, meeting }) {
   try {
-    // כל הנתונים (תאריך ושעות) מגיעים מה-Meeting שנוצר בפועל,
-    // ולא כתובים ידנית, ומוצגים לפי אזור הזמן של ישראל.
-    const meetingDate = new Date(
-      meeting.scheduledStart
-    ).toLocaleDateString("he-IL", {
-      timeZone: "Asia/Jerusalem",
-    });
-
-    const startTime = new Date(
-      meeting.scheduledStart
-    ).toLocaleTimeString("he-IL", {
+    const meetingDate = new Date(meeting.scheduledStart).toLocaleDateString(
+      "he-IL",
+      { timeZone: "Asia/Jerusalem" }
+    );
+    const timeOptions = {
       hour: "2-digit",
       minute: "2-digit",
       timeZone: "Asia/Jerusalem",
-    });
+    };
+    const startTime = new Date(meeting.scheduledStart).toLocaleTimeString(
+      "he-IL",
+      timeOptions
+    );
+    const endTime = new Date(meeting.scheduledEnd).toLocaleTimeString(
+      "he-IL",
+      timeOptions
+    );
 
-    const endTime = new Date(
-      meeting.scheduledEnd
-    ).toLocaleTimeString("he-IL", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Asia/Jerusalem",
-    });
-
-    // שני מיילים - למנטורית ולחניכה - נשלחים במקביל.
-    const emailResults = await Promise.allSettled([
-      // מייל למנטורית.
-      // הכתובת נשלפת מ-request.mentorProfile.user.email,
-      // ולא כתובת קבועה או SMTP_USER.
+    const results = await Promise.allSettled([
       sendEmail({
         to: mentor.email,
         subject: "נקבעה פגישה חדשה ב-Queen Match",
@@ -62,28 +68,17 @@ ${mentee.fullName} בחרה מועד לפגישה, והפגישה נקבעה ב�
         html: `
           <div dir="rtl" style="font-family: Arial, sans-serif;">
             <h2>נקבעה פגישה חדשה 🎉</h2>
-
             <p>היי ${mentor.fullName},</p>
-
-            <p>
-              <strong>${mentee.fullName}</strong>
-              בחרה מועד לפגישה, והפגישה נקבעה בהצלחה.
-            </p>
-
+            <p><strong>${mentee.fullName}</strong> בחרה מועד לפגישה, והפגישה נקבעה בהצלחה.</p>
             <p>
               <strong>תאריך הפגישה:</strong> ${meetingDate}<br />
               <strong>שעת התחלה:</strong> ${startTime}<br />
               <strong>שעת סיום:</strong> ${endTime}
             </p>
-
             <p>צוות Queen Match</p>
           </div>
         `,
       }),
-
-      // מייל לחניכה.
-      // הכתובת נשלפת מ-request.mentee.email,
-      // ולא כתובת קבועה או SMTP_USER.
       sendEmail({
         to: mentee.email,
         subject: "הפגישה שלך נקבעה ב-Queen Match",
@@ -101,304 +96,319 @@ ${mentee.fullName} בחרה מועד לפגישה, והפגישה נקבעה ב�
         html: `
           <div dir="rtl" style="font-family: Arial, sans-serif;">
             <h2>הפגישה שלך נקבעה 🎉</h2>
-
             <p>היי ${mentee.fullName},</p>
-
-            <p>
-              הפגישה שלך עם
-              <strong>${mentor.fullName}</strong>
-              נקבעה בהצלחה.
-            </p>
-
+            <p>הפגישה שלך עם <strong>${mentor.fullName}</strong> נקבעה בהצלחה.</p>
             <p>
               <strong>תאריך הפגישה:</strong> ${meetingDate}<br />
               <strong>שעת התחלה:</strong> ${startTime}<br />
               <strong>שעת סיום:</strong> ${endTime}
             </p>
-
             <p>צוות Queen Match</p>
           </div>
         `,
       }),
     ]);
 
-    // אם אחד המיילים נכשל, רק מדפיסים שגיאה ל-console.
-    // ה-Meeting שכבר נוצר לא מתבטל בגלל זה.
-    emailResults.forEach((result, index) => {
+    results.forEach((result, index) => {
       if (result.status === "rejected") {
-        const recipient =
-          index === 0 ? "למנטורית" : "לחניכה";
-
         console.error(
-          `שליחת המייל ${recipient} על קביעת הפגישה נכשלה:`,
+          `שליחת המייל ${index === 0 ? "למנטורית" : "לחניכה"} על קביעת הפגישה נכשלה:`,
           result.reason
         );
       }
     });
   } catch (error) {
-    // גם כאן לא זורקים את השגיאה הלאה,
-    // כדי שכשל במייל לא יבטל פגישה שכבר נוצרה.
-    console.error(
-      "שגיאה בשליחת מיילים על קביעת הפגישה:",
-      error
-    );
+    console.error("שגיאה בשליחת מיילים על קביעת הפגישה:", error);
   }
 }
 
-// ============================================================
-// יצירת פגישה לאחר שהחניכה בחרה מועד שהמנטורית הציעה.
-// ============================================================
-async function createMeetingFromSlot({
-  requestId,
-  slotId,
-  menteeId,
-}) {
-  // מחפשים את המועד שהחניכה בחרה.
-  // יחד איתו אנחנו שולפים גם את סבב התזמון,
-  // את בקשת המנטורינג שאליה המועד שייך,
-  // ואת פרטי החניכה והמנטורית (relations קיימים)
-  // כדי שנוכל לשלוח מייל בסוף בלי שאילתה נוספת.
-  const slot = await prisma.offeredSlot.findUnique({
+async function createMeetingFromSlot({ requestId, slotId, menteeId }) {
+  const request = await prisma.mentoringRequest.findFirst({
     where: {
-      id: Number(slotId),
+      id: Number(requestId),
+      menteeId: Number(menteeId),
+      status: "WAITING_FOR_MENTEE_SELECTION",
     },
-
     include: {
-      schedulingRound: {
-        include: {
-          request: {
-            include: {
-              mentee: true,
-
-              mentorProfile: {
-                include: {
-                  user: true,
-                },
-              },
-            },
+      mentee: {
+        select: { id: true, fullName: true, email: true },
+      },
+      mentorProfile: {
+        select: {
+          id: true,
+          userId: true,
+          meetingCapacity: true,
+          user: {
+            select: { id: true, fullName: true, email: true },
           },
         },
+      },
+      schedulingRounds: {
+        include: { offeredSlots: true },
+        orderBy: { roundNumber: "desc" },
+        take: 1,
+      },
+      meetings: {
+        select: { attemptNumber: true },
+        orderBy: { attemptNumber: "desc" },
+        take: 1,
       },
     },
   });
 
-  // אם המועד לא נמצא - אי אפשר ליצור פגישה.
-  if (!slot) {
-    throw new Error("Selected slot was not found");
-  }
-
-  // הבקשה שאליה המועד שייך.
-  const request = slot.schedulingRound.request;
-
-  // מוודאים שהמועד באמת שייך לבקשה
-  // שהחניכה מנסה לקבוע עבורה פגישה.
-  if (request.id !== Number(requestId)) {
-    throw new Error(
-      "Selected slot does not belong to this mentoring request"
+  if (!request) {
+    throw createServiceError(
+      "This request is not waiting for your time selection",
+      409
     );
   }
 
-  // מוודאים שהבקשה באמת שייכת לחניכה הנוכחית.
-  if (request.menteeId !== Number(menteeId)) {
-    throw new Error(
-      "This mentoring request does not belong to this mentee"
-    );
-  }
-
-  // אפשר לבחור מועד רק כאשר המנטורית כבר הציעה מועדים
-  // והמערכת מחכה לבחירת החניכה.
-  if (
-    request.status !==
-    "WAITING_FOR_MENTEE_SELECTION"
-  ) {
-    throw new Error(
-      "Mentoring request is not waiting for mentee selection"
-    );
-  }
-  // בודקים האם לחניכה כבר קיימת פגישה פעילה.
-const activeMeeting = await prisma.meeting.findFirst({
-  where: {
-    status: {
-      in: [
-        "SCHEDULED",
-        "ATTENDANCE_CONFIRMED",
-      ],
-    },
-    request: {
-      is: {
-        menteeId: Number(menteeId),
-      },
-    },
-  },
-});
-
-
-// אם כבר קיימת פגישה פעילה,
-// לא מאפשרים ליצור פגישה נוספת.
-if (activeMeeting) {
-  throw new Error(
-    "יש לך כבר פגישה פעילה. כדי לקבוע פגישה חדשה, בטלי קודם את הפגישה הקיימת."
+  const selectedSlot = request.schedulingRounds[0]?.offeredSlots.find(
+    (slot) => slot.id === Number(slotId)
   );
-}
 
-  // מחפשים את ניסיון הפגישה האחרון עבור הבקשה.
-  // זה חשוב כי בעתיד יכולה להיות פגישה שנקבעה מחדש.
-  const lastMeeting =
-    await prisma.meeting.findFirst({
-      where: {
-        requestId: Number(requestId),
-      },
+  if (!selectedSlot) {
+    throw createServiceError(
+      "The selected time is not part of the latest offer",
+      400
+    );
+  }
 
-      orderBy: {
-        attemptNumber: "desc",
-      },
-    });
+  if (selectedSlot.startTime.getTime() <= Date.now()) {
+    throw createServiceError("The selected time is no longer available", 409);
+  }
 
-  // אם עדיין לא הייתה פגישה - זה ניסיון מספר 1.
-  // אחרת מעלים את המספר באחד.
-  const attemptNumber = lastMeeting
-    ? lastMeeting.attemptNumber + 1
-    : 1;
+  const activeMeeting = await prisma.meeting.findFirst({
+    where: {
+      status: { in: ["SCHEDULED", "ATTENDANCE_CONFIRMED"] },
+      request: { is: { menteeId: Number(menteeId) } },
+    },
+    select: { id: true },
+  });
 
-  // משתמשים ב-transaction כדי ששתי הפעולות
-  // יקרו ביחד:
-  //
-  // 1. יצירת Meeting.
-  // 2. שינוי הבקשה ל-MATCHED.
-  //
-  // אם אחת מהפעולות נכשלת,
-  // גם הפעולה השנייה לא תישמר.
-  const result = await prisma.$transaction(
-    async (tx) => {
-      // יצירת הפגישה בפועל.
-      const meeting = await tx.meeting.create({
+  if (activeMeeting) {
+    throw createServiceError(
+      "יש לך כבר פגישה פעילה. כדי לקבוע פגישה חדשה, בטלי קודם את הפגישה הקיימת.",
+      409
+    );
+  }
+
+  const meeting = await prisma.$transaction(
+    async (transaction) => {
+      const usedCapacity = await transaction.mentoringRequest.count({
+        where: {
+          mentorProfileId: request.mentorProfile.id,
+          status: { in: CAPACITY_STATUSES },
+          id: { not: request.id },
+        },
+      });
+
+      if (usedCapacity >= request.mentorProfile.meetingCapacity) {
+        throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה", 409);
+      }
+
+      const statusUpdate = await transaction.mentoringRequest.updateMany({
+        where: {
+          id: request.id,
+          status: "WAITING_FOR_MENTEE_SELECTION",
+        },
+        data: { status: "MATCHED" },
+      });
+
+      if (statusUpdate.count !== 1) {
+        throw createServiceError("This request was already handled", 409);
+      }
+
+      const createdMeeting = await transaction.meeting.create({
         data: {
-          requestId: Number(requestId),
-
-          // המועד שהחניכה בחרה.
-          selectedSlotId: Number(slotId),
-
-          // מספר ניסיון הפגישה.
-          attemptNumber,
-
-          // התאריך והשעה מגיעים מהמועד
-          // שהמנטורית הציעה.
-          scheduledStart: slot.startTime,
-          scheduledEnd: slot.endTime,
-
-          // הפגישה כרגע מתוזמנת.
+          requestId: request.id,
+          selectedSlotId: selectedSlot.id,
+          attemptNumber: (request.meetings[0]?.attemptNumber || 0) + 1,
+          scheduledStart: selectedSlot.startTime,
+          scheduledEnd: selectedSlot.endTime,
           status: "SCHEDULED",
         },
       });
 
-      // ברגע שנוצרה פגישה אמיתית,
-      // הבקשה הופכת ל-MATCHED.
-      await tx.mentoringRequest.update({
-        where: {
-          id: Number(requestId),
-        },
-
+      await transaction.notification.create({
         data: {
-          status: "MATCHED",
+          recipientId: request.mentorProfile.userId,
+          requestId: request.id,
+          meetingId: createdMeeting.id,
+          type: "MEETING_MATCHED",
+          channel: "IN_APP",
         },
       });
 
-      return meeting;
-    }
+      return createdMeeting;
+    },
+    { isolationLevel: "Serializable" }
   );
 
-  // אחרי שהפגישה נוצרה בהצלחה והבקשה עודכנה ל-MATCHED,
-  // שולחים מייל למנטורית ולחניכה שהפגישה נקבעה.
-  // request.mentee ו-request.mentorProfile.user כבר נשלפו למעלה,
-  // כך שאין כאן שאילתה נוספת ואין email כפול שנשמר על ה-Meeting עצמו.
   await sendMeetingScheduledEmails({
     mentor: request.mentorProfile.user,
     mentee: request.mentee,
-    meeting: result,
+    meeting,
   });
 
-  return result;
+  return meeting;
 }
 
-// ============================================================
-// ביטול פגישה שכבר נקבעה.
-// ============================================================
-async function cancelMeeting({
-  meetingId,
-  menteeId,
-}) {
-  // קודם מחפשים את הפגישה ומוודאים:
-  //
-  // 1. שהפגישה קיימת.
-  // 2. שהיא שייכת לחניכה שמנסה לבטל אותה.
-  // 3. שהפגישה עדיין במצב שבו אפשר לבטל אותה.
+async function cancelMeeting({ meetingId, menteeId }) {
   const meeting = await prisma.meeting.findFirst({
     where: {
       id: Number(meetingId),
-
-      status: {
-        in: [
-          "SCHEDULED",
-          "ATTENDANCE_CONFIRMED",
-        ],
-      },
-
-      request: {
-        is: {
-          menteeId: Number(menteeId),
-        },
-      },
+      status: { in: ["SCHEDULED", "ATTENDANCE_CONFIRMED"] },
+      request: { is: { menteeId: Number(menteeId) } },
     },
-
-    include: {
-      request: true,
-    },
+    include: { request: true },
   });
 
-  // אם לא נמצאה פגישה מתאימה,
-  // לא מאפשרים את הביטול.
   if (!meeting) {
-    throw new Error(
-      "Meeting cannot be cancelled"
+    throw createServiceError("Meeting cannot be cancelled", 409);
+  }
+
+  return prisma.$transaction(async (transaction) => {
+    const updatedMeeting = await transaction.meeting.update({
+      where: { id: meeting.id },
+      data: { status: "CANCELLED" },
+    });
+
+    await transaction.mentoringRequest.update({
+      where: { id: meeting.requestId },
+      data: { status: "CANCELLED" },
+    });
+
+    return updatedMeeting;
+  });
+}
+
+async function getParticipantMeeting(meetingId, userId) {
+  const meeting = await prisma.meeting.findFirst({
+    where: {
+      id: Number(meetingId),
+      OR: [
+        { request: { menteeId: Number(userId) } },
+        { request: { mentorProfile: { userId: Number(userId) } } },
+      ],
+    },
+    include: MEETING_INCLUDE,
+  });
+
+  if (!meeting) {
+    throw createServiceError("Meeting not found", 404);
+  }
+
+  return meeting;
+}
+
+async function confirmMeetingOutcome({ meetingId, userId, occurred }) {
+  if (typeof occurred !== "boolean") {
+    throw createServiceError("occurred must be true or false", 400);
+  }
+
+  const meeting = await getParticipantMeeting(meetingId, userId);
+
+  if (meeting.scheduledEnd.getTime() > Date.now()) {
+    throw createServiceError(
+      "The meeting outcome can only be confirmed after it ends",
+      409
     );
   }
 
-  // גם כאן משתמשים ב-transaction.
-  //
-  // הפגישה עצמה הופכת ל-CANCELLED
-  // וגם תהליך המנטורינג נסגר כרגע כ-CANCELLED.
-  const cancelledMeeting =
-    await prisma.$transaction(async (tx) => {
-      // ביטול הפגישה.
-      const updatedMeeting =
-        await tx.meeting.update({
-          where: {
-            id: Number(meetingId),
-          },
+  if (
+    meeting.outcomeConfirmations.some(
+      (confirmation) => confirmation.userId === Number(userId)
+    )
+  ) {
+    throw createServiceError(
+      "You already confirmed this meeting outcome",
+      409
+    );
+  }
 
-          data: {
-            status: "CANCELLED",
-          },
-        });
+  const nextStatus = occurred ? "COMPLETED" : "NOT_COMPLETED";
 
-      // עדכון בקשת המנטורינג.
-      await tx.mentoringRequest.update({
-        where: {
-          id: meeting.requestId,
-        },
-
-        data: {
-          status: "CANCELLED",
-        },
-      });
-
-      return updatedMeeting;
+  return prisma.$transaction(async (transaction) => {
+    await transaction.meetingOutcomeConfirmation.create({
+      data: {
+        meetingId: meeting.id,
+        userId: Number(userId),
+        occurred,
+        wantsReschedule: false,
+      },
     });
 
-  return cancelledMeeting;
+    if (!["COMPLETED", "NOT_COMPLETED"].includes(meeting.status)) {
+      await transaction.meeting.update({
+        where: { id: meeting.id },
+        data: { status: nextStatus },
+      });
+      await transaction.mentoringRequest.update({
+        where: { id: meeting.requestId },
+        data: { status: nextStatus },
+      });
+    }
+
+    return transaction.meeting.findUnique({
+      where: { id: meeting.id },
+      include: MEETING_INCLUDE,
+    });
+  });
+}
+
+async function submitMeetingFeedback({ meetingId, userId, rating, text }) {
+  const numericRating = Number(rating);
+
+  if (
+    !Number.isInteger(numericRating) ||
+    numericRating < 1 ||
+    numericRating > 5
+  ) {
+    throw createServiceError(
+      "Rating must be a whole number between 1 and 5",
+      400
+    );
+  }
+
+  const meeting = await getParticipantMeeting(meetingId, userId);
+
+  if (meeting.status !== "COMPLETED") {
+    throw createServiceError(
+      "Feedback is available only after a completed meeting",
+      409
+    );
+  }
+
+  if (
+    meeting.feedback.some(
+      (entry) => entry.authorId === Number(userId)
+    )
+  ) {
+    throw createServiceError(
+      "You already submitted feedback for this meeting",
+      409
+    );
+  }
+
+  return prisma.feedback.create({
+    data: {
+      meetingId: meeting.id,
+      authorId: Number(userId),
+      answers: {
+        rating: numericRating,
+        text:
+          typeof text === "string"
+            ? text.trim().slice(0, 1000)
+            : "",
+      },
+    },
+  });
 }
 
 module.exports = {
   createMeetingFromSlot,
   cancelMeeting,
+  confirmMeetingOutcome,
+  submitMeetingFeedback,
 };

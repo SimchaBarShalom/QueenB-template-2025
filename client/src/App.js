@@ -14,20 +14,41 @@ import RoleAreaPage from "./components/RoleAreaPage";
 import MenteeDashboard from "./components/MenteeDashboard";
 import MentorSearchPage from "./components/MentorSearchPage";
 import MenteeMeetingsPage from "./components/MenteeMeetingsPage";
+import MentorMeetingsPage from "./components/MentorMeetingsPage";
+import { getDefaultAreaPath, isMentorUser } from "./utils/areaRouting";
+
+function MenteeOnlyRoute({ user, children }) {
+  if (!user) return <Navigate to="/" replace />;
+  if (isMentorUser(user)) return <Navigate to="/mentor" replace />;
+  return children;
+}
+
+function MentorOnlyRoute({ user, children }) {
+  if (!user) return <Navigate to="/" replace />;
+  if (!isMentorUser(user)) return <Navigate to={getDefaultAreaPath(user)} replace />;
+  return children;
+}
 
 function ThemedApp() {
   const { direction } = useLanguage();
   const theme = useMemo(() => getTheme(direction), [direction]);
   const [currentUser, setCurrentUser] = useState(() => {
     const savedUser = window.localStorage.getItem("queensMatchUser");
-    return savedUser ? JSON.parse(savedUser) : null;
+    const savedToken = window.localStorage.getItem("queensMatchToken");
+    return savedUser && savedToken ? JSON.parse(savedUser) : null;
   });
   // "login" | "register" | null - which auth dialog (if any) is open. Both
   // dialogs are rendered once here so they can be triggered from the public
   // navbar and swapped between ("צור חשבון" / "כניסה" links) without routing.
   const [authDialog, setAuthDialog] = useState(null);
 
-  const handleAuthSuccess = (user) => {
+  const handleAuthSuccess = (user, token) => {
+    setCurrentUser(user);
+    window.localStorage.setItem("queensMatchUser", JSON.stringify(user));
+    window.localStorage.setItem("queensMatchToken", token);
+  };
+
+  const handleUserUpdated = (user) => {
     setCurrentUser(user);
     window.localStorage.setItem("queensMatchUser", JSON.stringify(user));
   };
@@ -35,6 +56,7 @@ function ThemedApp() {
   const handleLogout = () => {
     setCurrentUser(null);
     window.localStorage.removeItem("queensMatchUser");
+    window.localStorage.removeItem("queensMatchToken");
   };
 
   return (
@@ -49,12 +71,60 @@ function ThemedApp() {
             onOpenRegister={() => setAuthDialog("register")}
           >
             <Routes>
-              <Route path="/" element={<HomePage onOpenRegister={() => setAuthDialog("register")} />} />
-              <Route path="/profile" element={<ProfilePage user={currentUser} />} />
-              <Route path="/mentee" element={<MenteeDashboard currentUser={currentUser} />} />
-              <Route path="/mentee/mentors" element={<MentorSearchPage />} />
-              <Route path="/mentee/meetings" element={<MenteeMeetingsPage />} />
-              <Route path="/mentor" element={<RoleAreaPage role="MENTOR" />} />
+              <Route
+                path="/"
+                element={
+                  currentUser ? (
+                    <Navigate to={getDefaultAreaPath(currentUser)} replace />
+                  ) : (
+                    <HomePage onOpenRegister={() => setAuthDialog("register")} />
+                  )
+                }
+              />
+              <Route
+                path="/profile"
+                element={<ProfilePage user={currentUser} onUserUpdated={handleUserUpdated} />}
+              />
+              <Route
+                path="/mentee"
+                element={
+                  <MenteeOnlyRoute user={currentUser}>
+                    <MenteeDashboard currentUser={currentUser} />
+                  </MenteeOnlyRoute>
+                }
+              />
+              <Route
+                path="/mentee/mentors"
+                element={
+                  <MenteeOnlyRoute user={currentUser}>
+                    <MentorSearchPage />
+                  </MenteeOnlyRoute>
+                }
+              />
+              <Route
+                path="/mentee/meetings"
+                element={
+                  <MenteeOnlyRoute user={currentUser}>
+                    <MenteeMeetingsPage />
+                  </MenteeOnlyRoute>
+                }
+              />
+              <Route
+                path="/mentor"
+                element={
+                  <MentorOnlyRoute user={currentUser}>
+                    <RoleAreaPage role="MENTOR" />
+                  </MentorOnlyRoute>
+                }
+              />
+              <Route
+                path="/mentor/meetings"
+                element={
+                  <MentorOnlyRoute user={currentUser}>
+                    <MentorMeetingsPage currentUser={currentUser} />
+                  </MentorOnlyRoute>
+                }
+              />
               <Route path="/admin" element={<RoleAreaPage role="ADMIN" />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

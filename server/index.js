@@ -20,10 +20,7 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/mentors", require("./routes/mentors"));
 app.use("/api/mentoring-requests", require("./routes/mentoringRequests"));
-app.use(
-  "/api/meetings",
-  require("./routes/meetings")
-);
+app.use("/api/meetings", require("./routes/meetings"));
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

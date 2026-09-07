@@ -58,7 +58,7 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
 
     try {
       const response = await axios.post("/api/auth/login", values);
-      onLogin(response.data.user);
+      onLogin(response.data.user, response.data.token);
       handleClose();
       navigate(getDefaultAreaPath(response.data.user));
     } catch (requestError) {

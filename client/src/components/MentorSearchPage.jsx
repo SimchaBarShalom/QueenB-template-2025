@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 
 import MentorCard from "./MentorCard";
+import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
 const initialFilters = {
   jobTitle: "",
@@ -104,6 +105,21 @@ const getRequestStatus = useCallback((mentorProfileId) => {
         "ATTENDANCE_CONFIRMED"
     ) {
       return "scheduled";
+    }
+
+    if (latestRequest.status === "CANCELLED") {
+      const extraSlotsUsed = (latestRequest.schedulingRounds || []).some(
+        (round) => round.type === "EXTRA_SLOTS"
+      );
+      const updatedAt = new Date(latestRequest.updatedAt);
+      const now = new Date();
+      const thisMonth =
+        updatedAt.getFullYear() === now.getFullYear() &&
+        updatedAt.getMonth() === now.getMonth();
+
+      if (extraSlotsUsed && thisMonth) {
+        return "blocked";
+      }
     }
 
     return "none";
@@ -195,7 +211,9 @@ const getRequestStatus = useCallback((mentorProfileId) => {
       ]);
     } catch (requestError) {
       console.error(requestError);
-      setError("שליחת בקשת הפגישה נכשלה.");
+      setError(
+        getRequestErrorMessage(requestError, "שליחת בקשת הפגישה נכשלה.")
+      );
     }
   };
 

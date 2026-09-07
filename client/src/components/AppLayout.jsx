@@ -2,7 +2,7 @@ import React from "react";
 import { useLocation } from "react-router-dom";
 import { Box } from "@mui/material";
 import Navbar from "./Navbar";
-import MenteeNavbar from "./MenteeNavbar";
+import AuthenticatedNavbar from "./AuthenticatedNavbar";
 import { useLanguage } from "../i18n/LanguageContext";
 
 function AppLayout({ children, currentUser, onLogout, onOpenLogin, onOpenRegister }) {
@@ -17,7 +17,7 @@ function AppLayout({ children, currentUser, onLogout, onOpenLogin, onOpenRegiste
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }} dir={direction}>
       {showAuthenticatedNavbar ? (
-        <MenteeNavbar currentUser={currentUser} onLogout={onLogout} />
+        <AuthenticatedNavbar currentUser={currentUser} onLogout={onLogout} />
       ) : (
         <Navbar onOpenLogin={onOpenLogin} onOpenRegister={onOpenRegister} />
       )}

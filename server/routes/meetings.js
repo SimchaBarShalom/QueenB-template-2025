@@ -1,131 +1,90 @@
-// מייבאים את Express כדי שנוכל ליצור Routes ל-API.
 const express = require("express");
-
-// יוצרים Router חדש.
-// כל הכתובות שקשורות לפגישות יעברו דרך ה-Router הזה.
-const router = express.Router();
-
-// מייבאים מה-Service את הפונקציות
-// שמבצעות את הלוגיקה האמיתית מול ה-Database.
+const authenticate = require("../middleware/authenticate");
 const {
   createMeetingFromSlot,
   cancelMeeting,
+  confirmMeetingOutcome,
+  submitMeetingFeedback,
 } = require("../services/meetingsService");
 
+const router = express.Router();
 
-// ============================================================
-// בחירת מועד ויצירת פגישה
-// ============================================================
-//
-// ה-Frontend ישלח:
-//
-// POST /api/meetings/select-slot
-//
-// וב-body:
-// {
-//   requestId,
-//   slotId,
-//   menteeId
-// }
-//
-// הפונקציה הזאת רק מקבלת את הבקשה מה-Frontend
-// ומעבירה את הנתונים ל-Service.
-//
-router.post("/select-slot", async (req, res) => {
+function handleServiceError(error, res, next) {
+  if (error.statusCode) {
+    return res.status(error.statusCode).json({ error: error.message });
+  }
+
+  return next(error);
+}
+
+router.post("/select-slot", async (req, res, next) => {
   try {
-    // שולפים מה-body את הנתונים שה-Frontend שלח.
-    const {
+    const { requestId, slotId, menteeId } = req.body;
+
+    if (!requestId || !slotId || !menteeId) {
+      return res.status(400).json({
+        error: "requestId, slotId and menteeId are required",
+      });
+    }
+
+    const meeting = await createMeetingFromSlot({
       requestId,
       slotId,
       menteeId,
-    } = req.body;
-
-    // קוראים לפונקציה מה-Service.
-    // היא זו שבודקת את הנתונים,
-    // יוצרת Meeting ב-Database
-    // ומשנה את MentoringRequest ל-MATCHED.
-    const meeting =
-      await createMeetingFromSlot({
-        requestId,
-        slotId,
-        menteeId,
-      });
-
-    // אם הכול הצליח,
-    // מחזירים ל-Frontend את הפגישה שנוצרה.
-    //
-    // 201 = נוצר משאב חדש בהצלחה.
-    res.status(201).json(meeting);
-
-  } catch (error) {
-    // אם הייתה שגיאה,
-    // מדפיסים אותה בטרמינל של השרת.
-    console.error(
-      "Error creating meeting:",
-      error
-    );
-
-    // מחזירים ל-Frontend הודעת שגיאה.
-    res.status(400).json({
-      error: error.message,
     });
+
+    return res.status(201).json(meeting);
+  } catch (error) {
+    return handleServiceError(error, res, next);
   }
 });
 
+router.patch("/:meetingId/cancel", async (req, res, next) => {
+  try {
+    const { menteeId } = req.body;
 
-// ============================================================
-// ביטול פגישה
-// ============================================================
-//
-// ה-Frontend ישלח:
-//
-// PATCH /api/meetings/:meetingId/cancel
-//
-// לדוגמה:
-// PATCH /api/meetings/5/cancel
-//
-// וב-body:
-// {
-//   menteeId
-// }
-//
-router.patch(
-  "/:meetingId/cancel",
-  async (req, res) => {
-    try {
-      // meetingId מגיע מתוך כתובת ה-URL.
-      const { meetingId } = req.params;
-
-      // menteeId מגיע מתוך ה-body.
-      const { menteeId } = req.body;
-
-      // קוראים לפונקציה מה-Service
-      // שמבצעת את ביטול הפגישה ב-Database.
-      const meeting = await cancelMeeting({
-        meetingId,
-        menteeId,
-      });
-
-      // מחזירים ל-Frontend את הפגישה המעודכנת.
-      res.json(meeting);
-
-    } catch (error) {
-      // אם הביטול נכשל,
-      // מציגים את השגיאה בטרמינל.
-      console.error(
-        "Error cancelling meeting:",
-        error
-      );
-
-      // ומחזירים הודעת שגיאה ל-Frontend.
-      res.status(400).json({
-        error: error.message,
-      });
+    if (!menteeId) {
+      return res.status(400).json({ error: "menteeId is required" });
     }
+
+    const meeting = await cancelMeeting({
+      meetingId: req.params.meetingId,
+      menteeId,
+    });
+
+    return res.json(meeting);
+  } catch (error) {
+    return handleServiceError(error, res, next);
   }
-);
+});
 
+router.patch("/:meetingId/outcome", authenticate, async (req, res, next) => {
+  try {
+    const meeting = await confirmMeetingOutcome({
+      meetingId: req.params.meetingId,
+      userId: req.auth.userId,
+      occurred: req.body.occurred,
+    });
 
-// מייצאים את ה-Router,
-// כדי ש-server/index.js יוכל להשתמש בו.
+    return res.json(meeting);
+  } catch (error) {
+    return handleServiceError(error, res, next);
+  }
+});
+
+router.post("/:meetingId/feedback", authenticate, async (req, res, next) => {
+  try {
+    const feedback = await submitMeetingFeedback({
+      meetingId: req.params.meetingId,
+      userId: req.auth.userId,
+      rating: req.body.rating,
+      text: req.body.text,
+    });
+
+    return res.status(201).json(feedback);
+  } catch (error) {
+    return handleServiceError(error, res, next);
+  }
+});
+
 module.exports = router;

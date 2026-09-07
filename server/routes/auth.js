@@ -5,6 +5,7 @@ const {
   validateRegistrationInput,
   validateLoginInput,
 } = require("../services/authService");
+const { createAuthToken } = require("../services/authTokenService");
 
 const router = express.Router();
 
@@ -17,7 +18,8 @@ router.post("/register", async (req, res, next) => {
     }
 
     const user = await registerUser(req.body);
-    return res.status(201).json({ user });
+    const token = createAuthToken(user.id);
+    return res.status(201).json({ user, token });
   } catch (error) {
     if (error.code === "P2002") {
       return res.status(409).json({ error: "Email already exists" });
@@ -41,7 +43,8 @@ router.post("/login", async (req, res, next) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    return res.json({ user });
+    const token = createAuthToken(user.id);
+    return res.json({ user, token });
   } catch (error) {
     return next(error);
   }

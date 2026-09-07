@@ -1,45 +1,96 @@
 const prisma = require("../lib/prisma");
 const { sendEmail } = require("./emailService");
+const { createMeetingFromSlot } = require("./meetingsService");
 
-// שולח מייל לחניכה ולמנטורית לאחר יצירת בקשת מנטורינג.
-// אם שליחת המייל נכשלת, הבקשה שכבר נשמרה ב-DB לא מתבטלת.
-async function sendMentoringRequestEmails({
-  menteeId,
-  mentorProfileId,
-}) {
-  try {
-    // שליפת פרטי החניכה מה-Database.
-    const mentee = await prisma.user.findUnique({
-      where: {
-        id: Number(menteeId),
-      },
-      select: {
-        id: true,
-        fullName: true,
-        email: true,
-      },
-    });
-
-    // שליפת פרטי המנטורית והמשתמשת המקושרת אליה.
-    const mentorProfile =
-      await prisma.mentorProfile.findUnique({
-        where: {
-          id: Number(mentorProfileId),
+const MENTOR_REQUEST_INCLUDE = {
+  mentee: {
+    select: {
+      id: true,
+      fullName: true,
+      profileImageUrl: true,
+      jobTitle: true,
+      workplace: true,
+    },
+  },
+  mentorProfile: {
+    select: {
+      id: true,
+      meetingDurationMinutes: true,
+      mentoringTopics: true,
+      user: {
+        select: {
+          id: true,
+          fullName: true,
         },
+      },
+    },
+  },
+  schedulingRounds: {
+    include: { offeredSlots: { orderBy: { startTime: "asc" } } },
+    orderBy: { roundNumber: "desc" },
+  },
+  meetings: {
+    include: {
+      outcomeConfirmations: {
+        select: { userId: true, occurred: true },
+      },
+      feedback: {
+        select: { authorId: true, answers: true },
+      },
+    },
+    orderBy: { scheduledStart: "desc" },
+  },
+  notifications: {
+    where: {
+      channel: "IN_APP",
+    },
+    select: {
+      id: true,
+      type: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+  },
+};
+
+const ACTIVE_REQUEST_STATUSES = [
+  "WAITING_FOR_MENTOR_SLOTS",
+  "WAITING_FOR_MENTEE_SELECTION",
+  "MATCHED",
+  "ATTENDANCE_CONFIRMED",
+];
+
+const CAPACITY_STATUSES = [
+  "MATCHED",
+  "ATTENDANCE_CONFIRMED",
+  "COMPLETED",
+  "FEEDBACK_COMPLETED",
+];
+
+function createServiceError(message, statusCode) {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
+
+async function sendMentoringRequestEmails({ menteeId, mentorProfileId }) {
+  try {
+    const [mentee, mentorProfile] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: Number(menteeId) },
+        select: { fullName: true, email: true },
+      }),
+      prisma.mentorProfile.findUnique({
+        where: { id: Number(mentorProfileId) },
         include: {
           user: {
-            select: {
-              id: true,
-              fullName: true,
-              email: true,
-            },
+            select: { fullName: true, email: true },
           },
           mentoringTopics: true,
         },
-      });
+      }),
+    ]);
 
-    // אם מסיבה כלשהי אחת המשתמשות לא נמצאה,
-    // לא ננסה לשלוח מייל.
     if (!mentee || !mentorProfile?.user) {
       console.error(
         "לא נמצאו פרטי החניכה או המנטורית לצורך שליחת המייל."
@@ -48,20 +99,14 @@ async function sendMentoringRequestEmails({
     }
 
     const mentor = mentorProfile.user;
-
-    // כרגע הבקשה עצמה לא שומרת נושא ספציפי שהחניכה בחרה,
-    // לכן במייל נציג את תחומי המנטורינג של המנטורית.
     const mentoringTopics =
-      mentorProfile.mentoringTopics?.length > 0
+      mentorProfile.mentoringTopics.length > 0
         ? mentorProfile.mentoringTopics
             .map((topic) => topic.name)
             .join(", ")
         : "לא צוין תחום ספציפי";
 
-    // שולחים את שני המיילים במקביל.
-    // Promise.allSettled מאפשר לבקשה להישאר תקינה גם אם מייל אחד נכשל.
-    const emailResults = await Promise.allSettled([
-      // מייל לחניכה.
+    const results = await Promise.allSettled([
       sendEmail({
         to: mentee.email,
         subject: "בקשת הפגישה שלך נשלחה | Queen Match",
@@ -78,29 +123,13 @@ async function sendMentoringRequestEmails({
         html: `
           <div dir="rtl" style="font-family: Arial, sans-serif;">
             <h2>הבקשה נשלחה בהצלחה 💗</h2>
-
             <p>היי ${mentee.fullName},</p>
-
-            <p>
-              בקשת הפגישה שלך עם
-              <strong>${mentor.fullName}</strong>
-              נשלחה בהצלחה.
-            </p>
-
-            <p>
-              ברגע שהמנטורית תציע מועדים לפגישה,
-              תקבלי עדכון ותוכלי לבחור את הזמן שמתאים לך.
-            </p>
-
-            <p>
-              בהצלחה,<br />
-              צוות Queen Match
-            </p>
+            <p>בקשת הפגישה שלך עם <strong>${mentor.fullName}</strong> נשלחה בהצלחה.</p>
+            <p>ברגע שהמנטורית תציע מועדים לפגישה, תקבלי עדכון ותוכלי לבחור את הזמן שמתאים לך.</p>
+            <p>בהצלחה,<br />צוות Queen Match</p>
           </div>
         `,
       }),
-
-      // מייל למנטורית.
       sendEmail({
         to: mentor.email,
         subject: `בקשת מנטורינג חדשה מ-${mentee.fullName} | Queen Match`,
@@ -119,48 +148,25 @@ ${mentoringTopics}
         html: `
           <div dir="rtl" style="font-family: Arial, sans-serif;">
             <h2>יש לך בקשת מנטורינג חדשה ✨</h2>
-
             <p>היי ${mentor.fullName},</p>
-
-            <p>
-              <strong>${mentee.fullName}</strong>
-              שלחה אלייך בקשת מנטורינג חדשה.
-            </p>
-
-            <p>
-              <strong>תחומי מנטורינג:</strong>
-              ${mentoringTopics}
-            </p>
-
-            <p>
-              היכנסי לאזור המנטורית ב-Queen Match
-              כדי לצפות בבקשה ולהציע מועדים לפגישה.
-            </p>
-
-            <p>
-              צוות Queen Match
-            </p>
+            <p><strong>${mentee.fullName}</strong> שלחה אלייך בקשת מנטורינג חדשה.</p>
+            <p><strong>תחומי מנטורינג:</strong> ${mentoringTopics}</p>
+            <p>היכנסי לאזור המנטורית ב-Queen Match כדי לצפות בבקשה ולהציע מועדים לפגישה.</p>
+            <p>צוות Queen Match</p>
           </div>
         `,
       }),
     ]);
 
-    // אם אחד המיילים נכשל, רק נרשום את השגיאה בשרת.
-    // לא נבטל את בקשת המנטורינג שנוצרה ב-DB.
-    emailResults.forEach((result, index) => {
+    results.forEach((result, index) => {
       if (result.status === "rejected") {
-        const recipient =
-          index === 0 ? "לחניכה" : "למנטורית";
-
         console.error(
-          `שליחת המייל ${recipient} נכשלה:`,
+          `שליחת המייל ${index === 0 ? "לחניכה" : "למנטורית"} נכשלה:`,
           result.reason
         );
       }
     });
   } catch (error) {
-    // גם כאן לא זורקים את השגיאה הלאה,
-    // כדי שכשל במייל לא ימחק או יבטל את הבקשה.
     console.error(
       "שגיאה בשליחת מיילים עבור בקשת המנטורינג:",
       error
@@ -168,142 +174,474 @@ ${mentoringTopics}
   }
 }
 
-async function createMentoringRequest({
-  menteeId,
-  mentorProfileId,
-}) {
-      // בודקים האם לחניכה כבר קיימת פגישה פעילה.
-  const activeMeeting = await prisma.meeting.findFirst({
-    where: {
-      status: {
-        in: [
-          "SCHEDULED",
-          "ATTENDANCE_CONFIRMED",
-        ],
-      },
+function currentMonthRange(now = new Date()) {
+  return {
+    start: new Date(now.getFullYear(), now.getMonth(), 1),
+    end: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+  };
+}
 
-      request: {
-        is: {
-          menteeId: Number(menteeId),
+function hasExtraSlotsRound(request) {
+  return (request.schedulingRounds || []).some((round) => round.type === "EXTRA_SLOTS");
+}
+
+async function assertCanCreateRequest(menteeId, mentorProfileId) {
+  const activeRequest = await prisma.mentoringRequest.findFirst({
+    where: {
+      menteeId,
+      mentorProfileId,
+      status: { in: ACTIVE_REQUEST_STATUSES },
+    },
+    select: { id: true },
+  });
+
+  if (activeRequest) {
+    throw createServiceError("כבר קיימת בקשה פעילה עם מנטורית זו", 409);
+  }
+
+  const { start, end } = currentMonthRange();
+  const monthlyBlock = await prisma.mentoringRequest.findFirst({
+    where: {
+      menteeId,
+      mentorProfileId,
+      status: "CANCELLED",
+      updatedAt: { gte: start, lt: end },
+      schedulingRounds: { some: { type: "EXTRA_SLOTS" } },
+      notifications: {
+        some: {
+          type: "RESCHEDULE_REQUIRED",
+          channel: "IN_APP",
         },
       },
     },
+    select: { id: true },
   });
 
-  // אם כבר קיימת פגישה פעילה,
-  // לא מאפשרים לשלוח בקשה לפגישה נוספת.
-  if (activeMeeting) {
-    throw new Error(
-      "יש לך כבר פגישה פעילה. כדי לקבוע פגישה חדשה, בטלי קודם את הפגישה הקיימת."
+  if (monthlyBlock) {
+    throw createServiceError(
+      "לא ניתן לקבוע פגישה חדשה עם מנטורית זו עד החודש הבא",
+      409
     );
   }
-  // קודם כל שומרים את הבקשה ב-Database.
+}
+
+async function createMentoringRequest({ menteeId, mentorProfileId }) {
+  const mentee = Number(menteeId);
+  const mentor = Number(mentorProfileId);
+
+  const activeMeeting = await prisma.meeting.findFirst({
+    where: {
+      status: { in: ["SCHEDULED", "ATTENDANCE_CONFIRMED"] },
+      request: { is: { menteeId: mentee } },
+    },
+    select: { id: true },
+  });
+
+  if (activeMeeting) {
+    throw createServiceError(
+      "יש לך כבר פגישה פעילה. כדי לקבוע פגישה חדשה, בטלי קודם את הפגישה הקיימת.",
+      409
+    );
+  }
+
+  await assertCanCreateRequest(mentee, mentor);
+
   const request = await prisma.mentoringRequest.create({
     data: {
-      menteeId: Number(menteeId),
-      mentorProfileId: Number(mentorProfileId),
+      menteeId: mentee,
+      mentorProfileId: mentor,
       status: "WAITING_FOR_MENTOR_SLOTS",
     },
   });
 
-  // אחרי שהבקשה נשמרה בהצלחה,
-  // שולחים מייל לחניכה ולמנטורית.
   await sendMentoringRequestEmails({
-    menteeId,
-    mentorProfileId,
+    menteeId: mentee,
+    mentorProfileId: mentor,
   });
 
   return request;
 }
 
 async function getMentoringRequestsByMentee(menteeId) {
-  const requests =
-    await prisma.mentoringRequest.findMany({
-      where: {
-        menteeId: Number(menteeId),
-      },
+  const requests = await prisma.mentoringRequest.findMany({
+    where: {
+      menteeId: Number(menteeId),
+    },
 
-      include: {
-        mentorProfile: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                fullName: true,
-                jobTitle: true,
-                workplace: true,
-                profileImageUrl: true,
-              },
+    include: {
+      mentorProfile: {
+        include: {
+          user: {
+            select: {
+              id: true,
+              fullName: true,
+              jobTitle: true,
+              workplace: true,
+              profileImageUrl: true,
             },
+          },
 
-            mentoringTopics: true,
-          },
-        },
-
-        schedulingRounds: {
-          include: {
-            offeredSlots: true,
-          },
-          orderBy: {
-            roundNumber: "desc",
-          },
-        },
-
-        meetings: {
-          orderBy: {
-            attemptNumber: "desc",
-          },
+          mentoringTopics: true,
         },
       },
 
-      orderBy: {
-        createdAt: "desc",
+      schedulingRounds: {
+        include: {
+          offeredSlots: true,
+        },
+        orderBy: {
+          roundNumber: "desc",
+        },
+      },
+
+      meetings: {
+        include: {
+          outcomeConfirmations: {
+            select: { userId: true, occurred: true },
+          },
+          feedback: {
+            select: { authorId: true, answers: true },
+          },
+        },
+        orderBy: {
+          attemptNumber: "desc",
+        },
+      },
+    },
+
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return requests;
+}
+
+async function getMentoringRequestsByMentorUser(userId) {
+  const mentorProfile = await prisma.mentorProfile.findUnique({
+    where: { userId: Number(userId) },
+    select: { id: true },
+  });
+
+  if (!mentorProfile) {
+    throw createServiceError("Only mentors can access mentor meetings", 403);
+  }
+
+  return prisma.mentoringRequest.findMany({
+    where: { mentorProfileId: mentorProfile.id },
+    include: MENTOR_REQUEST_INCLUDE,
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+async function getOwnedPendingRequest(requestId, userId) {
+  const request = await prisma.mentoringRequest.findFirst({
+    where: {
+      id: Number(requestId),
+      mentorProfile: { userId: Number(userId) },
+    },
+    include: {
+      mentorProfile: {
+        select: { id: true, meetingDurationMinutes: true, meetingCapacity: true },
+      },
+      schedulingRounds: {
+        select: { roundNumber: true },
+        orderBy: { roundNumber: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!request) {
+    throw createServiceError("Mentoring request not found", 404);
+  }
+
+  if (request.status !== "WAITING_FOR_MENTOR_SLOTS") {
+    throw createServiceError("This request is no longer waiting for mentor action", 409);
+  }
+
+  return request;
+}
+
+function validateAndNormalizeSlots(slots, meetingDurationMinutes) {
+  if (!Array.isArray(slots) || slots.length === 0 || slots.length > 10) {
+    throw createServiceError("Provide between 1 and 10 time slots", 400);
+  }
+
+  const now = Date.now();
+  const normalized = slots.map((slot) => {
+    const startTime = new Date(slot?.startTime);
+    const endTime = new Date(slot?.endTime);
+
+    if (
+      Number.isNaN(startTime.getTime()) ||
+      Number.isNaN(endTime.getTime()) ||
+      startTime.getTime() <= now
+    ) {
+      throw createServiceError("Every slot must have a valid future start and end time", 400);
+    }
+
+    const durationMinutes = (endTime.getTime() - startTime.getTime()) / 60000;
+    if (durationMinutes !== meetingDurationMinutes) {
+      throw createServiceError(
+        `Every slot must be exactly ${meetingDurationMinutes} minutes`,
+        400
+      );
+    }
+
+    return { startTime, endTime };
+  });
+
+  normalized.sort((first, second) => first.startTime - second.startTime);
+
+  for (let index = 1; index < normalized.length; index += 1) {
+    if (normalized[index].startTime < normalized[index - 1].endTime) {
+      throw createServiceError("Offered time slots cannot overlap", 400);
+    }
+  }
+
+  return normalized;
+}
+
+async function rejectMentoringRequest({ requestId, userId }) {
+  const request = await getOwnedPendingRequest(requestId, userId);
+
+  return prisma.mentoringRequest.update({
+    where: { id: request.id },
+    data: { status: "REJECTED" },
+    include: MENTOR_REQUEST_INCLUDE,
+  });
+}
+
+async function offerMentoringRequestSlots({ requestId, userId, slots }) {
+  const request = await getOwnedPendingRequest(requestId, userId);
+  const usedCapacity = await prisma.mentoringRequest.count({
+    where: {
+      mentorProfileId: request.mentorProfile.id,
+      status: { in: CAPACITY_STATUSES },
+    },
+  });
+
+  if (usedCapacity >= request.mentorProfile.meetingCapacity) {
+    throw createServiceError("הגעת למכסת הפגישות שלך", 409);
+  }
+
+  const normalizedSlots = validateAndNormalizeSlots(
+    slots,
+    request.mentorProfile.meetingDurationMinutes
+  );
+  const roundNumber = (request.schedulingRounds[0]?.roundNumber || 0) + 1;
+  const roundType = roundNumber === 1 ? "INITIAL" : "EXTRA_SLOTS";
+
+  await prisma.$transaction(async (transaction) => {
+    const statusUpdate = await transaction.mentoringRequest.updateMany({
+      where: {
+        id: request.id,
+        status: "WAITING_FOR_MENTOR_SLOTS",
+      },
+      data: { status: "WAITING_FOR_MENTEE_SELECTION" },
+    });
+
+    if (statusUpdate.count !== 1) {
+      throw createServiceError("This request was already handled", 409);
+    }
+
+    await transaction.schedulingRound.create({
+      data: {
+        requestId: request.id,
+        roundNumber,
+        type: roundType,
+        offeredSlots: { create: normalizedSlots },
+      },
+    });
+  });
+
+  return prisma.mentoringRequest.findUnique({
+    where: { id: request.id },
+    include: MENTOR_REQUEST_INCLUDE,
+  });
+}
+
+async function selectMentoringRequestSlot({ requestId, userId, slotId }) {
+  await createMeetingFromSlot({
+    requestId,
+    slotId,
+    menteeId: userId,
+  });
+
+  return prisma.mentoringRequest.findUnique({
+    where: { id: Number(requestId) },
+    include: MENTOR_REQUEST_INCLUDE,
+  });
+}
+
+async function offerRescheduleSlots({ requestId, userId, slots }) {
+  const request = await prisma.mentoringRequest.findFirst({
+    where: {
+      id: Number(requestId),
+      status: { in: ["MATCHED", "ATTENDANCE_CONFIRMED"] },
+      mentorProfile: { userId: Number(userId) },
+    },
+    include: {
+      mentorProfile: {
+        select: { meetingDurationMinutes: true },
+      },
+      schedulingRounds: {
+        select: { roundNumber: true, type: true },
+        orderBy: { roundNumber: "desc" },
+      },
+      meetings: {
+        where: { status: { in: ["SCHEDULED", "ATTENDANCE_CONFIRMED"] } },
+        orderBy: { attemptNumber: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!request) {
+    throw createServiceError("This meeting cannot be rescheduled", 409);
+  }
+
+  if (request.schedulingRounds.some((round) => round.type === "RESCHEDULE_BEFORE_MEETING")) {
+    throw createServiceError("The meeting has already been rescheduled once", 409);
+  }
+
+  const currentMeeting = request.meetings[0];
+  if (!currentMeeting || currentMeeting.scheduledStart.getTime() <= Date.now()) {
+    throw createServiceError("Only an upcoming meeting can be rescheduled", 409);
+  }
+
+  const normalizedSlots = validateAndNormalizeSlots(
+    slots,
+    request.mentorProfile.meetingDurationMinutes
+  );
+  const roundNumber = (request.schedulingRounds[0]?.roundNumber || 0) + 1;
+
+  await prisma.$transaction(async (transaction) => {
+    const statusUpdate = await transaction.mentoringRequest.updateMany({
+      where: {
+        id: request.id,
+        status: { in: ["MATCHED", "ATTENDANCE_CONFIRMED"] },
+      },
+      data: { status: "WAITING_FOR_MENTEE_SELECTION" },
+    });
+
+    if (statusUpdate.count !== 1) {
+      throw createServiceError("This meeting was already changed", 409);
+    }
+
+    await transaction.meeting.update({
+      where: { id: currentMeeting.id },
+      data: { status: "RESCHEDULED" },
+    });
+
+    await transaction.schedulingRound.create({
+      data: {
+        requestId: request.id,
+        roundNumber,
+        type: "RESCHEDULE_BEFORE_MEETING",
+        offeredSlots: { create: normalizedSlots },
       },
     });
 
-  return requests;
+    await transaction.notification.create({
+      data: {
+        recipientId: request.menteeId,
+        requestId: request.id,
+        meetingId: currentMeeting.id,
+        type: "RESCHEDULE_REQUIRED",
+        channel: "IN_APP",
+      },
+    });
+  });
+
+  return prisma.mentoringRequest.findUnique({
+    where: { id: request.id },
+    include: MENTOR_REQUEST_INCLUDE,
+  });
 }
 
 async function cancelMentoringRequest({
   requestId,
   menteeId,
 }) {
-  const existingRequest =
-    await prisma.mentoringRequest.findFirst({
-      where: {
-        id: Number(requestId),
-        menteeId: Number(menteeId),
-        status: {
-          in: [
-            "WAITING_FOR_MENTOR_SLOTS",
-            "WAITING_FOR_MENTEE_SELECTION",
-          ],
-        },
+  const existingRequest = await prisma.mentoringRequest.findFirst({
+    where: {
+      id: Number(requestId),
+      menteeId: Number(menteeId),
+      status: {
+        in: ["WAITING_FOR_MENTOR_SLOTS", "WAITING_FOR_MENTEE_SELECTION"],
       },
-    });
+    },
+  });
 
   if (!existingRequest) {
-    throw new Error(
-      "Mentoring request cannot be cancelled"
-    );
+    throw createServiceError("Mentoring request cannot be cancelled", 409);
   }
 
-  const cancelledRequest =
-    await prisma.mentoringRequest.update({
-      where: {
-        id: Number(requestId),
-      },
+  return prisma.mentoringRequest.update({
+    where: { id: existingRequest.id },
+    data: { status: "CANCELLED" },
+    include: MENTOR_REQUEST_INCLUDE,
+  });
+}
 
+async function declineOfferedSlots({ requestId, menteeId }) {
+  const request = await prisma.mentoringRequest.findFirst({
+    where: {
+      id: Number(requestId),
+      menteeId: Number(menteeId),
+      status: "WAITING_FOR_MENTEE_SELECTION",
+    },
+    include: {
+      schedulingRounds: {
+        select: { type: true },
+        orderBy: { roundNumber: "desc" },
+      },
+      mentorProfile: {
+        select: { userId: true },
+      },
+    },
+  });
+
+  if (!request) {
+    throw createServiceError("This request is not waiting for a time selection", 409);
+  }
+
+  const nextStatus = hasExtraSlotsRound(request)
+    ? "CANCELLED"
+    : "WAITING_FOR_MENTOR_SLOTS";
+
+  return prisma.$transaction(async (transaction) => {
+    await transaction.mentoringRequest.update({
+      where: { id: request.id },
+      data: { status: nextStatus },
+    });
+
+    await transaction.notification.create({
       data: {
-        status: "CANCELLED",
+        recipientId: request.mentorProfile.userId,
+        requestId: request.id,
+        type: "RESCHEDULE_REQUIRED",
+        channel: "IN_APP",
       },
     });
 
-  return cancelledRequest;
+    return transaction.mentoringRequest.findUnique({
+      where: { id: request.id },
+      include: MENTOR_REQUEST_INCLUDE,
+    });
+  });
 }
 
 module.exports = {
   createMentoringRequest,
   getMentoringRequestsByMentee,
+  getMentoringRequestsByMentorUser,
+  offerMentoringRequestSlots,
+  selectMentoringRequestSlot,
+  offerRescheduleSlots,
+  rejectMentoringRequest,
   cancelMentoringRequest,
+  declineOfferedSlots,
 };

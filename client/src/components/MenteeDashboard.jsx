@@ -22,6 +22,7 @@ import EventNoteIcon from "@mui/icons-material/EventNote";
 import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 
 import MentorCard from "./MentorCard";
+import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
 function SummaryCard({ icon: Icon, title, value, subtitle }) {
   return (
@@ -188,7 +189,28 @@ function MenteeDashboard({ currentUser }) {
         return "pending";
       }
 
-      return "none";
+      const now = new Date();
+      const blockedThisMonth = requests.some((request) => {
+        if (
+          request.mentorProfileId !== mentorProfileId ||
+          request.status !== "CANCELLED"
+        ) {
+          return false;
+        }
+
+        const extraSlotsUsed = (
+          request.schedulingRounds || []
+        ).some((round) => round.type === "EXTRA_SLOTS");
+        const updatedAt = new Date(request.updatedAt);
+
+        return (
+          extraSlotsUsed &&
+          updatedAt.getFullYear() === now.getFullYear() &&
+          updatedAt.getMonth() === now.getMonth()
+        );
+      });
+
+      return blockedThisMonth ? "blocked" : "none";
     },
     [requests]
   );
@@ -220,7 +242,9 @@ function MenteeDashboard({ currentUser }) {
       ]);
     } catch (requestError) {
       console.error(requestError);
-      setError("שליחת בקשת הפגישה נכשלה.");
+      setError(
+        getRequestErrorMessage(requestError, "שליחת בקשת הפגישה נכשלה.")
+      );
     }
   };
 
