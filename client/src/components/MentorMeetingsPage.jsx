@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   Container,
   Snackbar,
@@ -15,6 +15,12 @@ import {
   rejectMentorRequest,
 } from "../services/mentorMeetingsService";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
+import {
+  DEFAULT_MENTOR_MEETING_TAB,
+  getMentorMeetingTabFromSearch,
+  isMentorMeetingTab,
+  MENTOR_MEETING_TAB_QUERY,
+} from "../utils/meetingNav";
 import {
   MentorMonthlyBlockCard,
   MentorOfferedSlotsCard,
@@ -29,14 +35,6 @@ import {
   offerRescheduleSlots,
   submitMeetingFeedback,
 } from "../services/meetingsService";
-
-const SECTION_TABS = [
-  { id: "past-section", label: "פגישות שהתקיימו" },
-  { id: "upcoming-section", label: "פגישות קרובות" },
-  { id: "pending-section", label: "בקשות שממתינות לך" },
-  { id: "offered-section", label: "זמנים שהצעת" },
-  { id: "closed-section", label: "בקשות שנסגרו" },
-];
 
 function formatDate(value) {
   return new Date(value).toLocaleDateString("he-IL");
@@ -124,8 +122,9 @@ function EmptyState({ children }) {
 }
 
 function MentorMeetingsPage({ currentUser }) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [requests, setRequests] = useState([]);
-  const [activeTab, setActiveTab] = useState("upcoming-section");
+  const activeTab = getMentorMeetingTabFromSearch(searchParams);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [action, setAction] = useState(null);
@@ -155,6 +154,15 @@ function MentorMeetingsPage({ currentUser }) {
   useEffect(() => {
     loadRequests({ withSpinner: true });
   }, [loadRequests]);
+
+  useEffect(() => {
+    const rawTab = searchParams.get(MENTOR_MEETING_TAB_QUERY);
+    if (!isMentorMeetingTab(rawTab)) {
+      const next = new URLSearchParams(searchParams);
+      next.set(MENTOR_MEETING_TAB_QUERY, DEFAULT_MENTOR_MEETING_TAB);
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const {
     pastMeetings,
@@ -343,37 +351,7 @@ function MentorMeetingsPage({ currentUser }) {
           </Alert>
         )}
 
-        <Stack
-          direction="row"
-          spacing={1}
-          flexWrap="wrap"
-          rowGap={1}
-          sx={{
-            position: "sticky",
-            top: { xs: 64, md: 72 },
-            zIndex: 1,
-            bgcolor: "#fff",
-            border: "1px solid #f6d3e0",
-            borderRadius: 999,
-            p: 1,
-            mb: 4,
-          }}
-        >
-          {SECTION_TABS.map((tab) => (
-            <Button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              variant={activeTab === tab.id ? "contained" : "text"}
-              size="small"
-              sx={{ borderRadius: 999 }}
-            >
-              {tab.label}
-            </Button>
-          ))}
-        </Stack>
-
-        {activeTab === "past-section" && (
+        {activeTab === "past" && (
         <Box component="section" id="past-section">
           <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
             פגישות שהתקיימו
@@ -396,7 +374,7 @@ function MentorMeetingsPage({ currentUser }) {
         </Box>
         )}
 
-        {activeTab === "upcoming-section" && (
+        {activeTab === "upcoming" && (
         <Box component="section" id="upcoming-section">
           <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
             פגישות קרובות
@@ -417,7 +395,7 @@ function MentorMeetingsPage({ currentUser }) {
         </Box>
         )}
 
-        {activeTab === "pending-section" && (
+        {activeTab === "pending" && (
         <Box component="section" id="pending-section">
           <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
             בקשות שממתינות לך
@@ -440,7 +418,7 @@ function MentorMeetingsPage({ currentUser }) {
         </Box>
         )}
 
-        {activeTab === "offered-section" && (
+        {activeTab === "offered" && (
         <Box component="section" id="offered-section">
           <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
             זמנים שהצעת
@@ -457,7 +435,7 @@ function MentorMeetingsPage({ currentUser }) {
         </Box>
         )}
 
-        {activeTab === "closed-section" && (
+        {activeTab === "closed" && (
           <Box component="section" id="closed-section">
             <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
               בקשות שנסגרו החודש

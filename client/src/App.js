@@ -13,6 +13,7 @@ import RegisterDialog from "./components/RegisterDialog";
 import ProfilePage from "./components/ProfilePage";
 import RoleAreaPage from "./components/RoleAreaPage";
 import MenteeDashboard from "./components/MenteeDashboard";
+import MentorDashboard from "./components/MentorDashboard";
 import MentorSearchPage from "./components/MentorSearchPage";
 import MenteeMeetingsPage from "./components/MenteeMeetingsPage";
 import MentorMeetingsPage from "./components/MentorMeetingsPage";
@@ -185,7 +186,7 @@ function ThemedApp() {
                 path="/mentor"
                 element={
                   <MentorOnlyRoute currentUser={currentUser} authLoading={authLoading}>
-                    <RoleAreaPage role="MENTOR" />
+                    <MentorDashboard currentUser={currentUser} />
                   </MentorOnlyRoute>
                 }
               />

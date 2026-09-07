@@ -1,20 +1,29 @@
 import React from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useLocation } from "react-router-dom";
 import { AppBar, Box, Button, Stack, Toolbar } from "@mui/material";
 import UserMenu from "./UserMenu";
 import MessagesMenu from "./MessagesMenu";
 import QueensMatchLogo from "./QueensMatchLogo";
 import { getDefaultAreaPath, isMentorUser } from "../utils/areaRouting";
+import {
+  MENTOR_MEETING_TABS,
+  MENTOR_MEETINGS_PATH,
+  getMentorMeetingTabFromSearch,
+  getMentorMeetingsPath,
+} from "../utils/meetingNav";
 
 function AuthenticatedNavbar({ currentUser, onLogout }) {
   const mentor = isMentorUser(currentUser);
   const homePath = getDefaultAreaPath(currentUser);
-  const links = mentor
-    ? [{ path: "/mentor/meetings", label: "הפגישות שלי" }]
-    : [
-        { path: "/mentee/mentors", label: "חיפוש מנטוריות" },
-        { path: "/mentee/meetings", label: "הפגישות שלי" },
-      ];
+  const location = useLocation();
+  const activeMentorTab =
+    location.pathname === MENTOR_MEETINGS_PATH
+      ? getMentorMeetingTabFromSearch(location.search)
+      : null;
+  const menteeLinks = [
+    { path: "/mentee/mentors", label: "חיפוש מנטוריות" },
+    { path: "/mentee/meetings", label: "הפגישות שלי" },
+  ];
 
   return (
     <AppBar
@@ -43,18 +52,34 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
             <QueensMatchLogo height={48} />
           </Box>
 
-          <Stack direction="row" spacing={0.5}>
-            {links.map((link) => (
-              <Button
-                key={link.path}
-                component={RouterLink}
-                to={link.path}
-                size="small"
-                sx={{ fontWeight: 600 }}
-              >
-                {link.label}
-              </Button>
-            ))}
+          <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: "wrap" }}>
+            {mentor
+              ? MENTOR_MEETING_TABS.map((tab) => {
+                  const isActive = activeMentorTab === tab.id;
+                  return (
+                    <Button
+                      key={tab.id}
+                      component={RouterLink}
+                      to={getMentorMeetingsPath(tab.id)}
+                      size="small"
+                      variant={isActive ? "contained" : "text"}
+                      sx={{ fontWeight: 600 }}
+                    >
+                      {tab.label}
+                    </Button>
+                  );
+                })
+              : menteeLinks.map((link) => (
+                  <Button
+                    key={link.path}
+                    component={RouterLink}
+                    to={link.path}
+                    size="small"
+                    sx={{ fontWeight: 600 }}
+                  >
+                    {link.label}
+                  </Button>
+                ))}
           </Stack>
 
           <Box sx={{ flexGrow: 1 }} />
