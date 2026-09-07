@@ -53,7 +53,7 @@ function MentorCard({ mentor, onRequestClick }) {
 
       {typeof remainingCapacity === "number" && (
         <Chip
-          label={`מפגשים פנויים: ${remainingCapacity}`}
+          label={`מקומות פנויים החודש: ${remainingCapacity}`}
           size="small"
           variant="outlined"
           sx={{ alignSelf: "flex-start", mb: 1.5, borderColor: "#f6d3e0", color: "text.secondary" }}

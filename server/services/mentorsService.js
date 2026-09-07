@@ -1,5 +1,6 @@
 const prisma = require("../lib/prisma");
-const { CAPACITY_STATUSES } = require("../lib/capacity");
+const { CAPACITY_MEETING_STATUSES } = require("../lib/capacity");
+const { currentMonthRange } = require("../lib/dates");
 
 async function getAllMentors() {
   const mentors = await prisma.user.findMany({
@@ -24,20 +25,28 @@ async function getAllMentors() {
     },
   });
 
-  const usedCapacityGroups = await prisma.mentoringRequest.groupBy({
-    by: ["mentorProfileId"],
+  const { start, end } = currentMonthRange();
+
+  const meetingsThisMonth = await prisma.meeting.findMany({
     where: {
-      status: { in: CAPACITY_STATUSES },
+      status: { in: CAPACITY_MEETING_STATUSES },
+      scheduledStart: { gte: start, lt: end },
     },
-    _count: { _all: true },
+    select: {
+      request: { select: { mentorProfileId: true } },
+    },
   });
 
-  const usedCapacityByMentorProfileId = new Map(
-    usedCapacityGroups.map((group) => [
-      group.mentorProfileId,
-      group._count._all,
-    ])
-  );
+  const usedCapacityByMentorProfileId = new Map();
+
+  meetingsThisMonth.forEach((meeting) => {
+    const { mentorProfileId } = meeting.request;
+
+    usedCapacityByMentorProfileId.set(
+      mentorProfileId,
+      (usedCapacityByMentorProfileId.get(mentorProfileId) || 0) + 1
+    );
+  });
 
   return mentors.map((user) => {
     const meetingCapacity = user.mentorProfile.meetingCapacity;

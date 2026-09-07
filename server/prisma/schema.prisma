@@ -144,8 +144,9 @@ model MentorProfile {
   user   User @relation(fields: [userId], references: [id])
 
   background             String
-  // Total number of meetings the mentor is willing to provide. No time
-  // period (e.g. "per month") is assumed - not specified in requirements.
+  // Number of meetings the mentor is willing to provide per calendar month.
+  // Usage is counted from meetings scheduled inside that month, so the quota
+  // resets on the 1st and a cancelled or rescheduled meeting frees its seat.
   meetingCapacity        Int
   meetingDurationMinutes Int
 

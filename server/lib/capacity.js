@@ -1,24 +1,37 @@
-const CAPACITY_STATUSES = [
-  "MATCHED",
+const { monthRangeFor } = require("./dates");
+
+// Meeting statuses that occupy one of the mentor's seats for the month the
+// meeting is scheduled in. RESCHEDULED, CANCELLED and NOT_COMPLETED are absent
+// on purpose: an unscheduled meeting releases its seat back to the pool.
+const CAPACITY_MEETING_STATUSES = [
+  "SCHEDULED",
   "ATTENDANCE_CONFIRMED",
   "COMPLETED",
-  "FEEDBACK_COMPLETED",
 ];
 
-async function countUsedCapacity(client, mentorProfileId, excludeRequestId) {
-  const where = {
-    mentorProfileId,
-    status: { in: CAPACITY_STATUSES },
-  };
+function capacityWhere(mentorProfileId, { month, excludeRequestId } = {}) {
+  const { start, end } = monthRangeFor(month || new Date());
+  const request = { mentorProfileId };
 
   if (excludeRequestId) {
-    where.id = { not: excludeRequestId };
+    request.id = { not: excludeRequestId };
   }
 
-  return client.mentoringRequest.count({ where });
+  return {
+    request,
+    status: { in: CAPACITY_MEETING_STATUSES },
+    scheduledStart: { gte: start, lt: end },
+  };
+}
+
+// `month` is any date inside the month being checked, defaulting to now.
+async function countUsedCapacity(client, mentorProfileId, options) {
+  return client.meeting.count({
+    where: capacityWhere(mentorProfileId, options),
+  });
 }
 
 module.exports = {
-  CAPACITY_STATUSES,
+  CAPACITY_MEETING_STATUSES,
   countUsedCapacity,
 };

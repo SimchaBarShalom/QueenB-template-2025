@@ -1,5 +1,6 @@
 const prisma = require("../lib/prisma");
 const { countUsedCapacity } = require("../lib/capacity");
+const { currentMonthRange } = require("../lib/dates");
 
 const MENTOR_REQUEST_INCLUDE = {
   mentee: {
@@ -59,13 +60,6 @@ function createServiceError(message, statusCode) {
   return error;
 }
 
-function currentMonthRange(now = new Date()) {
-  return {
-    start: new Date(now.getFullYear(), now.getMonth(), 1),
-    end: new Date(now.getFullYear(), now.getMonth() + 1, 1),
-  };
-}
-
 function hasExtraSlotsRound(request) {
   return (request.schedulingRounds || []).some((round) => round.type === "EXTRA_SLOTS");
 }
@@ -121,7 +115,7 @@ async function assertCanCreateRequest(menteeId, mentorProfileId) {
   const usedCapacity = await countUsedCapacity(prisma, mentorProfileId);
 
   if (usedCapacity >= mentorProfile.meetingCapacity) {
-    throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה", 409);
+    throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה החודש", 409);
   }
 }
 
@@ -291,18 +285,39 @@ async function rejectMentoringRequest({ requestId, userId }) {
   });
 }
 
-async function offerMentoringRequestSlots({ requestId, userId, slots }) {
-  const request = await getOwnedPendingRequest(requestId, userId);
-  const usedCapacity = await countUsedCapacity(prisma, request.mentorProfile.id);
+// A slot can only ever be picked if its own month still has a free seat, so an
+// offer is refused only once every month it spans is full.
+async function assertOfferedMonthsHaveCapacity(mentorProfile, normalizedSlots) {
+  const monthsByKey = new Map();
 
-  if (usedCapacity >= request.mentorProfile.meetingCapacity) {
+  normalizedSlots.forEach((slot) => {
+    const key = `${slot.startTime.getFullYear()}-${slot.startTime.getMonth()}`;
+
+    if (!monthsByKey.has(key)) {
+      monthsByKey.set(key, slot.startTime);
+    }
+  });
+
+  const usage = await Promise.all(
+    Array.from(monthsByKey.values(), (month) =>
+      countUsedCapacity(prisma, mentorProfile.id, { month })
+    )
+  );
+
+  if (usage.every((used) => used >= mentorProfile.meetingCapacity)) {
     throw createServiceError("הגעת למכסת הפגישות שלך", 409);
   }
+}
 
+async function offerMentoringRequestSlots({ requestId, userId, slots }) {
+  const request = await getOwnedPendingRequest(requestId, userId);
   const normalizedSlots = validateAndNormalizeSlots(
     slots,
     request.mentorProfile.meetingDurationMinutes
   );
+
+  await assertOfferedMonthsHaveCapacity(request.mentorProfile, normalizedSlots);
+
   const roundNumber = (request.schedulingRounds[0]?.roundNumber || 0) + 1;
   const roundType = roundNumber === 1 ? "INITIAL" : "EXTRA_SLOTS";
 
@@ -384,11 +399,11 @@ async function selectMentoringRequestSlot({ requestId, userId, slotId }) {
       const usedCapacity = await countUsedCapacity(
         transaction,
         request.mentorProfile.id,
-        request.id
+        { month: selectedSlot.startTime, excludeRequestId: request.id }
       );
 
       if (usedCapacity >= request.mentorProfile.meetingCapacity) {
-        throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה", 409);
+        throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה בחודש זה", 409);
       }
 
       const statusUpdate = await transaction.mentoringRequest.updateMany({

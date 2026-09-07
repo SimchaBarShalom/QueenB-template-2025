@@ -307,7 +307,7 @@ function ProfilePage({ user, onUserUpdated }) {
 
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <TextField
-                    label="מספר מפגשים"
+                    label="מספר מפגשים בחודש"
                     type="number"
                     value={values.meetingCapacity}
                     onChange={(event) => setField("meetingCapacity", event.target.value)}
@@ -400,7 +400,7 @@ function ProfilePage({ user, onUserUpdated }) {
                     ))}
                   </Stack>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    {user.mentorProfile.meetingCapacity} מפגשים ·{" "}
+                    {user.mentorProfile.meetingCapacity} מפגשים בחודש ·{" "}
                     {user.mentorProfile.meetingDurationMinutes} דקות למפגש
                   </Typography>
                 </Box>

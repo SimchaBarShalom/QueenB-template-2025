@@ -19,11 +19,12 @@ import { getMentorMeetingRequests } from "../services/mentorMeetingsService";
 import { getMentorMeetingsPath } from "../utils/meetingNav";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
-const CAPACITY_STATUSES = [
-  "MATCHED",
+// Mirrors the server rule in server/lib/capacity.js: a seat belongs to the
+// month its meeting is scheduled in, and an unscheduled meeting releases it.
+const CAPACITY_MEETING_STATUSES = [
+  "SCHEDULED",
   "ATTENDANCE_CONFIRMED",
   "COMPLETED",
-  "FEEDBACK_COMPLETED",
 ];
 
 const UPCOMING_MEETING_STATUSES = ["SCHEDULED", "ATTENDANCE_CONFIRMED"];
@@ -103,10 +104,25 @@ function MentorDashboard({ currentUser }) {
     [requests]
   );
 
-  const usedCapacity = useMemo(
-    () => requests.filter((request) => CAPACITY_STATUSES.includes(request.status)).length,
-    [requests]
-  );
+  const usedCapacity = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    return requests.reduce((total, request) => {
+      const seats = (request.meetings || []).filter((meeting) => {
+        const scheduledStart = new Date(meeting.scheduledStart);
+
+        return (
+          CAPACITY_MEETING_STATUSES.includes(meeting.status) &&
+          scheduledStart >= start &&
+          scheduledStart < end
+        );
+      });
+
+      return total + seats.length;
+    }, 0);
+  }, [requests]);
 
   const meetingCapacity = currentUser?.mentorProfile?.meetingCapacity ?? 0;
 
@@ -253,7 +269,7 @@ function MentorDashboard({ currentUser }) {
 
           <DashboardSummaryCard
             icon={GroupsIcon}
-            title="מכסת פגישות"
+            title="מכסת פגישות החודש"
             value={`${usedCapacity} / ${meetingCapacity}`}
           />
         </Box>
