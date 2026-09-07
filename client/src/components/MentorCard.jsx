@@ -8,12 +8,13 @@ const STATUS_LABELS = {
   pending: "ממתין למענה",
   scheduled: "נקבעה פגישה",
   blocked: "לא ניתן לקבוע החודש",
+  full: "המכסה מלאה",
 };
 
-// requestStatus is "none" | "pending" | "scheduled", scoped to this
-// mentee+mentor pair - never a global mentor status.
+// requestStatus is "none" | "pending" | "scheduled" | "blocked", scoped to this
+// mentee+mentor pair, except "full" which is a global mentor status.
 function MentorCard({ mentor, onRequestClick }) {
-  const { fullName, jobTitle, workplace, mentoringTopics, githubUrl, linkedinUrl, technologies, requestStatus } =
+  const { fullName, jobTitle, workplace, mentoringTopics, githubUrl, linkedinUrl, technologies, requestStatus, remainingCapacity } =
     mentor;
 
   return (
@@ -49,6 +50,15 @@ function MentorCard({ mentor, onRequestClick }) {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         {technologies.join(" | ")}
       </Typography>
+
+      {typeof remainingCapacity === "number" && (
+        <Chip
+          label={`מפגשים פנויים: ${remainingCapacity}`}
+          size="small"
+          variant="outlined"
+          sx={{ alignSelf: "flex-start", mb: 1.5, borderColor: "#f6d3e0", color: "text.secondary" }}
+        />
+      )}
 
       <Stack direction="row" spacing={0.5} sx={{ mb: 2.5 }}>
         {githubUrl && (

@@ -126,12 +126,19 @@ const getRequestStatus = useCallback((mentorProfileId) => {
   }, [requests]);
 
   const mentorsWithStatus = useMemo(() => {
-    return mentors.map((mentor) => ({
-      ...mentor,
-      requestStatus: getRequestStatus(
+    return mentors.map((mentor) => {
+      const pairStatus = getRequestStatus(
         mentor.mentorProfileId
-      ),
-    }));
+      );
+
+      return {
+        ...mentor,
+        requestStatus:
+          mentor.isFull && pairStatus === "none"
+            ? "full"
+            : pairStatus,
+      };
+    });
   }, [mentors, getRequestStatus]);
 
   const jobTitles = useMemo(() => {

@@ -1,4 +1,5 @@
 const prisma = require("../lib/prisma");
+const { CAPACITY_STATUSES } = require("../lib/capacity");
 
 async function getAllMentors() {
   const mentors = await prisma.user.findMany({
@@ -23,30 +24,55 @@ async function getAllMentors() {
     },
   });
 
-  return mentors.map((user) => ({
-    id: user.id,
-    fullName: user.fullName,
-    jobTitle: user.jobTitle,
-    workplace: user.workplace,
-    yearsOfExperience: user.yearsOfExperience,
-    githubUrl: user.githubUrl,
-    linkedinUrl: user.linkedinUrl,
+  const usedCapacityGroups = await prisma.mentoringRequest.groupBy({
+    by: ["mentorProfileId"],
+    where: {
+      status: { in: CAPACITY_STATUSES },
+    },
+    _count: { _all: true },
+  });
 
-    technologies: user.technologies.map(
-      (technology) => technology.name
-    ),
+  const usedCapacityByMentorProfileId = new Map(
+    usedCapacityGroups.map((group) => [
+      group.mentorProfileId,
+      group._count._all,
+    ])
+  );
 
-    mentorProfileId: user.mentorProfile.id,
-    background: user.mentorProfile.background,
-    meetingCapacity: user.mentorProfile.meetingCapacity,
-    meetingDurationMinutes:
-      user.mentorProfile.meetingDurationMinutes,
+  return mentors.map((user) => {
+    const meetingCapacity = user.mentorProfile.meetingCapacity;
+    const usedCapacity =
+      usedCapacityByMentorProfileId.get(user.mentorProfile.id) || 0;
 
-    mentoringTopics:
-      user.mentorProfile.mentoringTopics.map(
-        (topic) => topic.name
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      jobTitle: user.jobTitle,
+      workplace: user.workplace,
+      yearsOfExperience: user.yearsOfExperience,
+      githubUrl: user.githubUrl,
+      linkedinUrl: user.linkedinUrl,
+
+      technologies: user.technologies.map(
+        (technology) => technology.name
       ),
-  }));
+
+      mentorProfileId: user.mentorProfile.id,
+      background: user.mentorProfile.background,
+      meetingCapacity,
+      meetingDurationMinutes:
+        user.mentorProfile.meetingDurationMinutes,
+
+      usedCapacity,
+      remainingCapacity: Math.max(meetingCapacity - usedCapacity, 0),
+      isFull: usedCapacity >= meetingCapacity,
+
+      mentoringTopics:
+        user.mentorProfile.mentoringTopics.map(
+          (topic) => topic.name
+        ),
+    };
+  });
 }
 
 module.exports = {

@@ -1,4 +1,5 @@
 const prisma = require("../lib/prisma");
+const { countUsedCapacity } = require("../lib/capacity");
 
 const MENTOR_REQUEST_INCLUDE = {
   mentee: {
@@ -106,6 +107,21 @@ async function assertCanCreateRequest(menteeId, mentorProfileId) {
       "לא ניתן לקבוע פגישה חדשה עם מנטורית זו עד החודש הבא",
       409
     );
+  }
+
+  const mentorProfile = await prisma.mentorProfile.findUnique({
+    where: { id: mentorProfileId },
+    select: { meetingCapacity: true },
+  });
+
+  if (!mentorProfile) {
+    throw createServiceError("המנטורית לא נמצאה", 404);
+  }
+
+  const usedCapacity = await countUsedCapacity(prisma, mentorProfileId);
+
+  if (usedCapacity >= mentorProfile.meetingCapacity) {
+    throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה", 409);
   }
 }
 
@@ -277,12 +293,7 @@ async function rejectMentoringRequest({ requestId, userId }) {
 
 async function offerMentoringRequestSlots({ requestId, userId, slots }) {
   const request = await getOwnedPendingRequest(requestId, userId);
-  const usedCapacity = await prisma.mentoringRequest.count({
-    where: {
-      mentorProfileId: request.mentorProfile.id,
-      status: { in: CAPACITY_STATUSES },
-    },
-  });
+  const usedCapacity = await countUsedCapacity(prisma, request.mentorProfile.id);
 
   if (usedCapacity >= request.mentorProfile.meetingCapacity) {
     throw createServiceError("הגעת למכסת הפגישות שלך", 409);
@@ -323,13 +334,6 @@ async function offerMentoringRequestSlots({ requestId, userId, slots }) {
     include: MENTOR_REQUEST_INCLUDE,
   });
 }
-
-const CAPACITY_STATUSES = [
-  "MATCHED",
-  "ATTENDANCE_CONFIRMED",
-  "COMPLETED",
-  "FEEDBACK_COMPLETED",
-];
 
 async function selectMentoringRequestSlot({ requestId, userId, slotId }) {
   const request = await prisma.mentoringRequest.findFirst({
@@ -377,13 +381,11 @@ async function selectMentoringRequestSlot({ requestId, userId, slotId }) {
 
   return prisma.$transaction(
     async (transaction) => {
-      const usedCapacity = await transaction.mentoringRequest.count({
-        where: {
-          mentorProfileId: request.mentorProfile.id,
-          status: { in: CAPACITY_STATUSES },
-          id: { not: request.id },
-        },
-      });
+      const usedCapacity = await countUsedCapacity(
+        transaction,
+        request.mentorProfile.id,
+        request.id
+      );
 
       if (usedCapacity >= request.mentorProfile.meetingCapacity) {
         throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה", 409);
