@@ -14,7 +14,10 @@ function AppLayout({ children, currentUser, onLogout, onOpenLogin, onOpenRegiste
   // authenticated navbar shell; only the public homepage shows the marketing
   // navbar with login/register triggers.
   const showAuthenticatedNavbar = Boolean(currentUser) && location.pathname !== "/";
-  const showAdminNavbar = showAuthenticatedNavbar && location.pathname.startsWith("/admin") && currentUser?.isAdmin;
+  // Administrators keep the admin navigation everywhere they can access,
+  // including their profile page. This prevents non-admin area links from
+  // being rendered for an administrator and then rejected by route guards.
+  const showAdminNavbar = showAuthenticatedNavbar && currentUser?.isAdmin;
 
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }} dir={direction}>

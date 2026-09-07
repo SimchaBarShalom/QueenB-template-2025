@@ -11,7 +11,6 @@ import HomePage from "./components/HomePage";
 import LoginDialog from "./components/LoginDialog";
 import RegisterDialog from "./components/RegisterDialog";
 import ProfilePage from "./components/ProfilePage";
-import RoleAreaPage from "./components/RoleAreaPage";
 import MenteeDashboard from "./components/MenteeDashboard";
 import MentorDashboard from "./components/MentorDashboard";
 import MentorSearchPage from "./components/MentorSearchPage";
@@ -65,7 +64,7 @@ function RequireAdmin({ currentUser, authLoading, children }) {
 function MenteeOnlyRoute({ currentUser, authLoading, children }) {
   return (
     <RequireAuth currentUser={currentUser} authLoading={authLoading}>
-      {isMentorUser(currentUser) ? <Navigate to="/mentor" replace /> : children}
+      {currentUser?.isAdmin ? <Navigate to="/admin" replace /> : children}
     </RequireAuth>
   );
 }
@@ -73,7 +72,7 @@ function MenteeOnlyRoute({ currentUser, authLoading, children }) {
 function MentorOnlyRoute({ currentUser, authLoading, children }) {
   return (
     <RequireAuth currentUser={currentUser} authLoading={authLoading}>
-      {isMentorUser(currentUser) ? children : <Navigate to={getDefaultAreaPath(currentUser)} replace />}
+      {isMentorUser(currentUser) && !currentUser?.isAdmin ? children : <Navigate to={getDefaultAreaPath(currentUser)} replace />}
     </RequireAuth>
   );
 }

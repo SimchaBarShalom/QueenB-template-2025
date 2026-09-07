@@ -4,7 +4,7 @@ import { AppBar, Box, Button, Stack, Toolbar } from "@mui/material";
 import UserMenu from "./UserMenu";
 import MessagesMenu from "./MessagesMenu";
 import QueensMatchLogo from "./QueensMatchLogo";
-import { getDefaultAreaPath, isMentorUser } from "../utils/areaRouting";
+import { isMentorUser } from "../utils/areaRouting";
 import {
   MENTOR_MEETING_TABS,
   MENTOR_MEETINGS_PATH,
@@ -13,9 +13,10 @@ import {
 } from "../utils/meetingNav";
 
 function AuthenticatedNavbar({ currentUser, onLogout }) {
-  const mentor = isMentorUser(currentUser);
-  const homePath = getDefaultAreaPath(currentUser);
   const location = useLocation();
+  const mentor = isMentorUser(currentUser);
+  const showingMentorArea = mentor && !location.pathname.startsWith("/mentee");
+  const homePath = showingMentorArea ? "/mentor" : "/mentee";
   const activeMentorTab =
     location.pathname === MENTOR_MEETINGS_PATH
       ? getMentorMeetingTabFromSearch(location.search)
@@ -24,6 +25,7 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
     { path: "/mentee/mentors", label: "חיפוש מנטוריות" },
     { path: "/mentee/meetings", label: "הפגישות שלי" },
   ];
+  const dashboardActive = location.pathname === homePath;
 
   return (
     <AppBar
@@ -52,8 +54,11 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
             <QueensMatchLogo height={48} />
           </Box>
 
-          <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: "wrap" }}>
-            {mentor
+          <Stack component="nav" aria-label="ניווט ראשי" direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: "wrap" }}>
+            <Button component={RouterLink} to={homePath} size="small" variant={dashboardActive ? "contained" : "text"} sx={{ fontWeight: dashboardActive ? 700 : 400 }}>
+              מסך הבית
+            </Button>
+            {showingMentorArea
               ? MENTOR_MEETING_TABS.map((tab) => {
                   const isActive = activeMentorTab === tab.id;
                   return (
@@ -63,7 +68,7 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
                       to={getMentorMeetingsPath(tab.id)}
                       size="small"
                       variant={isActive ? "contained" : "text"}
-                      sx={{ fontWeight: 600 }}
+                      sx={{ fontWeight: isActive ? 700 : 400 }}
                     >
                       {tab.label}
                     </Button>
@@ -75,7 +80,7 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
                     component={RouterLink}
                     to={link.path}
                     size="small"
-                    sx={{ fontWeight: 600 }}
+                    sx={{ fontWeight: location.pathname === link.path ? 700 : 400 }}
                   >
                     {link.label}
                   </Button>
