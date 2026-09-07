@@ -186,6 +186,10 @@ model MentoringRequest {
 
   status MentoringRequestStatus
 
+  // Set when the mentor knowingly offered times while already at her monthly
+  // capacity, so the mentee's selection is allowed past the capacity check.
+  capacityOverride Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

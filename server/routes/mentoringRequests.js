@@ -16,7 +16,9 @@ const router = express.Router();
 
 function handleServiceError(error, res, next) {
   if (error.statusCode) {
-    return res.status(error.statusCode).json({ error: error.message });
+    return res
+      .status(error.statusCode)
+      .json({ error: error.message, ...error.details });
   }
 
   return next(error);
@@ -83,6 +85,7 @@ router.post("/:requestId/slots", authenticate, async (req, res, next) => {
       requestId: req.params.requestId,
       userId: req.auth.userId,
       slots: req.body.slots,
+      confirmOverCapacity: req.body.confirmOverCapacity === true,
     });
 
     return res.status(201).json(request);

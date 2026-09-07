@@ -54,9 +54,16 @@ const ACTIVE_REQUEST_STATUSES = [
   "ATTENDANCE_CONFIRMED",
 ];
 
-function createServiceError(message, statusCode) {
+// `details` is merged into the JSON error body by the route layer, for the few
+// failures the client has to react to rather than just display.
+function createServiceError(message, statusCode, details) {
   const error = new Error(message);
   error.statusCode = statusCode;
+
+  if (details) {
+    error.details = details;
+  }
+
   return error;
 }
 
@@ -286,8 +293,10 @@ async function rejectMentoringRequest({ requestId, userId }) {
 }
 
 // A slot can only ever be picked if its own month still has a free seat, so an
-// offer is refused only once every month it spans is full.
-async function assertOfferedMonthsHaveCapacity(mentorProfile, normalizedSlots) {
+// offer only breaches capacity once every month it spans is full. Returns null
+// when there is still room somewhere, otherwise the fullest picture to show the
+// mentor when asking her to confirm going over.
+async function findOfferCapacityBreach(mentorProfile, normalizedSlots) {
   const monthsByKey = new Map();
 
   normalizedSlots.forEach((slot) => {
@@ -304,19 +313,41 @@ async function assertOfferedMonthsHaveCapacity(mentorProfile, normalizedSlots) {
     )
   );
 
-  if (usage.every((used) => used >= mentorProfile.meetingCapacity)) {
-    throw createServiceError("הגעת למכסת הפגישות שלך", 409);
+  if (usage.some((used) => used < mentorProfile.meetingCapacity)) {
+    return null;
   }
+
+  return {
+    code: "CAPACITY_EXCEEDED",
+    usedCapacity: Math.min(...usage),
+    meetingCapacity: mentorProfile.meetingCapacity,
+  };
 }
 
-async function offerMentoringRequestSlots({ requestId, userId, slots }) {
+async function offerMentoringRequestSlots({
+  requestId,
+  userId,
+  slots,
+  confirmOverCapacity = false,
+}) {
   const request = await getOwnedPendingRequest(requestId, userId);
   const normalizedSlots = validateAndNormalizeSlots(
     slots,
     request.mentorProfile.meetingDurationMinutes
   );
 
-  await assertOfferedMonthsHaveCapacity(request.mentorProfile, normalizedSlots);
+  const breach = await findOfferCapacityBreach(
+    request.mentorProfile,
+    normalizedSlots
+  );
+
+  if (breach && !confirmOverCapacity) {
+    throw createServiceError(
+      "הצעת הזמנים חורגת ממכסת הפגישות שלך החודש",
+      409,
+      breach
+    );
+  }
 
   const roundNumber = (request.schedulingRounds[0]?.roundNumber || 0) + 1;
   const roundType = roundNumber === 1 ? "INITIAL" : "EXTRA_SLOTS";
@@ -327,7 +358,9 @@ async function offerMentoringRequestSlots({ requestId, userId, slots }) {
         id: request.id,
         status: "WAITING_FOR_MENTOR_SLOTS",
       },
-      data: { status: "WAITING_FOR_MENTEE_SELECTION" },
+      data: breach
+        ? { status: "WAITING_FOR_MENTEE_SELECTION", capacityOverride: true }
+        : { status: "WAITING_FOR_MENTEE_SELECTION" },
     });
 
     if (statusUpdate.count !== 1) {
@@ -396,14 +429,16 @@ async function selectMentoringRequestSlot({ requestId, userId, slotId }) {
 
   return prisma.$transaction(
     async (transaction) => {
-      const usedCapacity = await countUsedCapacity(
-        transaction,
-        request.mentorProfile.id,
-        { month: selectedSlot.startTime, excludeRequestId: request.id }
-      );
+      if (!request.capacityOverride) {
+        const usedCapacity = await countUsedCapacity(
+          transaction,
+          request.mentorProfile.id,
+          { month: selectedSlot.startTime, excludeRequestId: request.id }
+        );
 
-      if (usedCapacity >= request.mentorProfile.meetingCapacity) {
-        throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה בחודש זה", 409);
+        if (usedCapacity >= request.mentorProfile.meetingCapacity) {
+          throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה בחודש זה", 409);
+        }
       }
 
       const statusUpdate = await transaction.mentoringRequest.updateMany({

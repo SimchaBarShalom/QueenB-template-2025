@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 const DEV_PASSWORD = "Password123!";
 const MENTEE_EMAILS = [
-  "member@queenb.org",
+
   "noa@queenb.org",
   "dana@queenb.org",
   "yael@queenb.org",
@@ -139,7 +139,7 @@ async function main() {
   const mentorProfile = await prisma.mentorProfile.upsert({
     where: { userId: mentorUser.id },
     update: {
-      meetingCapacity: 8,
+      meetingCapacity: 3,
       meetingDurationMinutes: 45,
       mentoringTopics: {
         set: mentoringTopics.map((topic) => ({ id: topic.id })),
@@ -149,7 +149,7 @@ async function main() {
       userId: mentorUser.id,
       background:
         "8 years of experience building web applications; happy to mentor on frontend and backend fundamentals.",
-      meetingCapacity: 8,
+      meetingCapacity: 3,
       meetingDurationMinutes: 45,
       mentoringTopics: {
         connect: mentoringTopics.map((topic) => ({ id: topic.id })),

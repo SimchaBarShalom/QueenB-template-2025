@@ -24,10 +24,14 @@ export async function rejectMentorRequest(requestId) {
   return response.data;
 }
 
-export async function offerMentorSlots(requestId, slots) {
+export async function offerMentorSlots(
+  requestId,
+  slots,
+  { confirmOverCapacity = false } = {}
+) {
   const response = await axios.post(
     `/api/mentoring-requests/${requestId}/slots`,
-    { slots },
+    { slots, confirmOverCapacity },
     authConfig()
   );
   return response.data;

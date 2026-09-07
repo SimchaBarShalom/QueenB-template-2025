@@ -245,15 +245,31 @@ function MentorMeetingsPage({ currentUser }) {
     }
   };
 
-  const handleOfferSlots = async (slots) => {
+  const handleOfferSlots = async (slots, { confirmOverCapacity = false } = {}) => {
     if (!slotRequest) return false;
 
     try {
       setAction({ requestId: slotRequest.id, type: "slots" });
-      replaceRequest(await offerMentorSlots(slotRequest.id, slots));
+      replaceRequest(
+        await offerMentorSlots(slotRequest.id, slots, { confirmOverCapacity })
+      );
       showNotification("success", "הזמנים נשלחו לחניכה.");
       return true;
     } catch (requestError) {
+      const capacity = requestError.response?.data;
+
+      if (capacity?.code === "CAPACITY_EXCEEDED" && !confirmOverCapacity) {
+        const proceed = window.confirm(
+          `כבר קבעת ${capacity.usedCapacity} מתוך ${capacity.meetingCapacity} מפגשים החודש. ` +
+            "להציע זמנים בכל זאת ולחרוג מהמכסה? " +
+            "חניכות נוספות עדיין לא יוכלו לשלוח לך בקשות חדשות."
+        );
+
+        if (!proceed) return false;
+
+        return handleOfferSlots(slots, { confirmOverCapacity: true });
+      }
+
       showNotification(
         "error",
         getRequestErrorMessage(requestError, "שליחת הזמנים נכשלה.")
