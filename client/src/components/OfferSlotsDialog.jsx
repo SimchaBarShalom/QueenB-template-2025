@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Dialog,
   DialogActions,
   DialogContent,
@@ -12,7 +13,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EventAvailableIcon from "@mui/icons-material/EventAvailable";
+import { queenbColors } from "../theme";
 
 function localDateTimeMinimum() {
   const now = new Date();
@@ -78,60 +82,140 @@ function OfferSlotsDialog({
   };
 
   return (
-    <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      onClose={loading ? undefined : onClose}
+      maxWidth="sm"
+      fullWidth
+      PaperProps={{ sx: { borderRadius: 3 } }}
+    >
       <Box component="form" onSubmit={handleSubmit}>
-        <DialogTitle>{title}</DialogTitle>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <EventAvailableIcon sx={{ color: queenbColors.pink }} />
+            <span>{title}</span>
+          </Stack>
+        </DialogTitle>
+
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
-            <Typography color="text.secondary">
-              הציעי לחניכה {request?.menteeName || ""} זמן אחד או יותר. כל פגישה אורכת{" "}
-              {durationMinutes} דקות.
-            </Typography>
+            <Stack spacing={1.25}>
+              <Typography color="text.secondary">
+                הציעי לחניכה{" "}
+                <Box component="span" sx={{ fontWeight: 700, color: "text.primary" }}>
+                  {request?.menteeName || ""}
+                </Box>{" "}
+                זמן אחד או יותר.
+              </Typography>
+              <Chip
+                label={`${durationMinutes} דקות לפגישה`}
+                size="small"
+                sx={{
+                  alignSelf: "flex-start",
+                  bgcolor: queenbColors.pinkPale,
+                  color: queenbColors.pink,
+                  fontWeight: 600,
+                }}
+              />
+            </Stack>
 
             {error && <Alert severity="error">{error}</Alert>}
 
-            {startTimes.map((startTime, index) => (
-              <Stack key={index} direction="row" spacing={1} alignItems="center">
-                <TextField
-                  type="datetime-local"
-                  label={`מועד ${index + 1}`}
-                  value={startTime}
-                  onChange={(event) => setStartTime(index, event.target.value)}
-                  inputProps={{ min: localDateTimeMinimum() }}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                  fullWidth
-                />
-                {startTimes.length > 1 && (
-                  <IconButton
-                    aria-label="הסרת מועד"
-                    onClick={() => removeStartTime(index)}
-                    disabled={loading}
+            <Stack spacing={1.5}>
+              {startTimes.map((startTime, index) => (
+                <Stack
+                  key={index}
+                  direction="row"
+                  spacing={1.5}
+                  alignItems="center"
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2,
+                    border: "1px solid #f6d3e0",
+                    bgcolor: "#fff",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      bgcolor: queenbColors.pinkPale,
+                      color: queenbColors.pink,
+                      fontWeight: 700,
+                      fontSize: 14,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
                   >
-                    <DeleteOutlineIcon />
-                  </IconButton>
-                )}
-              </Stack>
-            ))}
+                    {index + 1}
+                  </Box>
+
+                  <TextField
+                    type="datetime-local"
+                    value={startTime}
+                    onChange={(event) => setStartTime(index, event.target.value)}
+                    inputProps={{
+                      min: localDateTimeMinimum(),
+                      "aria-label": `מועד ${index + 1}`,
+                    }}
+                    size="small"
+                    required
+                    fullWidth
+                  />
+
+                  {startTimes.length > 1 && (
+                    <IconButton
+                      aria-label="הסרת מועד"
+                      onClick={() => removeStartTime(index)}
+                      disabled={loading}
+                      size="small"
+                      sx={{ color: queenbColors.pink }}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                </Stack>
+              ))}
+            </Stack>
 
             {startTimes.length < 10 && (
               <Button
                 type="button"
-                variant="text"
                 onClick={() => setStartTimes((current) => [...current, ""])}
                 disabled={loading}
-                sx={{ alignSelf: "flex-start" }}
+                startIcon={<AddIcon />}
+                sx={{
+                  py: 1,
+                  borderRadius: 2,
+                  border: "1px dashed",
+                  borderColor: queenbColors.pink,
+                  color: queenbColors.pink,
+                  "&:hover": {
+                    border: "1px dashed",
+                    borderColor: queenbColors.pink,
+                    bgcolor: queenbColors.pinkPale,
+                  },
+                }}
               >
                 הוספת מועד נוסף
               </Button>
             )}
           </Stack>
         </DialogContent>
-        <DialogActions>
+
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button type="button" onClick={onClose} disabled={loading}>
             ביטול
           </Button>
-          <Button type="submit" variant="contained" disabled={loading}>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            sx={{ borderRadius: 999, px: 3 }}
+          >
             {loading ? "שומרת..." : submitLabel}
           </Button>
         </DialogActions>
