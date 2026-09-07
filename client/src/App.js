@@ -2,6 +2,10 @@ import React, { useMemo, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { CacheProvider } from "@emotion/react";
 import { ThemeProvider, CssBaseline } from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import "dayjs/locale/he";
+import "dayjs/locale/ar";
 import getTheme from "./theme";
 import { rtlCache, ltrCache } from "./rtlCache";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageContext";
@@ -149,10 +153,22 @@ function ThemedApp() {
   );
 }
 
+// Date pickers read their month names and first-day-of-week from the dayjs
+// locale, so this sits inside LanguageProvider to follow the language switcher.
+function LocalizedApp() {
+  const { language } = useLanguage();
+
+  return (
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale={language}>
+      <ThemedApp />
+    </LocalizationProvider>
+  );
+}
+
 function App() {
   return (
     <LanguageProvider>
-      <ThemedApp />
+      <LocalizedApp />
     </LanguageProvider>
   );
 }

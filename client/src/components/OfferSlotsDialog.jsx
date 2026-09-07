@@ -10,19 +10,26 @@ import {
   DialogTitle,
   IconButton,
   Stack,
-  TextField,
   Typography,
 } from "@mui/material";
+import { DateTimePicker } from "@mui/x-date-pickers";
+import dayjs from "dayjs";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import { queenbColors } from "../theme";
 
-function localDateTimeMinimum() {
-  const now = new Date();
-  const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  return localTime.toISOString().slice(0, 16);
-}
+const pinkFieldSx = {
+  "& .MuiOutlinedInput-root": {
+    bgcolor: queenbColors.pinkPale,
+    fontWeight: 600,
+    "& fieldset": { borderColor: "#f6d3e0" },
+    "&:hover fieldset": { borderColor: queenbColors.pink },
+    "&.Mui-focused fieldset": { borderColor: queenbColors.pink, borderWidth: 2 },
+  },
+  "& .MuiInputBase-input": { color: queenbColors.pink, fontWeight: 600 },
+  "& .MuiSvgIcon-root": { color: queenbColors.pink },
+};
 
 function OfferSlotsDialog({
   open,
@@ -34,12 +41,12 @@ function OfferSlotsDialog({
   onClose,
   onSubmit,
 }) {
-  const [startTimes, setStartTimes] = useState([""]);
+  const [startTimes, setStartTimes] = useState([null]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (open) {
-      setStartTimes([""]);
+      setStartTimes([null]);
       setError("");
     }
   }, [open, request?.id]);
@@ -57,11 +64,10 @@ function OfferSlotsDialog({
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const parsedStarts = startTimes.map((value) => new Date(value));
+    const parsedStarts = startTimes.map((value) => (value ? value.toDate() : null));
 
     if (
-      startTimes.some((value) => !value) ||
-      parsedStarts.some((date) => Number.isNaN(date.getTime()) || date.getTime() <= Date.now())
+      parsedStarts.some((date) => !date || Number.isNaN(date.getTime()) || date.getTime() <= Date.now())
     ) {
       setError("יש לבחור זמנים עתידיים תקינים.");
       return;
@@ -153,17 +159,22 @@ function OfferSlotsDialog({
                     {index + 1}
                   </Box>
 
-                  <TextField
-                    type="datetime-local"
+                  <DateTimePicker
                     value={startTime}
-                    onChange={(event) => setStartTime(index, event.target.value)}
-                    inputProps={{
-                      min: localDateTimeMinimum(),
-                      "aria-label": `מועד ${index + 1}`,
+                    onChange={(value) => setStartTime(index, value && value.isValid() ? value : null)}
+                    minDateTime={dayjs()}
+                    disabled={loading}
+                    ampm={false}
+                    format="DD/MM/YYYY HH:mm"
+                    slotProps={{
+                      textField: {
+                        size: "small",
+                        required: true,
+                        fullWidth: true,
+                        inputProps: { "aria-label": `מועד ${index + 1}` },
+                        sx: pinkFieldSx,
+                      },
                     }}
-                    size="small"
-                    required
-                    fullWidth
                   />
 
                   {startTimes.length > 1 && (
@@ -184,7 +195,7 @@ function OfferSlotsDialog({
             {startTimes.length < 10 && (
               <Button
                 type="button"
-                onClick={() => setStartTimes((current) => [...current, ""])}
+                onClick={() => setStartTimes((current) => [...current, null])}
                 disabled={loading}
                 startIcon={<AddIcon />}
                 sx={{
