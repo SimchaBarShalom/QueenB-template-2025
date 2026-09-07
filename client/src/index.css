@@ -23,9 +23,9 @@ body {
 .admin-root .MuiInputBase-root,
 .admin-root .MuiInputLabel-root,
 .admin-root .MuiChip-root,
-.admin-navbar .MuiTypography-root,
-.admin-navbar .MuiButton-root,
-.admin-navbar .MuiListItemText-root {
+.role-navbar .MuiTypography-root,
+.role-navbar .MuiButton-root,
+.role-navbar .MuiListItemText-root {
   font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif;
 }
 
@@ -38,19 +38,19 @@ body {
 }
 
 .admin-root .MuiButton-root,
-.admin-navbar .MuiButton-root,
+.role-navbar .MuiButton-root,
 .admin-root .MuiIconButton-root,
-.admin-navbar .MuiIconButton-root,
+.role-navbar .MuiIconButton-root,
 .admin-root .MuiInputBase-root {
   border-radius: 8px;
 }
 
 .admin-root .MuiButton-root:focus-visible,
-.admin-navbar .MuiButton-root:focus-visible,
+.role-navbar .MuiButton-root:focus-visible,
 .admin-root .MuiIconButton-root:focus-visible,
-.admin-navbar .MuiIconButton-root:focus-visible,
+.role-navbar .MuiIconButton-root:focus-visible,
 .admin-root .MuiInputBase-root.Mui-focused,
-.admin-navbar .MuiListItemButton-root:focus-visible {
+.role-navbar .MuiListItemButton-root:focus-visible {
   outline: 3px solid rgba(230, 49, 122, 0.28);
   outline-offset: 2px;
 }
