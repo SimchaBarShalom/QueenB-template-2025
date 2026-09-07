@@ -10,7 +10,6 @@ import {
   Alert,
   Box,
   Button,
-  Card,
   CircularProgress,
   Container,
   Stack,
@@ -22,58 +21,8 @@ import EventNoteIcon from "@mui/icons-material/EventNote";
 import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 
 import MentorCard from "./MentorCard";
+import DashboardSummaryCard from "./DashboardSummaryCard";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
-
-function SummaryCard({ icon: Icon, title, value, subtitle }) {
-  return (
-    <Card
-      variant="outlined"
-      sx={{
-        p: 3,
-        borderRadius: 3,
-        borderColor: "#f6d3e0",
-        height: "100%",
-      }}
-    >
-      <Stack direction="row" spacing={2} alignItems="center">
-        <Box
-          sx={{
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            bgcolor: "background.default",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <Icon color="primary" />
-        </Box>
-
-        <Box sx={{ minWidth: 0 }}>
-          <Typography color="text.secondary" variant="body2">
-            {title}
-          </Typography>
-
-          <Typography variant="h6" noWrap>
-            {value}
-          </Typography>
-
-          {subtitle && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              noWrap
-            >
-              {subtitle}
-            </Typography>
-          )}
-        </Box>
-      </Stack>
-    </Card>
-  );
-}
 
 function formatDate(dateValue) {
   return new Date(dateValue).toLocaleDateString("he-IL");
@@ -286,13 +235,13 @@ function MenteeDashboard({ currentUser }) {
             mb: 4,
           }}
         >
-          <SummaryCard
+          <DashboardSummaryCard
             icon={SearchIcon}
             title="מנטוריות זמינות"
             value={mentors.length}
           />
 
-          <SummaryCard
+          <DashboardSummaryCard
             icon={EventNoteIcon}
             title="פגישה קרובה"
             value={
@@ -311,7 +260,7 @@ function MenteeDashboard({ currentUser }) {
             }
           />
 
-          <SummaryCard
+          <DashboardSummaryCard
             icon={HourglassTopIcon}
             title="בקשות פעילות"
             value={activeRequestsCount}
