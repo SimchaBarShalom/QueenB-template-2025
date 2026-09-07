@@ -18,6 +18,74 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.admin-root {
+  font-family: "Assistant", "Rubik", "Noto Sans Hebrew", Arial, sans-serif;
+}
+
+.admin-root .MuiTypography-root,
+.admin-root .MuiButton-root,
+.admin-root .MuiInputBase-root,
+.admin-root .MuiInputLabel-root,
+.admin-root .MuiChip-root,
+.admin-navbar .MuiTypography-root,
+.admin-navbar .MuiButton-root,
+.admin-navbar .MuiListItemText-root {
+  font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif;
+}
+
+.admin-root .MuiTableCell-root {
+  text-align: right;
+  font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom-color: #f3d9e3;
+}
+
+.admin-root .MuiButton-root,
+.admin-navbar .MuiButton-root,
+.admin-root .MuiIconButton-root,
+.admin-navbar .MuiIconButton-root,
+.admin-root .MuiInputBase-root {
+  border-radius: 8px;
+}
+
+.admin-root .MuiButton-root:focus-visible,
+.admin-navbar .MuiButton-root:focus-visible,
+.admin-root .MuiIconButton-root:focus-visible,
+.admin-navbar .MuiIconButton-root:focus-visible,
+.admin-root .MuiInputBase-root.Mui-focused,
+.admin-navbar .MuiListItemButton-root:focus-visible {
+  outline: 3px solid rgba(230, 49, 122, 0.28);
+  outline-offset: 2px;
+}
+
+.fc {
+  font-family: "Rubik", "Assistant", "Arial", sans-serif;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.fc .fc-button-primary {
+  background-color: #E6317A;
+  border-color: #E6317A;
+}
+
+.fc .fc-button-primary:hover,
+.fc .fc-button-primary:focus {
+  background-color: #c91e63;
+  border-color: #c91e63;
+}
+
+.fc .fc-event {
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 1px 3px;
+}
+
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;

@@ -9,7 +9,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
-    "db:setup": "prisma migrate dev && prisma db seed"
+    "db:setup": "prisma migrate dev && prisma db seed",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -23,6 +24,7 @@
     "nodemailer": "^10.0.0"
   },
   "devDependencies": {
+    "jest": "^30.5.1",
     "nodemon": "^3.0.2",
     "prisma": "^6.19.3"
   },
