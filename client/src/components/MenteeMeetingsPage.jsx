@@ -18,6 +18,14 @@ import {
 } from "./MeetingStatusCards";
 
 import ComingSoonSnackbar from "./ComingSoonSnackbar";
+import SelectSlotDialog from "./SelectSlotDialog";
+import FeedbackDialog from "./FeedbackDialog";
+import {
+  confirmMeetingOutcome,
+  selectMeetingSlot,
+  submitMeetingFeedback,
+} from "../services/meetingsService";
+import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
 const SECTION_TABS = [
   { id: "completed-section", label: "פגישות שהתקיימו" },
@@ -68,6 +76,10 @@ function getMentorName(request) {
 function MenteeMeetingsPage() {
   const [requests, setRequests] = useState([]);
   const [activeTab, setActiveTab] = useState("scheduled-section");
+  const [slotRequest, setSlotRequest] = useState(null);
+  const [selectedSlotId, setSelectedSlotId] = useState(null);
+  const [feedbackMeeting, setFeedbackMeeting] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
@@ -161,6 +173,67 @@ function MenteeMeetingsPage() {
     }
   };
 
+  const handleChooseSlot = async () => {
+    if (!slotRequest || !selectedSlotId) return;
+
+    try {
+      setActionLoading(true);
+      setError("");
+      const updatedRequest = await selectMeetingSlot(slotRequest.id, selectedSlotId);
+      setRequests((current) =>
+        current.map((request) =>
+          request.id === updatedRequest.id ? updatedRequest : request
+        )
+      );
+      setSlotRequest(null);
+      setSelectedSlotId(null);
+      setActiveTab("scheduled-section");
+    } catch (requestError) {
+      setError(getRequestErrorMessage(requestError, "קביעת הפגישה נכשלה."));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const reloadRequests = async () => {
+    const response = await axios.get(`/api/mentoring-requests/mentee/${menteeId}`);
+    setRequests(response.data);
+  };
+
+  const handleOutcome = async (meeting, occurred) => {
+    try {
+      setActionLoading(true);
+      setError("");
+      await confirmMeetingOutcome(meeting.id, occurred);
+      await reloadRequests();
+      setActiveTab("completed-section");
+      if (occurred) {
+        setFeedbackMeeting(meeting);
+      }
+    } catch (requestError) {
+      setError(getRequestErrorMessage(requestError, "עדכון תוצאת הפגישה נכשל."));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleFeedback = async (feedback) => {
+    if (!feedbackMeeting) return false;
+
+    try {
+      setActionLoading(true);
+      setError("");
+      await submitMeetingFeedback(feedbackMeeting.id, feedback);
+      await reloadRequests();
+      return true;
+    } catch (requestError) {
+      setError(getRequestErrorMessage(requestError, "שמירת המשוב נכשלה."));
+      return false;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const waitingForMentorSlots = requests
     .filter(
       (request) =>
@@ -192,6 +265,12 @@ function MenteeMeetingsPage() {
         mentorName: getMentorName(request),
         topic: getTopic(request),
         extraSlotsUsed,
+        offeredSlots: (latestRound?.offeredSlots || []).map((slot) => ({
+          id: slot.id,
+          date: formatDate(slot.startTime),
+          startTime: formatTime(slot.startTime),
+          endTime: formatTime(slot.endTime),
+        })),
         requestDate: formatDate(request.createdAt),
         respondedDate: formatDate(
           latestRound?.createdAt ||
@@ -205,9 +284,9 @@ function MenteeMeetingsPage() {
       (request.meetings || [])
         .filter(
           (meeting) =>
-            meeting.status === "SCHEDULED" ||
-            meeting.status ===
-              "ATTENDANCE_CONFIRMED"
+            (meeting.status === "SCHEDULED" ||
+              meeting.status === "ATTENDANCE_CONFIRMED") &&
+            new Date(meeting.scheduledStart).getTime() >= Date.now()
         )
         .map((meeting) => ({
           id: meeting.id,
@@ -228,10 +307,16 @@ function MenteeMeetingsPage() {
   const completedMeetings = requests.flatMap(
     (request) =>
       (request.meetings || [])
-        .filter(
-          (meeting) =>
-            meeting.status === "COMPLETED"
-        )
+        .filter((meeting) => {
+          const endedUnconfirmed =
+            ["SCHEDULED", "ATTENDANCE_CONFIRMED"].includes(meeting.status) &&
+            new Date(meeting.scheduledEnd).getTime() < Date.now() &&
+            !(meeting.outcomeConfirmations || []).some(
+              (confirmation) => confirmation.userId === menteeId
+            );
+
+          return meeting.status === "COMPLETED" || endedUnconfirmed;
+        })
         .map((meeting) => {
           const start = new Date(
             meeting.scheduledStart
@@ -245,6 +330,12 @@ function MenteeMeetingsPage() {
             (end - start) / 60000
           );
 
+          const needsConfirmation =
+            meeting.status !== "COMPLETED" &&
+            !(meeting.outcomeConfirmations || []).some(
+              (confirmation) => confirmation.userId === menteeId
+            );
+
           return {
             id: meeting.id,
             mentorName: getMentorName(request),
@@ -256,9 +347,11 @@ function MenteeMeetingsPage() {
             ),
             durationMinutes,
             topic: getTopic(request),
+            needsConfirmation,
             feedbackSubmitted:
-              request.status ===
-              "FEEDBACK_COMPLETED",
+              (meeting.feedback || []).some(
+                (feedback) => feedback.authorId === menteeId
+              ),
           };
         })
   );
@@ -347,7 +440,9 @@ function MenteeMeetingsPage() {
                 <CompletedMeetingCard
                   key={meeting.id}
                   meeting={meeting}
-                  onAddFeedback={notReady}
+                  loading={actionLoading}
+                  onConfirm={handleOutcome}
+                  onAddFeedback={setFeedbackMeeting}
                 />
               ))
             )}
@@ -446,7 +541,10 @@ function MenteeMeetingsPage() {
                   <SlotsToChooseMeetingCard
                     key={request.id}
                     request={request}
-                    onChooseTime={notReady}
+                    onChooseTime={(selectedRequest) => {
+                      setSlotRequest(selectedRequest);
+                      setSelectedSlotId(null);
+                    }}
                     onTimesDontWork={handleTimesDontWork}
                     onCancel={handleCancelRequest}
                   />
@@ -457,6 +555,26 @@ function MenteeMeetingsPage() {
         </Box>
         )}
       </Container>
+
+      <SelectSlotDialog
+        open={Boolean(slotRequest)}
+        request={slotRequest}
+        selectedSlotId={selectedSlotId}
+        loading={actionLoading}
+        onSelect={setSelectedSlotId}
+        onClose={() => {
+          setSlotRequest(null);
+          setSelectedSlotId(null);
+        }}
+        onSubmit={handleChooseSlot}
+      />
+
+      <FeedbackDialog
+        open={Boolean(feedbackMeeting)}
+        loading={actionLoading}
+        onClose={() => setFeedbackMeeting(null)}
+        onSubmit={handleFeedback}
+      />
 
       <ComingSoonSnackbar
         message={infoMessage}
