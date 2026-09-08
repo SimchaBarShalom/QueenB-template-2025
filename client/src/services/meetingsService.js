@@ -23,6 +23,16 @@ export async function offerRescheduleSlots(requestId, slots) {
   return response.data;
 }
 
+export async function requestMeetingReschedule(meetingId) {
+  const response = await axios.patch(`/api/meetings/${meetingId}/reschedule`, {}, authConfig());
+  return response.data;
+}
+
+export async function cancelMeeting(meetingId) {
+  const response = await axios.patch(`/api/meetings/${meetingId}/cancel`, {}, authConfig());
+  return response.data;
+}
+
 export async function confirmMeetingOutcome(meetingId, occurred) {
   const response = await axios.patch(
     `/api/meetings/${meetingId}/outcome`,

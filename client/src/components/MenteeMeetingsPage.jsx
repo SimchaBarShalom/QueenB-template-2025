@@ -21,6 +21,8 @@ import SelectSlotDialog from "./SelectSlotDialog";
 import FeedbackDialog from "./FeedbackDialog";
 import {
   confirmMeetingOutcome,
+  cancelMeeting,
+  requestMeetingReschedule,
   selectMeetingSlot,
   submitMeetingFeedback,
 } from "../services/meetingsService";
@@ -204,10 +206,26 @@ function MenteeMeetingsPage() {
     try {
       setActionLoading(true);
       setError("");
-      await axios.patch(`/api/meetings/${meeting.id}/cancel`, { menteeId });
+      await cancelMeeting(meeting.id);
       await reloadRequests();
     } catch (requestError) {
       setError(getRequestErrorMessage(requestError, "ביטול הפגישה נכשל."));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRescheduleMeeting = async (meeting) => {
+    if (!window.confirm("לבקש מהמנטורית להציע מועדים חדשים?")) return;
+
+    try {
+      setActionLoading(true);
+      setError("");
+      await requestMeetingReschedule(meeting.id);
+      await reloadRequests();
+      setActiveTab("waiting-mentor-section");
+    } catch (requestError) {
+      setError(getRequestErrorMessage(requestError, "בקשת שינוי המועד נכשלה."));
     } finally {
       setActionLoading(false);
     }
@@ -477,7 +495,7 @@ function MenteeMeetingsPage() {
                 <ScheduledMeetingCard
                   key={meeting.id}
                   meeting={meeting}
-                  onReschedule={notReady}
+                  onReschedule={handleRescheduleMeeting}
                   onCancel={handleCancelMeeting}
                 />
               ))

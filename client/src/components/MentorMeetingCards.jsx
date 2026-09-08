@@ -72,7 +72,7 @@ export function MentorPastMeetingCard({ meeting, loading, onConfirm, onFeedback 
   );
 }
 
-export function MentorUpcomingMeetingCard({ meeting, onReschedule }) {
+export function MentorUpcomingMeetingCard({ meeting, onReschedule, onCancel }) {
   return (
     <CardShell>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -83,16 +83,16 @@ export function MentorUpcomingMeetingCard({ meeting, onReschedule }) {
         {meeting.date} | {meeting.startTime}–{meeting.endTime}
       </InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{meeting.topic}</Typography>
-      {!meeting.rescheduleUsed && (
-        <Button
-          size="small"
-          variant="outlined"
-          onClick={() => onReschedule(meeting)}
-          sx={{ alignSelf: "flex-start" }}
-        >
-          שינוי מועד
+      <Stack direction="row" spacing={1}>
+        {!meeting.rescheduleUsed && (
+          <Button size="small" variant="outlined" onClick={() => onReschedule(meeting)}>
+            שינוי מועד
+          </Button>
+        )}
+        <Button size="small" color="error" onClick={() => onCancel(meeting)}>
+          ביטול פגישה
         </Button>
-      )}
+      </Stack>
     </CardShell>
   );
 }
