@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   Stack,
   Typography,
@@ -26,20 +26,13 @@ import {
   submitMeetingFeedback,
 } from "../services/meetingsService";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
-import { AppPage, AppPageHeader, AppSurface } from "./AppPrimitives";
-
-const SECTION_TABS = [
-  { id: "completed-section", label: "פגישות שהתקיימו" },
-  { id: "scheduled-section", label: "פגישות שנקבעו" },
-  {
-    id: "waiting-mentor-section",
-    label: "ממתינות להצעת זמנים",
-  },
-  {
-    id: "waiting-mentee-section",
-    label: "מחכות לבחירת מועד",
-  },
-];
+import { AppPage, AppPageHeader } from "./AppPrimitives";
+import {
+  DEFAULT_MENTEE_MEETING_TAB,
+  getMenteeMeetingTabFromSearch,
+  isMenteeMeetingTab,
+  MENTOR_MEETING_TAB_QUERY,
+} from "../utils/meetingNav";
 
 function formatDate(dateValue) {
   if (!dateValue) return "";
@@ -75,8 +68,9 @@ function getMentorName(request) {
 }
 
 function MenteeMeetingsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [requests, setRequests] = useState([]);
-  const [activeTab, setActiveTab] = useState("scheduled-section");
+  const activeTab = getMenteeMeetingTabFromSearch(searchParams);
   const [slotRequest, setSlotRequest] = useState(null);
   const [selectedSlotId, setSelectedSlotId] = useState(null);
   const [feedbackMeeting, setFeedbackMeeting] = useState(null);
@@ -89,6 +83,20 @@ function MenteeMeetingsPage() {
   );
 
   const menteeId = currentUser?.id;
+
+  const setActiveTab = (tabId) => {
+    const next = new URLSearchParams(searchParams);
+    next.set(MENTOR_MEETING_TAB_QUERY, tabId);
+    setSearchParams(next);
+  };
+
+  useEffect(() => {
+    if (!isMenteeMeetingTab(searchParams.get(MENTOR_MEETING_TAB_QUERY))) {
+      const next = new URLSearchParams(searchParams);
+      next.set(MENTOR_MEETING_TAB_QUERY, DEFAULT_MENTEE_MEETING_TAB);
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     async function loadRequests() {
@@ -403,34 +411,6 @@ function MenteeMeetingsPage() {
             {error}
           </Alert>
         )}
-
-        <AppSurface
-          component={Stack}
-          direction="row"
-          spacing={1}
-          flexWrap="wrap"
-          rowGap={1}
-          sx={{
-            position: "sticky",
-            top: { xs: 64, md: 72 },
-            zIndex: 1,
-            p: 1,
-            mb: 4,
-          }}
-        >
-          {SECTION_TABS.map((tab) => (
-            <Button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              variant={activeTab === tab.id ? "contained" : "text"}
-              size="small"
-              sx={{ fontWeight: activeTab === tab.id ? 700 : 400 }}
-            >
-              {tab.label}
-            </Button>
-          ))}
-        </AppSurface>
 
         {activeTab === "completed-section" && (
         <Box

@@ -7,6 +7,10 @@ import {
   MENTOR_MEETINGS_PATH,
   getMentorMeetingTabFromSearch,
   getMentorMeetingsPath,
+  MENTEE_MEETING_TABS,
+  MENTEE_MEETINGS_PATH,
+  getMenteeMeetingTabFromSearch,
+  getMenteeMeetingsPath,
 } from "../utils/meetingNav";
 
 function AuthenticatedNavbar({ currentUser, onLogout }) {
@@ -18,6 +22,8 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
     location.pathname === MENTOR_MEETINGS_PATH
       ? getMentorMeetingTabFromSearch(location.search)
       : null;
+  const showingMenteeMeetings = !showingMentorArea && location.pathname === MENTEE_MEETINGS_PATH;
+  const activeMenteeTab = showingMenteeMeetings ? getMenteeMeetingTabFromSearch(location.search) : null;
   const items = [
     { path: homePath, label: "מסך הבית", exact: true },
     ...(showingMentorArea
@@ -28,7 +34,11 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
         }))
       : [
           { path: "/mentee/mentors", label: "חיפוש מנטוריות" },
-          { path: "/mentee/meetings", label: "הפגישות שלי" },
+          ...MENTEE_MEETING_TABS.map((tab) => ({
+            path: getMenteeMeetingsPath(tab.id),
+            label: tab.label,
+            isActive: () => showingMenteeMeetings && activeMenteeTab === tab.id,
+          })),
         ]),
   ];
 

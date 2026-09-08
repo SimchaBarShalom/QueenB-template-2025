@@ -290,7 +290,7 @@ function MenteeDashboard({ currentUser }) {
 
           <Button
             component={RouterLink}
-            to="/mentee/meetings#waiting-mentor-section"
+            to="/mentee/meetings?tab=waiting-mentor-section"
             variant="outlined"
             sx={{ px: 3 }}
           >
