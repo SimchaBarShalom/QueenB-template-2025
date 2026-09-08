@@ -625,6 +625,23 @@ function HeroSection({ onOpenRegister }) {
           </Typography>
 
           <Button
+            component="a"
+            href="https://queenb.org.il/"
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="text"
+            sx={{
+              mb: 2,
+              px: 0,
+              alignSelf: "flex-start",
+              textDecoration: "underline",
+              textUnderlineOffset: 4,
+            }}
+          >
+            {t("hero.queenBWebsiteLink")}
+          </Button>
+
+          <Button
             onClick={onOpenRegister}
             variant="contained"
             size="large"

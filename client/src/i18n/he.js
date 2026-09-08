@@ -124,6 +124,7 @@ const he = {
   hero: {
     headline: "קהילת QueenB מתחברת, משתפת ומתקדמת יחד",
     body: "Queens Match מחברת בין חברות קהילת QueenB למנטוריות מהתעשייה, כדי לקבל הכוונה מקצועית, להתייעץ, ללמוד מניסיון ולבנות יחד את הצעד הבא בקריירה.",
+    queenBWebsiteLink: "לאתר QueenB",
     cta: "הצטרפי ל-Queens Match",
     codeBody: "לומדות. מתחברות. מתקדמות.",
   },

@@ -124,6 +124,7 @@ const en = {
   hero: {
     headline: "The QueenB community connects, shares, and grows together",
     body: "Queens Match connects QueenB community members with industry mentors — for professional guidance, advice, learning from experience, and building the next career step together.",
+    queenBWebsiteLink: "Visit the QueenB website",
     cta: "Join Queens Match",
     codeBody: "Learning. Connecting. Growing.",
   },
