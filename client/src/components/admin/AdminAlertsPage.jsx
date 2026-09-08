@@ -19,13 +19,16 @@ import AdminConfirmDialog from "./AdminConfirmDialog";
 import AdminLayout from "./AdminLayout";
 import { AdminPageHeader, AdminStatusBadge, AdminSurface } from "./AdminPrimitives";
 import { AdminEmpty, AdminError, AdminLoading } from "./AdminState";
-import { ALERT_TYPE_LABELS, formatDateTime } from "./adminFormatters";
+import { alertTypeLabel, formatDateTime } from "./adminFormatters";
+import { useLanguage } from "../../i18n/LanguageContext";
 
-const PRIORITY_LABELS = {
-  low: "נמוכה",
-  normal: "רגילה",
-  high: "גבוהה",
-  urgent: "דחופה",
+const ALERT_TYPES = ["NO_SHOW", "MISSING_FEEDBACK", "STALE_REQUEST", "PAST_PENDING_MEETING", "MENTOR_LOAD"];
+const PRIORITY_KEYS = ["low", "normal", "high", "urgent"];
+const PRIORITY_LABEL_KEYS = {
+  low: "admin.alerts.priorityLow",
+  normal: "admin.alerts.priorityNormal",
+  high: "admin.alerts.priorityHigh",
+  urgent: "admin.alerts.priorityUrgent",
 };
 
 function getAlertMeetingLink(alert) {
@@ -36,6 +39,7 @@ function getAlertMeetingLink(alert) {
 }
 
 function AdminAlertsPage() {
+  const { t, language } = useLanguage();
   const [alerts, setAlerts] = useState([]);
   const [filters, setFilters] = useState({ type: "", resolved: "unresolved" });
   const [assignees, setAssignees] = useState([]);
@@ -63,7 +67,7 @@ function AdminAlertsPage() {
       setSelectedKeys([]);
     } catch (requestError) {
       console.error(requestError);
-      setError("לא הצלחנו לטעון התראות.");
+      setError(t("errors.loadAlerts"));
     } finally {
       setLoading(false);
     }
@@ -84,10 +88,10 @@ function AdminAlertsPage() {
       const path = resolved ? "resolve" : "unresolve";
       await apiClient.patch(`/api/admin/alerts/${encodeURIComponent(alert.key)}/${path}`);
       await loadAlerts(filters);
-      setSuccess(resolved ? "ההתראה סומנה כטופלה." : "ההתראה נפתחה מחדש.");
+      setSuccess(resolved ? t("admin.alerts.markedResolved") : t("admin.alerts.reopened"));
     } catch (requestError) {
       console.error(requestError);
-      setError("עדכון ההתראה נכשל.");
+      setError(t("errors.updateAlert"));
     }
   };
 
@@ -97,10 +101,10 @@ function AdminAlertsPage() {
       setSuccess("");
       await apiClient.patch(`/api/admin/alerts/${encodeURIComponent(alert.key)}/metadata`, patch);
       await loadAlerts(filters);
-      setSuccess("פרטי התור עודכנו.");
+      setSuccess(t("admin.alerts.queueUpdated"));
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "עדכון פרטי התור נכשל.");
+      setError(requestError.response?.data?.error || t("errors.updateQueue"));
     }
   };
 
@@ -112,18 +116,18 @@ function AdminAlertsPage() {
     try {
       const preview = await apiClient.post("/api/admin/alerts/bulk", { alertKeys: selectedKeys, action, preview: true });
       setPendingAction({
-        title: action === "resolve" ? "לסמן התראות כטופלו?" : "לפתוח התראות מחדש?",
-        description: `${preview.data.eligibleCount} התראות יעודכנו. ${preview.data.skipped.length} ידולגו.`,
-        confirmLabel: action === "resolve" ? "סימון כטופלו" : "פתיחה מחדש",
+        title: action === "resolve" ? t("admin.alerts.confirmResolveTitle") : t("admin.alerts.confirmReopenTitle"),
+        description: t("admin.alerts.bulkBody", { eligible: preview.data.eligibleCount, skipped: preview.data.skipped.length }),
+        confirmLabel: action === "resolve" ? t("admin.alerts.markResolvedBulk") : t("admin.alerts.reopenBulk"),
         run: async () => {
           const response = await apiClient.post("/api/admin/alerts/bulk", { alertKeys: selectedKeys, action });
-          setSuccess(`${response.data.updatedCount} התראות עודכנו. ${response.data.skipped.length} דולגו.`);
+          setSuccess(t("admin.alerts.bulkSuccess", { updated: response.data.updatedCount, skipped: response.data.skipped.length }));
           await loadAlerts(filters);
         },
       });
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "הכנת פעולת האצווה נכשלה.");
+      setError(requestError.response?.data?.error || t("errors.bulkPrepare"));
     }
   };
 
@@ -137,7 +141,7 @@ function AdminAlertsPage() {
 
   return (
     <AdminLayout>
-      <AdminPageHeader title="התראות תפעוליות" subtitle="תור עבודה לפי חומרה, עדיפות, בעלות טיפול והערות פנימיות." breadcrumbs={[{ label: "התראות" }]} />
+      <AdminPageHeader title={t("admin.alerts.title")} subtitle={t("admin.alerts.subtitle")} breadcrumbs={[{ label: t("admin.alerts.breadcrumb") }]} />
       <AdminError message={error} />
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -148,26 +152,26 @@ function AdminAlertsPage() {
       <AdminSurface sx={{ p: 2, mb: 2 }}>
         <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
           <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>סוג</InputLabel>
-            <Select label="סוג" value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}>
-              <MenuItem value="">הכול</MenuItem>
-              {Object.entries(ALERT_TYPE_LABELS).map(([value, label]) => (
+            <InputLabel>{t("admin.alerts.type")}</InputLabel>
+            <Select label={t("admin.alerts.type")} value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value }))}>
+              <MenuItem value="">{t("admin.all")}</MenuItem>
+              {ALERT_TYPES.map((value) => (
                 <MenuItem key={value} value={value}>
-                  {label}
+                  {alertTypeLabel(value, t)}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
           <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>מצב</InputLabel>
-            <Select label="מצב" value={filters.resolved} onChange={(event) => setFilters((current) => ({ ...current, resolved: event.target.value }))}>
-              <MenuItem value="unresolved">פתוחות</MenuItem>
-              <MenuItem value="resolved">טופלו</MenuItem>
-              <MenuItem value="">הכול</MenuItem>
+            <InputLabel>{t("admin.alerts.state")}</InputLabel>
+            <Select label={t("admin.alerts.state")} value={filters.resolved} onChange={(event) => setFilters((current) => ({ ...current, resolved: event.target.value }))}>
+              <MenuItem value="unresolved">{t("admin.alerts.open")}</MenuItem>
+              <MenuItem value="resolved">{t("admin.alerts.resolved")}</MenuItem>
+              <MenuItem value="">{t("admin.all")}</MenuItem>
             </Select>
           </FormControl>
           <Button variant="contained" onClick={applyFilters}>
-            סינון
+            {t("common.filter")}
           </Button>
         </Stack>
       </AdminSurface>
@@ -175,17 +179,17 @@ function AdminAlertsPage() {
       {selectedKeys.length > 0 && (
         <AdminSurface sx={{ p: 1.5, mb: 2 }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={1} justifyContent="space-between" alignItems={{ md: "center" }}>
-            <Typography sx={{ fontWeight: 700 }}>{selectedKeys.length} התראות נבחרו</Typography>
+            <Typography sx={{ fontWeight: 700 }}>{t("admin.alerts.selectedCount", { count: selectedKeys.length })}</Typography>
             <Stack direction="row" spacing={1}>
-              <Button size="small" variant="outlined" onClick={() => requestBulkAlerts("resolve")}>סימון כטופלו</Button>
-              <Button size="small" variant="outlined" onClick={() => requestBulkAlerts("reopen")}>פתיחה מחדש</Button>
+              <Button size="small" variant="outlined" onClick={() => requestBulkAlerts("resolve")}>{t("admin.alerts.markResolvedBulk")}</Button>
+              <Button size="small" variant="outlined" onClick={() => requestBulkAlerts("reopen")}>{t("admin.alerts.reopenBulk")}</Button>
             </Stack>
           </Stack>
         </AdminSurface>
       )}
 
       {alerts.length === 0 ? (
-        <AdminEmpty title="אין התראות להצגה" subtitle="אפשר להציג גם התראות שטופלו דרך הסינון." />
+        <AdminEmpty title={t("admin.alerts.emptyTitle")} subtitle={t("admin.alerts.emptySubtitle")} />
       ) : (
         <AdminSurface sx={{ overflow: "hidden" }}>
           {alerts.map((alert) => (
@@ -201,45 +205,54 @@ function AdminAlertsPage() {
                 <Stack spacing={1} sx={{ flex: 1, minWidth: 0 }}>
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" rowGap={0.75}>
                     <Checkbox checked={selectedKeys.includes(alert.key)} onChange={() => toggleSelected(alert.key)} sx={{ p: 0.25 }} />
-                    <Chip label={ALERT_TYPE_LABELS[alert.type] || alert.type} color={alert.resolved ? "default" : "primary"} size="small" sx={{ fontWeight: 700 }} />
-                    <AdminStatusBadge label={PRIORITY_LABELS[alert.priority] || alert.priority} tone={alert.priority} />
-                    <Chip label={alert.resolved ? "טופלה" : "פתוחה"} size="small" variant={alert.resolved ? "outlined" : "filled"} color={alert.resolved ? "default" : "warning"} sx={{ fontWeight: 700 }} />
+                    <Chip label={alertTypeLabel(alert.type, t)} color={alert.resolved ? "default" : "primary"} size="small" sx={{ fontWeight: 700 }} />
+                    <AdminStatusBadge label={t(PRIORITY_LABEL_KEYS[alert.priority] || PRIORITY_LABEL_KEYS.normal)} tone={alert.priority} />
+                    <Chip label={alert.resolved ? t("admin.alerts.resolvedChip") : t("admin.alerts.openChip")} size="small" variant={alert.resolved ? "outlined" : "filled"} color={alert.resolved ? "default" : "warning"} sx={{ fontWeight: 700 }} />
                     <Typography sx={{ fontWeight: 800, lineHeight: 1.35 }}>{alert.title}</Typography>
                   </Stack>
                   <Typography color="text.secondary" variant="body2" sx={{ maxWidth: 840 }}>{alert.description}</Typography>
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} color="text.secondary" flexWrap="wrap" rowGap={0.5}>
-                    <Typography variant="body2">מקור: {formatDateTime(alert.materializedAt)}</Typography>
-                    <Typography variant="body2">מטפלת: {alert.assignedAdminName || "לא שובצה"}</Typography>
-                    {alert.resolved && <Typography variant="body2">טופל על ידי {alert.resolvedByName || "מנהלת"} ב-{formatDateTime(alert.resolvedAt)}</Typography>}
+                    <Typography variant="body2">{t("admin.alerts.source", { value: formatDateTime(alert.materializedAt, language) })}</Typography>
+                    <Typography variant="body2">{t("admin.alerts.assignee", { name: alert.assignedAdminName || t("admin.alerts.unassigned") })}</Typography>
+                    {alert.resolved && (
+                      <Typography variant="body2">
+                        {t("admin.alerts.resolvedBy", {
+                          name: alert.resolvedByName || t("admin.alerts.defaultResolver"),
+                          when: formatDateTime(alert.resolvedAt, language),
+                        })}
+                      </Typography>
+                    )}
                   </Stack>
                   <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "150px 180px minmax(220px, 1fr)" }, gap: 1 }}>
                     <FormControl size="small">
-                      <InputLabel>עדיפות</InputLabel>
-                      <Select label="עדיפות" value={alert.priority || "normal"} onChange={(event) => updateMetadata(alert, { priority: event.target.value })}>
-                        {Object.entries(PRIORITY_LABELS).map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+                      <InputLabel>{t("admin.alerts.priority")}</InputLabel>
+                      <Select label={t("admin.alerts.priority")} value={alert.priority || "normal"} onChange={(event) => updateMetadata(alert, { priority: event.target.value })}>
+                        {PRIORITY_KEYS.map((value) => (
+                          <MenuItem key={value} value={value}>{t(PRIORITY_LABEL_KEYS[value])}</MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                     <FormControl size="small">
-                      <InputLabel>מטפלת</InputLabel>
-                      <Select label="מטפלת" value={alert.assignedAdminId || ""} onChange={(event) => updateMetadata(alert, { assignedAdminId: event.target.value || null })}>
-                        <MenuItem value="">ללא שיבוץ</MenuItem>
+                      <InputLabel>{t("admin.alerts.assigneeLabel")}</InputLabel>
+                      <Select label={t("admin.alerts.assigneeLabel")} value={alert.assignedAdminId || ""} onChange={(event) => updateMetadata(alert, { assignedAdminId: event.target.value || null })}>
+                        <MenuItem value="">{t("admin.alerts.noAssignee")}</MenuItem>
                         {assignees.map((admin) => <MenuItem key={admin.id} value={admin.id}>{admin.fullName}</MenuItem>)}
                       </Select>
                     </FormControl>
-                    <TextField size="small" label="הערה" defaultValue={alert.notes || ""} onBlur={(event) => event.target.value !== (alert.notes || "") && updateMetadata(alert, { notes: event.target.value })} />
+                    <TextField size="small" label={t("admin.alerts.note")} defaultValue={alert.notes || ""} onBlur={(event) => event.target.value !== (alert.notes || "") && updateMetadata(alert, { notes: event.target.value })} />
                   </Box>
                 </Stack>
                 <Stack direction="row" spacing={1} alignItems="flex-start" justifyContent={{ xs: "flex-start", lg: "flex-end" }} sx={{ flexShrink: 0 }}>
                   <Button component={RouterLink} to={getAlertMeetingLink(alert)} size="small">
-                    צפייה בפגישה
+                    {t("admin.alerts.viewMeeting")}
                   </Button>
                   {alert.resolved ? (
                     <Button size="small" onClick={() => setResolved(alert, false)}>
-                      פתיחה מחדש
+                      {t("admin.alerts.reopen")}
                     </Button>
                   ) : (
                     <Button variant="contained" size="small" onClick={() => setResolved(alert, true)}>
-                      סימון כטופלה
+                      {t("admin.alerts.markResolved")}
                     </Button>
                   )}
                 </Stack>
@@ -252,7 +265,7 @@ function AdminAlertsPage() {
         open={Boolean(pendingAction)}
         title={pendingAction?.title || ""}
         description={pendingAction?.description || ""}
-        confirmLabel={pendingAction?.confirmLabel || "אישור"}
+        confirmLabel={pendingAction?.confirmLabel || t("common.confirm")}
         onClose={() => setPendingAction(null)}
         onConfirm={confirmPendingAction}
       />

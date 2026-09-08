@@ -13,20 +13,23 @@ import {
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import apiClient from "../api/client";
 import { isMentorUser } from "../utils/areaRouting";
+import { useLanguage } from "../i18n/LanguageContext";
 
-const NOTIFICATION_CONTENT = {
-  MENTORING_REQUEST_RECEIVED: ["בקשת מנטורינג חדשה", "נכנסה בקשה חדשה שממתינה לטיפול שלך."],
-  REQUEST_REJECTED: ["הבקשה נדחתה", "בקשת המנטורינג עודכנה."],
-  SLOTS_AVAILABLE: ["זמנים חדשים זמינים", "נוספו מועדים חדשים לבחירה."],
-  MEETING_MATCHED: ["נקבעה פגישה חדשה", "נבחר מועד לפגישה."],
-  RESCHEDULE_REQUIRED: ["נדרשים זמנים חדשים", "יש בקשה לעדכון מועדי הפגישה."],
-  ATTENDANCE_CONFIRMATION_REQUEST: ["נדרש אישור פגישה", "יש לאשר את תוצאת הפגישה."],
-  POST_MEETING_CHECK: ["עדכון לאחר פגישה", "נדרש לעדכן אם הפגישה התקיימה."],
-  FEEDBACK_REMINDER: ["משוב ממתין", "נשמח לקבל את המשוב שלך על הפגישה."],
-};
+const NOTIFICATION_TYPES = [
+  "MENTORING_REQUEST_RECEIVED",
+  "REQUEST_REJECTED",
+  "SLOTS_AVAILABLE",
+  "MEETING_MATCHED",
+  "RESCHEDULE_REQUIRED",
+  "ATTENDANCE_CONFIRMATION_REQUEST",
+  "POST_MEETING_CHECK",
+  "FEEDBACK_REMINDER",
+];
 
-function messageFromNotification(notification) {
-  const [title, text] = NOTIFICATION_CONTENT[notification.type] || ["התראה חדשה", "יש עדכון חדש בחשבון שלך."];
+function messageFromNotification(notification, t) {
+  const known = NOTIFICATION_TYPES.includes(notification.type);
+  const title = known ? t(`notifications.${notification.type}_title`) : t("notifications.fallbackTitle");
+  const text = known ? t(`notifications.${notification.type}_text`) : t("notifications.fallbackText");
   return { id: `notification:${notification.id}`, title, text, createdAt: notification.createdAt };
 }
 
@@ -35,6 +38,7 @@ function storageKey(userId) {
 }
 
 function MessagesMenu({ currentUser }) {
+  const { t } = useLanguage();
   const [anchorEl, setAnchorEl] = useState(null);
   const [messages, setMessages] = useState([]);
   const [seenIds, setSeenIds] = useState(() => {
@@ -49,11 +53,11 @@ function MessagesMenu({ currentUser }) {
   const loadMessages = useCallback(async () => {
     try {
       const response = await apiClient.get("/api/notifications/me");
-      setMessages(response.data.map(messageFromNotification));
+      setMessages(response.data.map((notification) => messageFromNotification(notification, t)));
     } catch {
       // The meetings page displays API errors; the navbar should remain usable.
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadMessages();
@@ -85,7 +89,7 @@ function MessagesMenu({ currentUser }) {
   return (
     <>
       <IconButton
-        aria-label="התראות"
+        aria-label={t("notifications.aria")}
         onClick={(event) => {
           setAnchorEl(event.currentTarget);
           loadMessages();
@@ -103,12 +107,12 @@ function MessagesMenu({ currentUser }) {
         onClose={() => setAnchorEl(null)}
         PaperProps={{ sx: { width: 340, maxWidth: "calc(100vw - 32px)", p: 1 } }}
       >
-        <Typography sx={{ px: 1.5, py: 1, fontWeight: 700 }}>התראות</Typography>
+        <Typography sx={{ px: 1.5, py: 1, fontWeight: 700 }}>{t("notifications.title")}</Typography>
         <Divider />
 
         {visibleMessages.length === 0 ? (
           <Typography color="text.secondary" variant="body2" sx={{ p: 2 }}>
-            אין התראות חדשות.
+            {t("notifications.empty")}
           </Typography>
         ) : (
           visibleMessages.map((message) => (
@@ -138,7 +142,7 @@ function MessagesMenu({ currentUser }) {
                   onClick={() => markSeen(message.id)}
                   sx={{ alignSelf: "flex-start" }}
                 >
-                  ראיתי
+                  {t("notifications.seen")}
                 </Button>
               </Stack>
               <Divider sx={{ mt: 1.5 }} />

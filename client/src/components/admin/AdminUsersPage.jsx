@@ -26,18 +26,21 @@ import AdminConfirmDialog from "./AdminConfirmDialog";
 import AdminLayout from "./AdminLayout";
 import { AdminPageHeader, AdminSurface } from "./AdminPrimitives";
 import { AdminEmpty, AdminError, AdminLoading } from "./AdminState";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 function CapabilityChips({ user }) {
+  const { t } = useLanguage();
   return (
     <Stack direction="row" spacing={0.5} flexWrap="wrap" rowGap={0.5}>
-      <Chip label="מנטית" size="small" />
-      {user.capabilities.mentor && <Chip label="מנטורית" color="secondary" size="small" />}
-      {user.capabilities.admin && <Chip label="מנהלת" color="primary" size="small" />}
+      <Chip label={t("roles.mentee")} size="small" />
+      {user.capabilities.mentor && <Chip label={t("roles.mentor")} color="secondary" size="small" />}
+      {user.capabilities.admin && <Chip label={t("roles.admin")} color="primary" size="small" />}
     </Stack>
   );
 }
 
 function AdminUsersPage() {
+  const { t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState(searchParams.get("search") || "");
@@ -59,7 +62,7 @@ function AdminUsersPage() {
       setSelectedIds([]);
     } catch (requestError) {
       console.error(requestError);
-      setError("לא הצלחנו לטעון משתמשות.");
+      setError(t("errors.loadUsers"));
     } finally {
       setLoading(false);
     }
@@ -82,19 +85,19 @@ function AdminUsersPage() {
       setSuccess("");
       const response = await apiClient.patch(`/api/admin/users/${user.id}/admin`, { isAdmin });
       setUsers((current) => current.map((item) => (item.id === user.id ? response.data : item)));
-      setSuccess(isAdmin ? "הרשאת מנהלת נוספה." : "הרשאת מנהלת הוסרה.");
+      setSuccess(isAdmin ? t("admin.users.adminAdded") : t("admin.users.adminRemoved"));
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "עדכון הרשאות נכשל.");
+      setError(requestError.response?.data?.error || t("errors.updatePermissions"));
     }
   };
 
   const requestAdminChange = (user, isAdmin) => {
     if (!isAdmin) {
       setPendingAction({
-        title: "להסיר הרשאת מנהלת?",
-        description: `המשתמשת ${user.fullName} לא תוכל להיכנס לאזור הניהול.`,
-        confirmLabel: "הסרת הרשאה",
+        title: t("admin.users.removeAdminTitle"),
+        description: t("admin.users.removeAdminBody", { name: user.fullName }),
+        confirmLabel: t("admin.users.removeAdminConfirm"),
         confirmColor: "error",
         run: () => updateAdmin(user, false),
       });
@@ -121,9 +124,9 @@ function AdminUsersPage() {
 
   const runBulkMakeAdmin = () => {
     setPendingAction({
-      title: "להוסיף הרשאת מנהלת?",
-      description: `${adminSelection.length} משתמשות יקבלו גישה לאזור הניהול.`,
-      confirmLabel: "הוספת הרשאה",
+      title: t("admin.users.addAdminTitle"),
+      description: t("admin.users.addAdminBody", { count: adminSelection.length }),
+      confirmLabel: t("admin.users.addAdminConfirm"),
       run: async () => {
         const targets = adminSelection;
         for (const user of targets) {
@@ -138,7 +141,7 @@ function AdminUsersPage() {
 
   return (
     <AdminLayout>
-      <AdminPageHeader title="משתמשות" subtitle="חיפוש וניהול הרשאות מנהלת." breadcrumbs={[{ label: "משתמשות" }]} />
+      <AdminPageHeader title={t("admin.users.title")} subtitle={t("admin.users.subtitle")} breadcrumbs={[{ label: t("admin.users.title") }]} />
       <AdminError message={error} />
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -148,18 +151,18 @@ function AdminUsersPage() {
 
       <AdminSurface sx={{ p: 2, mb: 2 }}>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ sm: "center" }}>
-          <TextField size="small" label="חיפוש" placeholder="שם, אימייל, תפקיד או מקום עבודה" value={search} onChange={(event) => setSearch(event.target.value)} sx={{ width: { sm: 250 } }} />
+          <TextField size="small" label={t("admin.users.search")} placeholder={t("admin.users.searchPlaceholder")} value={search} onChange={(event) => setSearch(event.target.value)} sx={{ width: { sm: 250 } }} />
           <FormControl size="small" sx={{ minWidth: 180 }}>
-            <InputLabel>תפקיד</InputLabel>
-            <Select label="תפקיד" value={capability} onChange={(event) => setCapability(event.target.value)}>
-              <MenuItem value="">הכול</MenuItem>
-              <MenuItem value="admin">מנהלות</MenuItem>
-              <MenuItem value="mentor">מנטוריות</MenuItem>
-              <MenuItem value="mentee">מנטיות</MenuItem>
+            <InputLabel>{t("admin.users.role")}</InputLabel>
+            <Select label={t("admin.users.role")} value={capability} onChange={(event) => setCapability(event.target.value)}>
+              <MenuItem value="">{t("admin.all")}</MenuItem>
+              <MenuItem value="admin">{t("admin.users.admins")}</MenuItem>
+              <MenuItem value="mentor">{t("admin.users.mentors")}</MenuItem>
+              <MenuItem value="mentee">{t("admin.users.mentees")}</MenuItem>
             </Select>
           </FormControl>
           <Button variant="contained" onClick={applyFilters}>
-            סינון
+            {t("common.filter")}
           </Button>
         </Stack>
       </AdminSurface>
@@ -167,16 +170,16 @@ function AdminUsersPage() {
       {selectedIds.length > 0 && (
         <AdminSurface sx={{ p: 1.5, mb: 2 }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={1} justifyContent="space-between" alignItems={{ md: "center" }}>
-            <Typography sx={{ fontWeight: 700 }}>{selectedIds.length} נבחרו</Typography>
+            <Typography sx={{ fontWeight: 700 }}>{t("admin.users.selectedCount", { count: selectedIds.length })}</Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
-              <Button size="small" variant="outlined" disabled={!adminSelection.length} onClick={runBulkMakeAdmin}>הוספת הרשאת מנהלת</Button>
+              <Button size="small" variant="outlined" disabled={!adminSelection.length} onClick={runBulkMakeAdmin}>{t("admin.users.addAdminBulk")}</Button>
             </Stack>
           </Stack>
         </AdminSurface>
       )}
 
       {users.length === 0 ? (
-        <AdminEmpty title="אין משתמשות להצגה" subtitle="נסי לשנות את הסינון." />
+        <AdminEmpty title={t("admin.users.emptyTitle")} subtitle={t("admin.users.emptySubtitle")} />
       ) : (
         <>
         <AdminSurface sx={{ overflowX: "auto", display: { xs: "none", md: "block" } }}>
@@ -184,10 +187,10 @@ function AdminUsersPage() {
             <TableHead>
               <TableRow>
                 <TableCell padding="checkbox" />
-                <TableCell>שם</TableCell>
-                <TableCell>אימייל</TableCell>
-                <TableCell>תפקידים</TableCell>
-                <TableCell>מנהלת</TableCell>
+                <TableCell>{t("admin.users.name")}</TableCell>
+                <TableCell>{t("admin.users.email")}</TableCell>
+                <TableCell>{t("admin.users.roles")}</TableCell>
+                <TableCell>{t("admin.users.isAdmin")}</TableCell>
                 <TableCell />
               </TableRow>
             </TableHead>
@@ -215,7 +218,7 @@ function AdminUsersPage() {
                   </TableCell>
                   <TableCell>
                     <Button component={RouterLink} to={`/admin/users/${user.id}`} size="small">
-                      פרטים
+                      {t("common.details")}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -236,10 +239,10 @@ function AdminUsersPage() {
                 </Stack>
                 <CapabilityChips user={user} />
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography variant="body2">מנהלת</Typography>
+                  <Typography variant="body2">{t("admin.users.isAdmin")}</Typography>
                   <Switch checked={user.isAdmin} disabled={user.isAdmin && !user.permissions.canRemoveAdmin} onChange={(event) => requestAdminChange(user, event.target.checked)} />
                 </Stack>
-                <Button component={RouterLink} to={`/admin/users/${user.id}`} size="small" sx={{ alignSelf: "flex-start" }}>פרטים</Button>
+                <Button component={RouterLink} to={`/admin/users/${user.id}`} size="small" sx={{ alignSelf: "flex-start" }}>{t("common.details")}</Button>
               </Stack>
             </AdminSurface>
           ))}
@@ -251,7 +254,7 @@ function AdminUsersPage() {
         open={Boolean(pendingAction)}
         title={pendingAction?.title || ""}
         description={pendingAction?.description || ""}
-        confirmLabel={pendingAction?.confirmLabel || "אישור"}
+        confirmLabel={pendingAction?.confirmLabel || t("common.confirm")}
         confirmColor={pendingAction?.confirmColor || "primary"}
         onClose={() => setPendingAction(null)}
         onConfirm={confirmPendingAction}

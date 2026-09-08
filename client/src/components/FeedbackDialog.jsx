@@ -10,8 +10,10 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function FeedbackDialog({ open, loading, onClose, onSubmit }) {
+  const { t } = useLanguage();
   const [rating, setRating] = useState(0);
   const [text, setText] = useState("");
 
@@ -29,11 +31,11 @@ function FeedbackDialog({ open, loading, onClose, onSubmit }) {
 
   return (
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>משוב על הפגישה</DialogTitle>
+      <DialogTitle>{t("meetings.feedbackTitle")}</DialogTitle>
       <DialogContent>
         <Stack spacing={2.5} sx={{ pt: 1 }}>
           <Stack spacing={0.5}>
-            <Typography>דירוג</Typography>
+            <Typography>{t("meetings.rating")}</Typography>
             <Rating
               value={rating}
               onChange={(_, value) => setRating(value || 0)}
@@ -41,7 +43,7 @@ function FeedbackDialog({ open, loading, onClose, onSubmit }) {
             />
           </Stack>
           <TextField
-            label="הערה (לא חובה)"
+            label={t("meetings.noteOptional")}
             value={text}
             onChange={(event) => setText(event.target.value)}
             multiline
@@ -51,9 +53,9 @@ function FeedbackDialog({ open, loading, onClose, onSubmit }) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>ביטול</Button>
+        <Button onClick={onClose} disabled={loading}>{t("common.cancel")}</Button>
         <Button variant="contained" onClick={handleSubmit} disabled={loading || rating === 0}>
-          {loading ? "שומרת..." : "שליחת משוב"}
+          {loading ? t("common.saving") : t("meetings.sendFeedback")}
         </Button>
       </DialogActions>
     </Dialog>

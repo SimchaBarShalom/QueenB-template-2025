@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import translations from "./translations";
+import { getLocale } from "./locales";
 
 const STORAGE_KEY = "queensMatchLanguage";
 
@@ -8,6 +9,15 @@ const DIRECTION_BY_LANGUAGE = { he: "rtl", en: "ltr", ar: "rtl" };
 
 const LanguageContext = createContext(null);
 
+function lookup(dictionary, key) {
+  return key.split(".").reduce((current, part) => (current == null ? undefined : current[part]), dictionary);
+}
+
+function interpolate(template, vars) {
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (_, name) => (vars[name] == null ? `{${name}}` : String(vars[name])));
+}
+
 function LanguageProvider({ children }) {
   const [language, setLanguage] = useState(() => {
     const savedLanguage = window.localStorage.getItem(STORAGE_KEY);
@@ -15,6 +25,7 @@ function LanguageProvider({ children }) {
   });
 
   const direction = DIRECTION_BY_LANGUAGE[language] || "rtl";
+  const locale = getLocale(language);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -23,21 +34,23 @@ function LanguageProvider({ children }) {
   }, [language, direction]);
 
   // Looks up a dot-separated key such as "auth.email" in the current
-  // language's translation object. Falls back to the key itself so a
-  // missing translation is visible instead of crashing the page.
+  // language's translation object. Missing en/ar keys fall back to Hebrew,
+  // then to the key itself so incomplete translations stay visible.
+  // Optional second argument interpolates {name} placeholders.
   const t = useMemo(() => {
-    return (key) => {
-      const value = key
-        .split(".")
-        .reduce((current, part) => (current ? current[part] : undefined), translations[language]);
+    return (key, vars) => {
+      const fromCurrent = lookup(translations[language], key);
+      const fromHebrew = language === "he" ? undefined : lookup(translations.he, key);
+      const value = typeof fromCurrent === "string" ? fromCurrent : typeof fromHebrew === "string" ? fromHebrew : null;
 
-      return value ?? key;
+      if (value == null) return key;
+      return interpolate(value, vars);
     };
   }, [language]);
 
   const value = useMemo(
-    () => ({ language, setLanguage, direction, t }),
-    [language, direction, t]
+    () => ({ language, setLanguage, direction, locale, t }),
+    [language, direction, locale, t]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

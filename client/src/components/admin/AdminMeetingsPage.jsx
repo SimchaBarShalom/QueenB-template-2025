@@ -25,11 +25,13 @@ import AdminConfirmDialog from "./AdminConfirmDialog";
 import AdminLayout from "./AdminLayout";
 import { AdminPageHeader, AdminSurface } from "./AdminPrimitives";
 import { AdminEmpty, AdminError, AdminLoading } from "./AdminState";
-import { formatDateTime, getMeetingStatusColor, MEETING_STATUS_LABELS } from "./adminFormatters";
+import { formatDateTime, getMeetingStatusColor, meetingStatusLabel } from "./adminFormatters";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 const STATUSES = ["SCHEDULED", "ATTENDANCE_CONFIRMED", "COMPLETED", "NOT_COMPLETED", "CANCELLED"];
 
 function AdminMeetingsPage() {
+  const { t, language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const [meetings, setMeetings] = useState([]);
   const [filters, setFilters] = useState({
@@ -66,7 +68,7 @@ function AdminMeetingsPage() {
       setSelectedIds([]);
     } catch (requestError) {
       console.error(requestError);
-      setError("לא הצלחנו לטעון פגישות.");
+      setError(t("errors.loadMeetingsAdmin"));
     } finally {
       setLoading(false);
     }
@@ -95,25 +97,25 @@ function AdminMeetingsPage() {
       setSuccess("");
       const response = await apiClient.patch(`/api/admin/meetings/${meeting.id}/status`, { status });
       setMeetings((current) => current.map((item) => (item.id === meeting.id ? response.data : item)));
-      setSuccess("סטטוס הפגישה עודכן.");
+      setSuccess(t("admin.meetings.statusUpdated"));
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "עדכון סטטוס הפגישה נכשל.");
+      setError(requestError.response?.data?.error || t("errors.updateMeetingStatus"));
     }
   };
 
   const requestStatusUpdate = (meeting, status) => {
     const confirmations = {
       NOT_COMPLETED: {
-        title: "לסמן שהפגישה לא התקיימה?",
-        description: `הפגישה של ${meeting.mentor.fullName} ו-${meeting.mentee.fullName} תיסגר כלא הושלמה.`,
-        confirmLabel: "סימון כלא הושלמה",
+        title: t("admin.meetings.confirmNotCompletedTitle"),
+        description: t("admin.meetings.confirmNotCompletedBody", { mentor: meeting.mentor.fullName, mentee: meeting.mentee.fullName }),
+        confirmLabel: t("admin.meetings.confirmNotCompletedAction"),
         confirmColor: "warning",
       },
       CANCELLED: {
-        title: "לבטל את הפגישה?",
-        description: `הפגישה של ${meeting.mentor.fullName} ו-${meeting.mentee.fullName} תבוטל.`,
-        confirmLabel: "ביטול פגישה",
+        title: t("admin.meetings.confirmCancelTitle"),
+        description: t("admin.meetings.confirmCancelBody", { mentor: meeting.mentor.fullName, mentee: meeting.mentee.fullName }),
+        confirmLabel: t("admin.meetings.confirmCancelAction"),
         confirmColor: "error",
       },
     };
@@ -146,19 +148,19 @@ function AdminMeetingsPage() {
       setError("");
       const preview = await apiClient.post("/api/admin/meetings/bulk-status", { meetingIds: selectedIds, status, preview: true });
       setPendingAction({
-        title: "עדכון סטטוס באצווה",
-        description: `${preview.data.eligibleCount} פגישות יעודכנו ל-${MEETING_STATUS_LABELS[status]}. ${preview.data.skipped.length} ידולגו.`,
-        confirmLabel: "עדכון פגישות",
+        title: t("admin.meetings.bulkTitle"),
+        description: t("admin.meetings.bulkBody", { eligible: preview.data.eligibleCount, status: meetingStatusLabel(status, t), skipped: preview.data.skipped.length }),
+        confirmLabel: t("admin.meetings.bulkConfirm"),
         confirmColor: status === "CANCELLED" ? "error" : status === "NOT_COMPLETED" ? "warning" : "primary",
         run: async () => {
           const response = await apiClient.post("/api/admin/meetings/bulk-status", { meetingIds: selectedIds, status });
-          setSuccess(`${response.data.updatedCount} פגישות עודכנו. ${response.data.skipped.length} דולגו.`);
+          setSuccess(t("admin.meetings.bulkSuccess", { updated: response.data.updatedCount, skipped: response.data.skipped.length }));
           await loadMeetings(filters);
         },
       });
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "הכנת פעולת האצווה נכשלה.");
+      setError(requestError.response?.data?.error || t("errors.bulkPrepare"));
     }
   };
 
@@ -166,7 +168,7 @@ function AdminMeetingsPage() {
 
   return (
     <AdminLayout>
-      <AdminPageHeader title="פגישות" subtitle="איתור פגישות בעייתיות, עדכון סטטוסים וכניסה מהירה לפרטי פגישה." breadcrumbs={[{ label: "פגישות" }]} />
+      <AdminPageHeader title={t("admin.meetings.title")} subtitle={t("admin.meetings.subtitle")} breadcrumbs={[{ label: t("admin.meetings.title") }]} />
       <AdminError message={error} />
       {success && (
         <Alert severity="success" sx={{ mb: 3 }}>
@@ -177,30 +179,30 @@ function AdminMeetingsPage() {
       <AdminSurface sx={{ p: 2, mb: 2 }}>
         <Stack direction={{ xs: "column", lg: "row" }} spacing={1} alignItems={{ lg: "center" }} sx={{ "& .MuiInputBase-root": { fontSize: "0.875rem" } }}>
           <FormControl size="small" sx={{ minWidth: 130, flexShrink: 0 }}>
-            <InputLabel>סטטוס</InputLabel>
-            <Select label="סטטוס" value={filters.status} onChange={(event) => setFilter("status", event.target.value)}>
-              <MenuItem value="">הכול</MenuItem>
+            <InputLabel>{t("admin.meetings.status")}</InputLabel>
+            <Select label={t("admin.meetings.status")} value={filters.status} onChange={(event) => setFilter("status", event.target.value)}>
+              <MenuItem value="">{t("admin.all")}</MenuItem>
               {STATUSES.map((status) => (
                 <MenuItem key={status} value={status}>
-                  {MEETING_STATUS_LABELS[status]}
+                  {meetingStatusLabel(status, t)}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
-          <TextField size="small" label="חיפוש מנטורית" value={filters.mentorId} onChange={(event) => setFilter("mentorId", event.target.value)} sx={{ width: 145, flexShrink: 0 }} />
-          <TextField size="small" label="חיפוש מנטית" value={filters.menteeId} onChange={(event) => setFilter("menteeId", event.target.value)} sx={{ width: 135, flexShrink: 0 }} />
-          <TextField size="small" type="date" label="מתאריך" InputLabelProps={{ shrink: true }} value={filters.startDate} onChange={(event) => setFilter("startDate", event.target.value)} sx={{ width: 135, flexShrink: 0 }} />
-          <TextField size="small" type="date" label="עד תאריך" InputLabelProps={{ shrink: true }} value={filters.endDate} onChange={(event) => setFilter("endDate", event.target.value)} sx={{ width: 135, flexShrink: 0 }} />
+          <TextField size="small" label={t("admin.meetings.searchMentor")} value={filters.mentorId} onChange={(event) => setFilter("mentorId", event.target.value)} sx={{ width: 145, flexShrink: 0 }} />
+          <TextField size="small" label={t("admin.meetings.searchMentee")} value={filters.menteeId} onChange={(event) => setFilter("menteeId", event.target.value)} sx={{ width: 135, flexShrink: 0 }} />
+          <TextField size="small" type="date" label={t("admin.meetings.fromDate")} InputLabelProps={{ shrink: true }} value={filters.startDate} onChange={(event) => setFilter("startDate", event.target.value)} sx={{ width: 135, flexShrink: 0 }} />
+          <TextField size="small" type="date" label={t("admin.meetings.toDate")} InputLabelProps={{ shrink: true }} value={filters.endDate} onChange={(event) => setFilter("endDate", event.target.value)} sx={{ width: 135, flexShrink: 0 }} />
           <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0 }}>
-            <Typography variant="body2">חסר פידבק</Typography>
+            <Typography variant="body2">{t("admin.meetings.missingFeedback")}</Typography>
             <Switch checked={filters.missingFeedback} onChange={(event) => setFilter("missingFeedback", event.target.checked)} />
           </Stack>
           <Stack direction="row" spacing={0.25} alignItems="center" sx={{ flexShrink: 0 }}>
-            <Typography variant="body2">אי הגעה</Typography>
+            <Typography variant="body2">{t("admin.meetings.noShow")}</Typography>
             <Switch checked={filters.noShow} onChange={(event) => setFilter("noShow", event.target.checked)} />
           </Stack>
           <Button variant="contained" onClick={applyFilters}>
-            סינון
+            {t("common.filter")}
           </Button>
         </Stack>
       </AdminSurface>
@@ -208,18 +210,18 @@ function AdminMeetingsPage() {
       {selectedIds.length > 0 && (
         <AdminSurface sx={{ p: 1.5, mb: 2 }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={1} justifyContent="space-between" alignItems={{ md: "center" }}>
-            <Typography sx={{ fontWeight: 700 }}>{selectedIds.length} פגישות נבחרו</Typography>
+            <Typography sx={{ fontWeight: 700 }}>{t("admin.meetings.selectedCount", { count: selectedIds.length })}</Typography>
             <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
-              <Button size="small" variant="outlined" onClick={() => requestBulkStatusUpdate("COMPLETED")}>סימון כהושלמו</Button>
-              <Button size="small" variant="outlined" color="warning" onClick={() => requestBulkStatusUpdate("NOT_COMPLETED")}>סימון כלא הושלמו</Button>
-              <Button size="small" variant="outlined" color="error" onClick={() => requestBulkStatusUpdate("CANCELLED")}>ביטול</Button>
+              <Button size="small" variant="outlined" onClick={() => requestBulkStatusUpdate("COMPLETED")}>{t("admin.meetings.markCompleted")}</Button>
+              <Button size="small" variant="outlined" color="warning" onClick={() => requestBulkStatusUpdate("NOT_COMPLETED")}>{t("admin.meetings.markNotCompleted")}</Button>
+              <Button size="small" variant="outlined" color="error" onClick={() => requestBulkStatusUpdate("CANCELLED")}>{t("admin.meetings.cancel")}</Button>
             </Stack>
           </Stack>
         </AdminSurface>
       )}
 
       {meetings.length === 0 ? (
-        <AdminEmpty title="אין פגישות להצגה" subtitle="נסי לשנות את הסינון." />
+        <AdminEmpty title={t("admin.meetings.emptyTitle")} subtitle={t("admin.meetings.emptySubtitle")} />
       ) : (
         <>
         <AdminSurface sx={{ overflowX: "auto", display: { xs: "none", md: "block" } }}>
@@ -227,12 +229,12 @@ function AdminMeetingsPage() {
             <TableHead>
               <TableRow>
                 <TableCell padding="checkbox" />
-                <TableCell>מועד</TableCell>
-                <TableCell>מנטורית</TableCell>
-                <TableCell>מנטית</TableCell>
-                <TableCell>סטטוס</TableCell>
-                <TableCell>פידבק</TableCell>
-                <TableCell>פעולות</TableCell>
+                <TableCell>{t("admin.meetings.when")}</TableCell>
+                <TableCell>{t("admin.meetings.mentor")}</TableCell>
+                <TableCell>{t("admin.meetings.mentee")}</TableCell>
+                <TableCell>{t("admin.meetings.status")}</TableCell>
+                <TableCell>{t("admin.meetings.feedback")}</TableCell>
+                <TableCell>{t("admin.meetings.actions")}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -241,26 +243,26 @@ function AdminMeetingsPage() {
                   <TableCell padding="checkbox">
                     <Checkbox checked={selectedIds.includes(meeting.id)} onChange={() => toggleSelected(meeting.id)} />
                   </TableCell>
-                  <TableCell>{formatDateTime(meeting.scheduledStart)}</TableCell>
+                  <TableCell>{formatDateTime(meeting.scheduledStart, language)}</TableCell>
                   <TableCell>{meeting.mentor.fullName}</TableCell>
                   <TableCell>{meeting.mentee.fullName}</TableCell>
                   <TableCell>
-                    <Chip label={MEETING_STATUS_LABELS[meeting.status] || meeting.status} color={getMeetingStatusColor(meeting.status)} size="small" />
+                    <Chip label={meetingStatusLabel(meeting.status, t)} color={getMeetingStatusColor(meeting.status)} size="small" />
                   </TableCell>
-                  <TableCell>{meeting.feedbackStatus.count}/2</TableCell>
+                  <TableCell>{t("admin.meetings.feedbackCount", { count: meeting.feedbackStatus.count })}</TableCell>
                   <TableCell>
                     <Stack direction="row" spacing={1}>
                       <Button component={RouterLink} to={`/admin/meetings/${meeting.id}`} size="small">
-                        פרטים
+                        {t("common.details")}
                       </Button>
                       <Button size="small" disabled={meeting.status === "COMPLETED"} onClick={() => requestStatusUpdate(meeting, "COMPLETED")}>
-                        הושלמה
+                        {t("admin.meetings.completed")}
                       </Button>
                       <Button size="small" disabled={meeting.status === "NOT_COMPLETED"} onClick={() => requestStatusUpdate(meeting, "NOT_COMPLETED")}>
-                        לא הושלמה
+                        {t("admin.meetings.notCompleted")}
                       </Button>
                       <Button size="small" color="error" disabled={meeting.status === "CANCELLED"} onClick={() => requestStatusUpdate(meeting, "CANCELLED")}>
-                        ביטול
+                        {t("admin.meetings.cancel")}
                       </Button>
                     </Stack>
                   </TableCell>
@@ -275,20 +277,20 @@ function AdminMeetingsPage() {
               <Stack spacing={1.25}>
                 <Stack direction="row" justifyContent="space-between" spacing={1}>
                   <Box>
-                    <Typography sx={{ fontWeight: 800 }}>{formatDateTime(meeting.scheduledStart)}</Typography>
+                    <Typography sx={{ fontWeight: 800 }}>{formatDateTime(meeting.scheduledStart, language)}</Typography>
                     <Typography variant="body2" color="text.secondary">{meeting.mentor.fullName} / {meeting.mentee.fullName}</Typography>
                   </Box>
                   <Checkbox checked={selectedIds.includes(meeting.id)} onChange={() => toggleSelected(meeting.id)} />
                 </Stack>
                 <Stack direction="row" spacing={1} alignItems="center">
-                  <Chip label={MEETING_STATUS_LABELS[meeting.status] || meeting.status} color={getMeetingStatusColor(meeting.status)} size="small" />
-                  <Typography variant="body2" color="text.secondary">פידבק {meeting.feedbackStatus.count}/2</Typography>
+                  <Chip label={meetingStatusLabel(meeting.status, t)} color={getMeetingStatusColor(meeting.status)} size="small" />
+                  <Typography variant="body2" color="text.secondary">{t("admin.meetings.feedbackCount", { count: meeting.feedbackStatus.count })}</Typography>
                 </Stack>
                 <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
-                  <Button component={RouterLink} to={`/admin/meetings/${meeting.id}`} size="small">פרטים</Button>
-                  <Button size="small" disabled={meeting.status === "COMPLETED"} onClick={() => requestStatusUpdate(meeting, "COMPLETED")}>הושלמה</Button>
-                  <Button size="small" disabled={meeting.status === "NOT_COMPLETED"} onClick={() => requestStatusUpdate(meeting, "NOT_COMPLETED")}>לא הושלמה</Button>
-                  <Button size="small" color="error" disabled={meeting.status === "CANCELLED"} onClick={() => requestStatusUpdate(meeting, "CANCELLED")}>ביטול</Button>
+                  <Button component={RouterLink} to={`/admin/meetings/${meeting.id}`} size="small">{t("common.details")}</Button>
+                  <Button size="small" disabled={meeting.status === "COMPLETED"} onClick={() => requestStatusUpdate(meeting, "COMPLETED")}>{t("admin.meetings.completed")}</Button>
+                  <Button size="small" disabled={meeting.status === "NOT_COMPLETED"} onClick={() => requestStatusUpdate(meeting, "NOT_COMPLETED")}>{t("admin.meetings.notCompleted")}</Button>
+                  <Button size="small" color="error" disabled={meeting.status === "CANCELLED"} onClick={() => requestStatusUpdate(meeting, "CANCELLED")}>{t("admin.meetings.cancel")}</Button>
                 </Stack>
               </Stack>
             </AdminSurface>
@@ -301,7 +303,7 @@ function AdminMeetingsPage() {
         open={Boolean(pendingAction)}
         title={pendingAction?.title || ""}
         description={pendingAction?.description || ""}
-        confirmLabel={pendingAction?.confirmLabel || "אישור"}
+        confirmLabel={pendingAction?.confirmLabel || t("common.confirm")}
         confirmColor={pendingAction?.confirmColor || "primary"}
         onClose={() => setPendingAction(null)}
         onConfirm={confirmPendingAction}

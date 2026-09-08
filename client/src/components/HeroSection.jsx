@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Button, Typography } from "@mui/material";
 import { keyframes } from "@emotion/react";
+import { useLanguage } from "../i18n/LanguageContext";
 
 
 /* =========================================================
@@ -58,16 +59,16 @@ const drawArrowHead = keyframes`
    CODE HELPERS
 ========================================================= */
 
-function CodeLine({ children, indent = false }) {
+function CodeLine({ children, indent = false, direction }) {
   return (
     <Box
       component="div"
-      dir="rtl"
+      dir={direction}
       sx={{
         display: "block",
-        direction: "rtl",
-        textAlign: "right",
-        pr: indent ? 2.5 : 0,
+        direction,
+        textAlign: direction === "rtl" ? "right" : "left",
+        ps: indent ? 2.5 : 0,
       }}
     >
       {children}
@@ -125,7 +126,7 @@ function ArrayColor({ children }) {
    CODE WINDOW
 ========================================================= */
 
-function CodeWindow() {
+function CodeWindow({ direction }) {
   return (
     <Box
       sx={{
@@ -172,7 +173,7 @@ function CodeWindow() {
           */
           justifyContent: "flex-start",
 
-          direction: "rtl",
+          direction,
 
           gap: 1,
 
@@ -215,10 +216,10 @@ function CodeWindow() {
       {/* CODE */}
 
       <Box
-        dir="rtl"
+        dir={direction}
         sx={{
-          direction: "rtl",
-          textAlign: "right",
+          direction,
+          textAlign: direction === "rtl" ? "right" : "left",
 
           px: {
             xs: 2,
@@ -247,13 +248,13 @@ function CodeWindow() {
           overflow: "hidden",
         }}
       >
-        <CodeLine>
+        <CodeLine direction={direction}>
           <Symbol>{"<"}</Symbol>
           <Component>QueenMatch</Component>
           <Symbol>{">"}</Symbol>
         </CodeLine>
 
-        <CodeLine indent>
+        <CodeLine indent direction={direction}>
           <Symbol>{"<"}</Symbol>
 
           <Component>FindMentor</Component>
@@ -275,7 +276,7 @@ function CodeWindow() {
           <Symbol> /{">"}</Symbol>
         </CodeLine>
 
-        <CodeLine indent>
+        <CodeLine indent direction={direction}>
           <Symbol>{"<"}</Symbol>
 
           <Component>
@@ -293,7 +294,7 @@ function CodeWindow() {
           <Symbol> /{">"}</Symbol>
         </CodeLine>
 
-        <CodeLine indent>
+        <CodeLine indent direction={direction}>
           <Symbol>{"<"}</Symbol>
 
           <Component>Process</Component>
@@ -309,7 +310,7 @@ function CodeWindow() {
           <Symbol> /{">"}</Symbol>
         </CodeLine>
 
-        <CodeLine indent>
+        <CodeLine indent direction={direction}>
           <Symbol>{"<"}</Symbol>
 
           <Component>Result</Component>
@@ -325,7 +326,7 @@ function CodeWindow() {
           <Symbol> /{">"}</Symbol>
         </CodeLine>
 
-        <CodeLine>
+        <CodeLine direction={direction}>
           <Symbol>{"</"}</Symbol>
 
           <Component>QueenMatch</Component>
@@ -444,7 +445,7 @@ function DrawingArrow() {
    LEFT VISUAL
 ========================================================= */
 
-function HeroVisual() {
+function HeroVisual({ direction }) {
   return (
     <Box
       sx={{
@@ -508,7 +509,7 @@ function HeroVisual() {
         borderRadius: 0,
       }}
     >
-      <CodeWindow />
+      <CodeWindow direction={direction} />
 
       <DrawingArrow />
     </Box>
@@ -520,6 +521,8 @@ function HeroVisual() {
 ========================================================= */
 
 function HeroSection({ onOpenRegister }) {
+  const { t, direction } = useLanguage();
+
   return (
     <Box
       sx={{
@@ -605,7 +608,7 @@ function HeroSection({ onOpenRegister }) {
               lineHeight: 1.25,
             }}
           >
-            קהילת QueenB מתחברת, משתפת ומתקדמת יחד
+            {t("hero.headline")}
           </Typography>
 
           <Typography
@@ -618,10 +621,7 @@ function HeroSection({ onOpenRegister }) {
               maxWidth: 520,
             }}
           >
-            Queens Match מחברת בין חברות קהילת QueenB
-            למנטוריות מהתעשייה, כדי לקבל הכוונה מקצועית,
-            להתייעץ, ללמוד מניסיון ולבנות יחד את הצעד הבא
-            בקריירה.
+            {t("hero.body")}
           </Typography>
 
           <Button
@@ -636,7 +636,7 @@ function HeroSection({ onOpenRegister }) {
               alignSelf: "flex-start",
             }}
           >
-            הצטרפי ל-Queens Match
+            {t("hero.cta")}
           </Button>
         </Box>
 
@@ -656,7 +656,7 @@ function HeroSection({ onOpenRegister }) {
             overflow: "hidden",
           }}
         >
-          <HeroVisual />
+          <HeroVisual direction={direction} />
         </Box>
       </Box>
     </Box>

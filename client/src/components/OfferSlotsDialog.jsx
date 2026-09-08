@@ -18,6 +18,7 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import { queenbColors } from "../theme";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const pinkFieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -36,13 +37,16 @@ function OfferSlotsDialog({
   request,
   durationMinutes,
   loading,
-  title = "קבלה והצעת זמנים",
-  submitLabel = "שליחת זמנים",
+  title,
+  submitLabel,
   onClose,
   onSubmit,
 }) {
+  const { t } = useLanguage();
   const [startTimes, setStartTimes] = useState([null]);
   const [error, setError] = useState("");
+  const dialogTitle = title || t("meetings.offerTitle");
+  const dialogSubmit = submitLabel || t("meetings.offerSubmit");
 
   useEffect(() => {
     if (open) {
@@ -69,12 +73,12 @@ function OfferSlotsDialog({
     if (
       parsedStarts.some((date) => !date || Number.isNaN(date.getTime()) || date.getTime() <= Date.now())
     ) {
-      setError("יש לבחור זמנים עתידיים תקינים.");
+      setError(t("validation.futureTimes"));
       return;
     }
 
     if (new Set(parsedStarts.map((date) => date.getTime())).size !== parsedStarts.length) {
-      setError("לא ניתן להציע את אותו זמן פעמיים.");
+      setError(t("validation.duplicateTimes"));
       return;
     }
 
@@ -99,7 +103,7 @@ function OfferSlotsDialog({
         <DialogTitle sx={{ pb: 1 }}>
           <Stack direction="row" spacing={1} alignItems="center">
             <EventAvailableIcon sx={{ color: queenbColors.pink }} />
-            <span>{title}</span>
+            <span>{dialogTitle}</span>
           </Stack>
         </DialogTitle>
 
@@ -107,14 +111,13 @@ function OfferSlotsDialog({
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Stack spacing={1.25}>
               <Typography color="text.secondary">
-                הציעי לחניכה{" "}
-                <Box component="span" sx={{ fontWeight: 700, color: "text.primary" }}>
-                  {request?.menteeName || ""}
-                </Box>{" "}
-                זמן אחד או יותר.
+                {t("meetings.offerHelp", {
+                  name: request?.menteeName || "",
+                  minutes: durationMinutes,
+                })}
               </Typography>
               <Chip
-                label={`${durationMinutes} דקות לפגישה`}
+                label={t("common.minutesCount", { minutes: durationMinutes })}
                 size="small"
                 sx={{
                   alignSelf: "flex-start",
@@ -211,7 +214,7 @@ function OfferSlotsDialog({
                   },
                 }}
               >
-                הוספת מועד נוסף
+                {t("meetings.addSlot")}
               </Button>
             )}
           </Stack>
@@ -219,7 +222,7 @@ function OfferSlotsDialog({
 
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button type="button" onClick={onClose} disabled={loading}>
-            ביטול
+            {t("common.cancel")}
           </Button>
           <Button
             type="submit"
@@ -227,7 +230,7 @@ function OfferSlotsDialog({
             disabled={loading}
             sx={{ borderRadius: 999, px: 3 }}
           >
-            {loading ? "שומרת..." : submitLabel}
+            {loading ? t("common.saving") : dialogSubmit}
           </Button>
         </DialogActions>
       </Box>

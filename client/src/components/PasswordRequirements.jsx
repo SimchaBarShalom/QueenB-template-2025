@@ -3,8 +3,10 @@ import { Stack, Typography } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { PASSWORD_RULES, getPasswordChecks } from "../utils/passwordValidation";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function PasswordRequirements({ password }) {
+  const { t } = useLanguage();
   const checks = getPasswordChecks(password);
 
   return (
@@ -29,7 +31,7 @@ function PasswordRequirements({ password }) {
                 variant="caption"
                 sx={{ color: satisfied ? "success.main" : "text.secondary", fontWeight: satisfied ? 700 : 400 }}
               >
-                {rule.label}
+                {t(`auth.passwordRules.${rule.key}`)}
               </Typography>
             </Stack>
           </Fragment>

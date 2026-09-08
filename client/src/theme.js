@@ -38,7 +38,7 @@ function getTheme(direction = "rtl") {
     },
 
     typography: {
-      fontFamily: "Assistant, 'Noto Sans Hebrew', Arial, sans-serif",
+      fontFamily: "Assistant, 'Noto Sans Hebrew', 'Noto Sans Arabic', Arial, sans-serif",
 
       h3: {
         fontWeight: 800,

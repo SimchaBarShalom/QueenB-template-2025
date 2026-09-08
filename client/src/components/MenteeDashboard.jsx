@@ -23,16 +23,15 @@ import MentorCard from "./MentorCard";
 import DashboardSummaryCard from "./DashboardSummaryCard";
 import { AppPage, AppPageHeader, AppSectionTitle } from "./AppPrimitives";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
+import { formatDate as formatDateLocale, formatTime as formatTimeLocale } from "../i18n/locales";
+import { useLanguage } from "../i18n/LanguageContext";
 
-function formatDate(dateValue) {
-  return new Date(dateValue).toLocaleDateString("he-IL");
+function formatDate(dateValue, language) {
+  return formatDateLocale(dateValue, language);
 }
 
-function formatTime(dateValue) {
-  return new Date(dateValue).toLocaleTimeString("he-IL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatTime(dateValue, language) {
+  return formatTimeLocale(dateValue, language);
 }
 
 const ACTIVE_STATUSES = [
@@ -43,6 +42,7 @@ const ACTIVE_STATUSES = [
 ];
 
 function MenteeDashboard({ currentUser }) {
+  const { t, language } = useLanguage();
   const [mentors, setMentors] = useState([]);
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,7 +53,7 @@ function MenteeDashboard({ currentUser }) {
   useEffect(() => {
     async function loadDashboard() {
       if (!menteeId) {
-        setError("לא נמצאה משתמשת מחוברת.");
+        setError(t("errors.noUser"));
         setLoading(false);
         return;
       }
@@ -74,14 +74,14 @@ function MenteeDashboard({ currentUser }) {
         setRequests(requestsResponse.data);
       } catch (requestError) {
         console.error(requestError);
-        setError("לא הצלחנו לטעון את דף הבית.");
+        setError(t("errors.loadHome"));
       } finally {
         setLoading(false);
       }
     }
 
     loadDashboard();
-  }, [menteeId]);
+  }, [menteeId, t]);
 
   const activeRequestsCount = useMemo(() => {
     return requests.filter((request) =>
@@ -103,7 +103,7 @@ function MenteeDashboard({ currentUser }) {
           ...meeting,
           mentorName:
             request.mentorProfile?.user?.fullName ||
-            "מנטורית",
+            t("roles.mentor"),
         }))
     );
 
@@ -114,7 +114,7 @@ function MenteeDashboard({ currentUser }) {
     );
 
     return meetings[0] || null;
-  }, [requests]);
+  }, [requests, t]);
 
   const getRequestStatus = useCallback(
     (mentorProfileId) => {
@@ -192,7 +192,7 @@ function MenteeDashboard({ currentUser }) {
     } catch (requestError) {
       console.error(requestError);
       setError(
-        getRequestErrorMessage(requestError, "שליחת בקשת הפגישה נכשלה.")
+        getRequestErrorMessage(requestError, t("errors.sendRequest"), t)
       );
     }
   };
@@ -244,24 +244,26 @@ function MenteeDashboard({ currentUser }) {
         >
           <DashboardSummaryCard
             icon={SearchIcon}
-            title="מנטוריות זמינות"
+            title={t("menteeDashboard.availableMentors")}
             value={mentors.length}
           />
 
           <DashboardSummaryCard
             icon={EventNoteIcon}
-            title="פגישה קרובה"
+            title={t("menteeDashboard.upcomingMeeting")}
             value={
               upcomingMeeting
                 ? upcomingMeeting.mentorName
-                : "אין פגישות קרובות"
+                : t("menteeDashboard.noUpcoming")
             }
             subtitle={
               upcomingMeeting
                 ? `${formatDate(
-                    upcomingMeeting.scheduledStart
+                    upcomingMeeting.scheduledStart,
+                    language
                   )} · ${formatTime(
-                    upcomingMeeting.scheduledStart
+                    upcomingMeeting.scheduledStart,
+                    language
                   )}`
                 : undefined
             }
@@ -269,7 +271,7 @@ function MenteeDashboard({ currentUser }) {
 
           <DashboardSummaryCard
             icon={HourglassTopIcon}
-            title="בקשות פעילות"
+            title={t("menteeDashboard.activeRequests")}
             value={activeRequestsCount}
           />
         </Box>
@@ -285,7 +287,7 @@ function MenteeDashboard({ currentUser }) {
             variant="contained"
             sx={{ px: 3 }}
           >
-            חפשי מנטורית
+            {t("menteeDashboard.searchMentor")}
           </Button>
 
           <Button
@@ -294,7 +296,7 @@ function MenteeDashboard({ currentUser }) {
             variant="outlined"
             sx={{ px: 3 }}
           >
-            לכל הפגישות
+            {t("menteeDashboard.allMeetings")}
           </Button>
 
           <Button
@@ -303,17 +305,17 @@ function MenteeDashboard({ currentUser }) {
             variant="outlined"
             sx={{ px: 3 }}
           >
-            הציגי בקשות
+            {t("menteeDashboard.showRequests")}
           </Button>
 
           {!currentUser.isAdmin && !currentUser.mentorProfile && (
             <Button component={RouterLink} to="/profile" variant="outlined" sx={{ px: 3 }}>
-              הצטרפי כמנטורית
+              {t("menteeDashboard.joinAsMentor")}
             </Button>
           )}
         </Stack>
 
-        <AppSectionTitle title="מנטוריות שאולי יתאימו לך" action={
+        <AppSectionTitle title={t("menteeDashboard.suggested")} action={
           <Button
             component={RouterLink}
             to="/mentee/mentors"
@@ -323,13 +325,13 @@ function MenteeDashboard({ currentUser }) {
               minWidth: 0,
             }}
           >
-            לכל המנטוריות
+            {t("menteeDashboard.allMentors")}
           </Button>
         } />
 
         {suggestedMentors.length === 0 ? (
           <Typography color="text.secondary">
-            אין כרגע מנטוריות זמינות.
+            {t("menteeDashboard.noMentors")}
           </Typography>
         ) : (
           <Box

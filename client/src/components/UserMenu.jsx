@@ -6,11 +6,13 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import VolunteerActivismIcon from "@mui/icons-material/VolunteerActivism";
 import { getSwitchableAreas, isMentorUser } from "../utils/areaRouting";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function UserMenu({ currentUser, onLogout }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
 
   const switchableAreas = getSwitchableAreas(currentUser, location.pathname);
 
@@ -48,7 +50,7 @@ function UserMenu({ currentUser, onLogout }) {
           <ListItemIcon>
             <PersonIcon fontSize="small" />
           </ListItemIcon>
-          פרופיל
+          {t("nav.profile")}
         </MenuItem>
 
         {switchableAreas.map((area) => (
@@ -56,7 +58,7 @@ function UserMenu({ currentUser, onLogout }) {
             <ListItemIcon>
               <SwapHorizIcon fontSize="small" />
             </ListItemIcon>
-            {area.label}
+            {t(area.labelKey)}
           </MenuItem>
         ))}
 
@@ -65,7 +67,7 @@ function UserMenu({ currentUser, onLogout }) {
             <ListItemIcon>
               <VolunteerActivismIcon fontSize="small" />
             </ListItemIcon>
-            הצטרפי כמנטורית
+            {t("nav.joinAsMentor")}
           </MenuItem>
         )}
 
@@ -75,7 +77,7 @@ function UserMenu({ currentUser, onLogout }) {
           <ListItemIcon>
             <LogoutIcon fontSize="small" />
           </ListItemIcon>
-          התנתקות
+          {t("nav.signOut")}
         </MenuItem>
       </Menu>
     </>

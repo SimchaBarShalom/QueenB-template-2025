@@ -1,4 +1,4 @@
-function getRequestErrorMessage(error, fallbackMessage) {
+function getRequestErrorMessage(error, fallbackMessage, t) {
   const errors = error.response?.data?.errors;
 
   if (Array.isArray(errors) && errors.length > 0) {
@@ -10,7 +10,7 @@ function getRequestErrorMessage(error, fallbackMessage) {
   }
 
   if (error.request) {
-    return "לא ניתן להתחבר לשרת. ודאי שהשרת רץ על http://localhost:5000.";
+    return t ? t("errors.localhost") : "לא ניתן להתחבר לשרת. ודאי שהשרת רץ על http://localhost:5000.";
   }
 
   return fallbackMessage;

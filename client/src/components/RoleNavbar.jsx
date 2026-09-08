@@ -5,6 +5,8 @@ import MenuIcon from "@mui/icons-material/Menu";
 import QueensMatchLogo from "./QueensMatchLogo";
 import MessagesMenu from "./MessagesMenu";
 import UserMenu from "./UserMenu";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const activeButtonSx = {
   color: "#fff",
@@ -20,9 +22,12 @@ function isCurrentItem(item, location) {
   return item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
 }
 
-function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel = "ניווט ראשי" }) {
+function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t, direction } = useLanguage();
+  const navAria = ariaLabel || t("nav.mainAria");
+  const drawerAnchor = direction === "rtl" ? "right" : "left";
   const buttonSx = (active) => ({ minHeight: 38, px: 1.75, borderRadius: 2, whiteSpace: "nowrap", fontSize: "0.95rem", ...(active ? activeButtonSx : inactiveButtonSx) });
 
   return (
@@ -32,22 +37,26 @@ function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel = "ני�
           <Box component={RouterLink} to={homePath} sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
             <QueensMatchLogo height={48} sx={{ height: { xs: 40, md: 48 }, maxWidth: { xs: 142, sm: 180, md: "100%" } }} />
           </Box>
-          <Stack component="nav" aria-label={ariaLabel} direction="row" spacing={0.5} sx={{ display: { xs: "none", md: "flex" }, alignItems: "center", flexGrow: 1, justifyContent: "center" }}>
+          <Stack component="nav" aria-label={navAria} direction="row" spacing={0.5} sx={{ display: { xs: "none", md: "flex" }, alignItems: "center", flexGrow: 1, justifyContent: "center" }}>
             {items.map((item) => {
               const active = isCurrentItem(item, location);
               return <Button key={item.path} component={RouterLink} to={item.path} aria-current={active ? "page" : undefined} sx={buttonSx(active)}>{item.label}</Button>;
             })}
           </Stack>
           <Box sx={{ flexGrow: { xs: 1, md: 0 } }} />
+          <Box sx={{ display: { xs: "none", sm: "block" } }}>
+            <LanguageSwitcher />
+          </Box>
           <MessagesMenu currentUser={currentUser} />
           <Box sx={{ display: { xs: "none", sm: "block" } }}><UserMenu currentUser={currentUser} onLogout={onLogout} /></Box>
-          <IconButton onClick={() => setMobileOpen(true)} aria-label="פתיחת תפריט" sx={{ display: { xs: "inline-flex", md: "none" }, color: "text.primary" }}><MenuIcon /></IconButton>
+          <IconButton onClick={() => setMobileOpen(true)} aria-label={t("nav.openMenu")} sx={{ display: { xs: "inline-flex", md: "none" }, color: "text.primary" }}><MenuIcon /></IconButton>
         </Box>
       </Toolbar>
-      <Drawer anchor="right" open={mobileOpen} onClose={() => setMobileOpen(false)}>
-        <Box className="role-navbar" sx={{ width: 286, p: 2 }} dir="rtl">
+      <Drawer anchor={drawerAnchor} open={mobileOpen} onClose={() => setMobileOpen(false)}>
+        <Box className="role-navbar" sx={{ width: 286, p: 2 }} dir={direction}>
           <Box component={RouterLink} to={homePath} onClick={() => setMobileOpen(false)} sx={{ display: "flex", alignItems: "center", mb: 2 }}><QueensMatchLogo height={48} /></Box>
-          <List component="nav" aria-label={`${ariaLabel} במובייל`} sx={{ py: 0 }}>
+          <Box sx={{ mb: 2 }}><LanguageSwitcher /></Box>
+          <List component="nav" aria-label={t("nav.mobileAria", { label: navAria })} sx={{ py: 0 }}>
             {items.map((item) => {
               const active = isCurrentItem(item, location);
               return <ListItemButton key={item.path} component={RouterLink} to={item.path} selected={active} aria-current={active ? "page" : undefined} onClick={() => setMobileOpen(false)} sx={{ mb: 0.5, borderRadius: 2, ...buttonSx(active), "&.Mui-selected, &.Mui-selected:hover": activeButtonSx }}><ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: active ? 700 : 400 }} /></ListItemButton>;

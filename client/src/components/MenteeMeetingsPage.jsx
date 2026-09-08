@@ -4,6 +4,7 @@ import axios from "axios";
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
   Stack,
   Typography,
@@ -26,49 +27,56 @@ import {
   submitMeetingFeedback,
 } from "../services/meetingsService";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
-import { AppPage, AppPageHeader } from "./AppPrimitives";
+import { AppPage, AppPageHeader, AppSurface } from "./AppPrimitives";
 import {
   DEFAULT_MENTEE_MEETING_TAB,
   getMenteeMeetingTabFromSearch,
   isMenteeMeetingTab,
   MENTOR_MEETING_TAB_QUERY,
 } from "../utils/meetingNav";
+import { formatDate as formatDateLocale, formatTime as formatTimeLocale } from "../i18n/locales";
+import { useLanguage } from "../i18n/LanguageContext";
 
-function formatDate(dateValue) {
+const SECTION_TABS = [
+  { id: "completed-section", labelKey: "meetings.tabCompleted" },
+  { id: "scheduled-section", labelKey: "meetings.tabScheduled" },
+  { id: "waiting-mentor-section", labelKey: "meetings.tabWaitingMentor" },
+  { id: "waiting-mentee-section", labelKey: "meetings.tabWaitingMentee" },
+];
+
+function formatDate(dateValue, language) {
   if (!dateValue) return "";
 
-  return new Date(dateValue).toLocaleDateString("he-IL");
+  return formatDateLocale(dateValue, language);
 }
 
-function formatTime(dateValue) {
+function formatTime(dateValue, language) {
   if (!dateValue) return "";
 
-  return new Date(dateValue).toLocaleTimeString("he-IL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatTimeLocale(dateValue, language);
 }
 
-function getTopic(request) {
+function getTopic(request, mentoringFallback) {
   const topics =
     request.mentorProfile?.mentoringTopics || [];
 
   if (topics.length === 0) {
-    return "מנטורינג";
+    return mentoringFallback;
   }
 
   return topics.map((topic) => topic.name).join(", ");
 }
 
-function getMentorName(request) {
+function getMentorName(request, mentorFallback) {
   return (
     request.mentorProfile?.user?.fullName ||
-    "מנטורית"
+    mentorFallback
   );
 }
 
 function MenteeMeetingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { t, language } = useLanguage();
   const [requests, setRequests] = useState([]);
   const activeTab = getMenteeMeetingTabFromSearch(searchParams);
   const [slotRequest, setSlotRequest] = useState(null);
@@ -101,7 +109,7 @@ function MenteeMeetingsPage() {
   useEffect(() => {
     async function loadRequests() {
       if (!menteeId) {
-        setError("לא נמצאה משתמשת מחוברת.");
+        setError(t("errors.noUser"));
         setLoading(false);
         return;
       }
@@ -117,7 +125,7 @@ function MenteeMeetingsPage() {
         setRequests(response.data);
       } catch (requestError) {
         console.error(requestError);
-        setError("לא הצלחנו לטעון את הפגישות.");
+        setError(t("errors.loadMeetings"));
       } finally {
         setLoading(false);
       }
@@ -144,7 +152,7 @@ function MenteeMeetingsPage() {
     );
   } catch (requestError) {
     console.error(requestError);
-    setError("ביטול הבקשה נכשל.");
+    setError(t("errors.cancelRequest"));
   }
 };
 
@@ -152,8 +160,8 @@ function MenteeMeetingsPage() {
     const isSecondDecline = request.extraSlotsUsed;
     const confirmed = window.confirm(
       isSecondDecline
-        ? "דחיית הזמנים פעם נוספת תסגור את הבקשה ולא תאפשר לקבוע פגישה עם המנטורית עד סוף החודש. להמשיך?"
-        : "לדחות את הזמנים שהוצעו ולבקש מהמנטורית זמנים חדשים?"
+        ? t("meetings.confirmDeclineSecond")
+        : t("meetings.confirmDeclineFirst")
     );
 
     if (!confirmed) return;
@@ -172,7 +180,7 @@ function MenteeMeetingsPage() {
       );
     } catch (requestError) {
       console.error(requestError);
-      setError("עדכון הבקשה נכשל.");
+      setError(t("errors.updateRequest"));
     }
   };
 
@@ -192,7 +200,7 @@ function MenteeMeetingsPage() {
       setSelectedSlotId(null);
       setActiveTab("scheduled-section");
     } catch (requestError) {
-      setError(getRequestErrorMessage(requestError, "קביעת הפגישה נכשלה."));
+      setError(getRequestErrorMessage(requestError, t("errors.scheduleMeeting"), t));
     } finally {
       setActionLoading(false);
     }
@@ -210,7 +218,7 @@ function MenteeMeetingsPage() {
       await cancelMeeting(meeting.id);
       await reloadRequests();
     } catch (requestError) {
-      setError(getRequestErrorMessage(requestError, "ביטול הפגישה נכשל."));
+      setError(getRequestErrorMessage(requestError, t("errors.cancelMeeting"), t));
     } finally {
       setActionLoading(false);
     }
@@ -243,7 +251,7 @@ function MenteeMeetingsPage() {
         setFeedbackMeeting(meeting);
       }
     } catch (requestError) {
-      setError(getRequestErrorMessage(requestError, "עדכון תוצאת הפגישה נכשל."));
+      setError(getRequestErrorMessage(requestError, t("errors.updateOutcome"), t));
     } finally {
       setActionLoading(false);
     }
@@ -259,7 +267,7 @@ function MenteeMeetingsPage() {
       await reloadRequests();
       return true;
     } catch (requestError) {
-      setError(getRequestErrorMessage(requestError, "שמירת המשוב נכשלה."));
+      setError(getRequestErrorMessage(requestError, t("errors.saveFeedback"), t));
       return false;
     } finally {
       setActionLoading(false);
@@ -274,9 +282,9 @@ function MenteeMeetingsPage() {
     )
     .map((request) => ({
       id: request.id,
-      mentorName: getMentorName(request),
-      requestDate: formatDate(request.createdAt),
-      topic: getTopic(request),
+      mentorName: getMentorName(request, t("roles.mentor")),
+      requestDate: formatDate(request.createdAt, language),
+      topic: getTopic(request, t("roles.mentoring")),
     }));
 
   const waitingForMenteeSelection = requests
@@ -294,19 +302,20 @@ function MenteeMeetingsPage() {
 
       return {
         id: request.id,
-        mentorName: getMentorName(request),
-        topic: getTopic(request),
+        mentorName: getMentorName(request, t("roles.mentor")),
+        topic: getTopic(request, t("roles.mentoring")),
         extraSlotsUsed,
         offeredSlots: (latestRound?.offeredSlots || []).map((slot) => ({
           id: slot.id,
-          date: formatDate(slot.startTime),
-          startTime: formatTime(slot.startTime),
-          endTime: formatTime(slot.endTime),
+          date: formatDate(slot.startTime, language),
+          startTime: formatTime(slot.startTime, language),
+          endTime: formatTime(slot.endTime, language),
         })),
-        requestDate: formatDate(request.createdAt),
+        requestDate: formatDate(request.createdAt, language),
         respondedDate: formatDate(
           latestRound?.createdAt ||
-            request.updatedAt
+            request.updatedAt,
+          language
         ),
       };
     });
@@ -322,17 +331,20 @@ function MenteeMeetingsPage() {
         )
         .map((meeting) => ({
           id: meeting.id,
-          mentorName: getMentorName(request),
+          mentorName: getMentorName(request, t("roles.mentor")),
           date: formatDate(
-            meeting.scheduledStart
+            meeting.scheduledStart,
+            language
           ),
           startTime: formatTime(
-            meeting.scheduledStart
+            meeting.scheduledStart,
+            language
           ),
           endTime: formatTime(
-            meeting.scheduledEnd
+            meeting.scheduledEnd,
+            language
           ),
-          topic: getTopic(request),
+          topic: getTopic(request, t("roles.mentoring")),
         }))
   );
 
@@ -370,15 +382,17 @@ function MenteeMeetingsPage() {
 
           return {
             id: meeting.id,
-            mentorName: getMentorName(request),
+            mentorName: getMentorName(request, t("roles.mentor")),
             date: formatDate(
-              meeting.scheduledStart
+              meeting.scheduledStart,
+              language
             ),
             time: formatTime(
-              meeting.scheduledStart
+              meeting.scheduledStart,
+              language
             ),
             durationMinutes,
-            topic: getTopic(request),
+            topic: getTopic(request, t("roles.mentoring")),
             needsConfirmation,
             feedbackSubmitted:
               (meeting.feedback || []).some(
@@ -404,7 +418,7 @@ function MenteeMeetingsPage() {
 
   return (
     <AppPage maxWidth="md">
-        <AppPageHeader title="הפגישות שלי" subtitle="ניהול בקשות, מועדים ומשוב במקום אחד." />
+        <AppPageHeader title={t("meetings.menteeTitle")} subtitle={t("meetings.menteeSubtitle")} />
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -412,6 +426,33 @@ function MenteeMeetingsPage() {
           </Alert>
         )}
 
+        <AppSurface
+          component={Stack}
+          direction="row"
+          spacing={1}
+          flexWrap="wrap"
+          rowGap={1}
+          sx={{
+            position: "sticky",
+            top: { xs: 64, md: 72 },
+            zIndex: 1,
+            p: 1,
+            mb: 4,
+          }}
+        >
+          {SECTION_TABS.map((tab) => (
+            <Button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              variant={activeTab === tab.id ? "contained" : "text"}
+              size="small"
+              sx={{ fontWeight: activeTab === tab.id ? 700 : 400 }}
+            >
+              {t(tab.labelKey)}
+            </Button>
+          ))}
+        </AppSurface>
         {activeTab === "completed-section" && (
         <Box
           component="section"
@@ -422,13 +463,13 @@ function MenteeMeetingsPage() {
             component="h2"
             sx={{ mb: 2 }}
           >
-            פגישות שהתקיימו
+            {t("meetings.tabCompleted")}
           </Typography>
 
           <Stack spacing={2}>
             {completedMeetings.length === 0 ? (
               <Typography color="text.secondary">
-                אין פגישות שהתקיימו עדיין.
+                {t("meetings.emptyCompleted")}
               </Typography>
             ) : (
               completedMeetings.map((meeting) => (
@@ -455,13 +496,13 @@ function MenteeMeetingsPage() {
             component="h2"
             sx={{ mb: 2 }}
           >
-            פגישות שנקבעו
+            {t("meetings.tabScheduled")}
           </Typography>
 
           <Stack spacing={2}>
             {scheduledMeetings.length === 0 ? (
               <Typography color="text.secondary">
-                אין פגישות מתוכננות כרגע.
+                {t("meetings.emptyScheduled")}
               </Typography>
             ) : (
               scheduledMeetings.map((meeting) => (
@@ -487,13 +528,13 @@ function MenteeMeetingsPage() {
             component="h2"
             sx={{ mb: 2 }}
           >
-            ממתינות להצעת זמנים
+            {t("meetings.tabWaitingMentor")}
           </Typography>
 
           <Stack spacing={2}>
             {waitingForMentorSlots.length === 0 ? (
               <Typography color="text.secondary">
-                אין בקשות הממתינות להצעת זמנים.
+                {t("meetings.emptyWaitingMentor")}
               </Typography>
             ) : (
               waitingForMentorSlots.map(
@@ -520,15 +561,14 @@ function MenteeMeetingsPage() {
             component="h2"
             sx={{ mb: 2 }}
           >
-            מחכות לבחירת מועד
+            {t("meetings.tabWaitingMentee")}
           </Typography>
 
           <Stack spacing={2}>
             {waitingForMenteeSelection.length ===
             0 ? (
               <Typography color="text.secondary">
-                אין בקשות הממתינות לבחירת
-                מועד.
+                {t("meetings.emptyWaitingMentee")}
               </Typography>
             ) : (
               waitingForMenteeSelection.map(

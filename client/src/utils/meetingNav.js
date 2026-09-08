@@ -4,18 +4,18 @@ export const MENTEE_MEETINGS_PATH = "/mentee/meetings";
 export const MENTOR_MEETING_TAB_QUERY = "tab";
 
 export const MENTOR_MEETING_TABS = [
-  { id: "past", label: "פגישות שהתקיימו" },
-  { id: "upcoming", label: "פגישות קרובות" },
-  { id: "pending", label: "בקשות שממתינות לך" },
-  { id: "offered", label: "זמנים שהצעת" },
-  { id: "closed", label: "בקשות שנסגרו" },
+  { id: "past", labelKey: "meetings.tabPast" },
+  { id: "upcoming", labelKey: "meetings.tabUpcoming" },
+  { id: "pending", labelKey: "meetings.tabPending" },
+  { id: "offered", labelKey: "meetings.tabOffered" },
+  { id: "closed", labelKey: "meetings.tabClosed" },
 ];
 
 export const MENTEE_MEETING_TABS = [
-  { id: "completed-section", label: "פגישות שהתקיימו" },
-  { id: "scheduled-section", label: "פגישות שנקבעו" },
-  { id: "waiting-mentor-section", label: "ממתינות להצעת זמנים" },
-  { id: "waiting-mentee-section", label: "מחכות לבחירת מועד" },
+  { id: "completed-section", labelKey: "meetings.tabCompleted" },
+  { id: "scheduled-section", labelKey: "meetings.tabScheduled" },
+  { id: "waiting-mentor-section", labelKey: "meetings.tabWaitingMentor" },
+  { id: "waiting-mentee-section", labelKey: "meetings.tabWaitingMentee" },
 ];
 
 export const DEFAULT_MENTOR_MEETING_TAB = "upcoming";

@@ -8,15 +8,14 @@ html {
 
 body {
   margin: 0;
-  direction: rtl;
 
-  font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif;
+  font-family: "Assistant", "Noto Sans Hebrew", "Noto Sans Arabic", Arial, sans-serif;
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.admin-root { font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif; }
+.admin-root { font-family: "Assistant", "Noto Sans Hebrew", "Noto Sans Arabic", Arial, sans-serif; }
 
 .admin-root .MuiTypography-root,
 .admin-root .MuiButton-root,
@@ -26,12 +25,12 @@ body {
 .role-navbar .MuiTypography-root,
 .role-navbar .MuiButton-root,
 .role-navbar .MuiListItemText-root {
-  font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif;
+  font-family: "Assistant", "Noto Sans Hebrew", "Noto Sans Arabic", Arial, sans-serif;
 }
 
 .admin-root .MuiTableCell-root {
-  text-align: right;
-  font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif;
+  text-align: start;
+  font-family: "Assistant", "Noto Sans Hebrew", "Noto Sans Arabic", Arial, sans-serif;
   padding-top: 12px;
   padding-bottom: 12px;
   border-bottom-color: #f3d9e3;
@@ -56,7 +55,7 @@ body {
 }
 
 .fc {
-  font-family: "Rubik", "Assistant", "Arial", sans-serif;
+  font-family: "Rubik", "Assistant", "Noto Sans Arabic", "Arial", sans-serif;
 }
 
 .fc .fc-toolbar-title {
