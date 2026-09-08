@@ -154,6 +154,82 @@ async function ensureDemoNotification({ recipientId, requestId, meetingId, type,
   });
 }
 
+async function seedMeetingStatusShowcase({ mentors, technologies }) {
+  const now = new Date();
+  const duration = 45;
+  const mentees = [];
+  for (let index = 0; index < 8; index += 1) {
+    mentees.push(await upsertDemoUser({
+      email: `demo-showcase-mentee-${index + 1}@queenb.org`,
+      fullName: `Demo Showcase Mentee ${index + 1}`,
+      jobTitle: "מפתחת תוכנה",
+      workplace: "QueenB Demo Lab",
+      yearsOfExperience: index % 3,
+      technologies: technologies.slice(0, 2),
+    }));
+  }
+
+  async function requestFor(index, status) {
+    const mentor = mentors[index % mentors.length];
+    const existing = await prisma.mentoringRequest.findFirst({ where: { menteeId: mentees[index].id, mentorProfileId: mentor.profile.id } });
+    const request = existing || await prisma.mentoringRequest.create({ data: { menteeId: mentees[index].id, mentorProfileId: mentor.profile.id, status, createdAt: addDays(now, -14 - index), updatedAt: addDays(now, -14 - index) } });
+    return prisma.mentoringRequest.update({ where: { id: request.id }, data: { status, updatedAt: now } });
+  }
+
+  async function meeting(requestId, attemptNumber, slot, status, selectedSlotId) {
+    return prisma.meeting.upsert({
+      where: { requestId_attemptNumber: { requestId, attemptNumber } },
+      update: { scheduledStart: slot.startTime, scheduledEnd: slot.endTime, status, selectedSlotId },
+      create: { requestId, attemptNumber, scheduledStart: slot.startTime, scheduledEnd: slot.endTime, status, selectedSlotId },
+    });
+  }
+
+  const waiting = await requestFor(0, "WAITING_FOR_MENTEE_SELECTION");
+  await ensureDemoRound(waiting.id, 1, "INITIAL", addDays(now, 3), duration);
+  await ensureDemoNotification({ recipientId: mentees[0].id, requestId: waiting.id, type: "SLOTS_AVAILABLE", createdAt: now });
+
+  const scheduled = await requestFor(1, "MATCHED");
+  const scheduledRound = await ensureDemoRound(scheduled.id, 1, "INITIAL", addDays(now, 2), duration);
+  const scheduledMeeting = await meeting(scheduled.id, 1, scheduledRound.offeredSlots[0], "SCHEDULED", scheduledRound.offeredSlots[0].id);
+  await ensureDemoNotification({ recipientId: mentors[1 % mentors.length].user.id, requestId: scheduled.id, meetingId: scheduledMeeting.id, type: "MEETING_MATCHED", createdAt: now });
+
+  const attendance = await requestFor(2, "ATTENDANCE_CONFIRMED");
+  const attendanceRound = await ensureDemoRound(attendance.id, 1, "INITIAL", addDays(now, -2), duration);
+  const attendanceMeeting = await meeting(attendance.id, 1, attendanceRound.offeredSlots[0], "ATTENDANCE_CONFIRMED", attendanceRound.offeredSlots[0].id);
+  for (const user of [mentees[2], mentors[2 % mentors.length].user]) {
+    await prisma.attendanceConfirmation.upsert({ where: { meetingId_userId: { meetingId: attendanceMeeting.id, userId: user.id } }, update: { status: "CONFIRMED", confirmedAt: addDays(now, -1) }, create: { meetingId: attendanceMeeting.id, userId: user.id, status: "CONFIRMED", confirmedAt: addDays(now, -1) } });
+  }
+
+  const completed = await requestFor(3, "COMPLETED");
+  const completedSlot = { startTime: atHour(addDays(now, -5), 11), endTime: atHour(addDays(now, -5), 11, 45) };
+  const completedMeeting = await meeting(completed.id, 1, completedSlot, "COMPLETED");
+  for (const user of [mentees[3], mentors[3 % mentors.length].user]) {
+    await prisma.meetingOutcomeConfirmation.upsert({ where: { meetingId_userId: { meetingId: completedMeeting.id, userId: user.id } }, update: { occurred: true, wantsReschedule: false }, create: { meetingId: completedMeeting.id, userId: user.id, occurred: true, wantsReschedule: false } });
+  }
+
+  const noShow = await requestFor(4, "NOT_COMPLETED");
+  const noShowSlot = { startTime: atHour(addDays(now, -4), 15), endTime: atHour(addDays(now, -4), 15, 45) };
+  const noShowMeeting = await meeting(noShow.id, 1, noShowSlot, "NOT_COMPLETED");
+  await prisma.meetingOutcomeConfirmation.upsert({ where: { meetingId_userId: { meetingId: noShowMeeting.id, userId: mentees[4].id } }, update: { occurred: false, wantsReschedule: true }, create: { meetingId: noShowMeeting.id, userId: mentees[4].id, occurred: false, wantsReschedule: true } });
+
+  const cancelled = await requestFor(5, "CANCELLED");
+  await meeting(cancelled.id, 1, { startTime: atHour(addDays(now, -7), 13), endTime: atHour(addDays(now, -7), 13, 45) }, "CANCELLED");
+
+  const rescheduled = await requestFor(6, "MATCHED");
+  const originalRound = await ensureDemoRound(rescheduled.id, 1, "INITIAL", addDays(now, -3), duration);
+  const rescheduleRound = await ensureDemoRound(rescheduled.id, 2, "RESCHEDULE_BEFORE_MEETING", addDays(now, 4), duration);
+  await meeting(rescheduled.id, 1, originalRound.offeredSlots[0], "RESCHEDULED", originalRound.offeredSlots[0].id);
+  await meeting(rescheduled.id, 2, rescheduleRound.offeredSlots[0], "SCHEDULED", rescheduleRound.offeredSlots[0].id);
+
+  const feedback = await requestFor(7, "FEEDBACK_COMPLETED");
+  const feedbackMeeting = await meeting(feedback.id, 1, { startTime: atHour(addDays(now, -10), 17), endTime: atHour(addDays(now, -10), 17, 45) }, "COMPLETED");
+  for (const user of [mentees[7], mentors[7 % mentors.length].user]) {
+    await prisma.feedback.upsert({ where: { meetingId_authorId: { meetingId: feedbackMeeting.id, authorId: user.id } }, update: {}, create: { meetingId: feedbackMeeting.id, authorId: user.id, answers: { rating: 5, text: "Demo feedback for the completed mentoring journey." } } });
+  }
+
+  console.log("Seeded meeting showcase: waiting selection, scheduled, attendance confirmed, completed, not completed, cancelled, rescheduled, and feedback completed.");
+}
+
 async function seedExpandedDemoData({ technologies, mentoringTopics }) {
   const jobTitles = ["מהנדסת תוכנה", "מפתחת Frontend", "מנהלת מוצר", "אנליסטית נתונים", "מעצבת UX/UI"];
   const workplaces = ["Wix", "Monday.com", "Intel", "Fiverr", "סטארטאפ בתחום הבריאות"];
@@ -262,6 +338,8 @@ async function seedExpandedDemoData({ technologies, mentoringTopics }) {
       await ensureDemoNotification({ recipientId: mentee.id, requestId: request.id, type: "REQUEST_REJECTED", createdAt });
     }
   }
+
+  await seedMeetingStatusShowcase({ mentors, technologies });
 }
 
 async function main() {
