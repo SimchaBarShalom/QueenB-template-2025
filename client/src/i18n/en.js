@@ -49,7 +49,7 @@ const en = {
     minutesCount: "{minutes} minutes",
     loading: "Loading...",
     close: "Close",
-    greeting: "Hi, {name}",
+    greeting: "Hi {name}",
     notSpecified: "Not specified",
     submit: "Send",
     logoAlt: "Queen Match By QueenB",

@@ -49,7 +49,7 @@ const he = {
     minutesCount: "{minutes} דקות",
     loading: "טוענת...",
     close: "סגירה",
-    greeting: "שלום, {name}",
+    greeting: "שלום {name}",
     notSpecified: "לא צוין",
     submit: "שליחה",
     logoAlt: "Queen Match By QueenB",

@@ -49,7 +49,7 @@ const ar = {
     minutesCount: "{minutes} دقائق",
     loading: "جارٍ التحميل...",
     close: "إغلاق",
-    greeting: "مرحبًا، {name}",
+    greeting: "مرحبًا {name}",
     notSpecified: "غير محدّد",
     submit: "إرسال",
     logoAlt: "Queen Match By QueenB",

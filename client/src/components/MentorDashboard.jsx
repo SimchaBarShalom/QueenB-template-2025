@@ -225,13 +225,10 @@ function MentorDashboard({ currentUser }) {
     <AppPage>
         <AppPageHeader
           title={
-            currentUser?.fullName?.trim() ? (
-              <span dir="rtl">שלום {currentUser.fullName.trim()},</span>
-            ) : (
-              "מסך הבית"
-            )
+            currentUser?.fullName?.trim()
+              ? t("common.greeting", { name: currentUser.fullName.trim() })
+              : t("nav.home")
           }
-          subtitle={`שלום, ${currentUser.fullName}`}
         />
 
         {error && (
