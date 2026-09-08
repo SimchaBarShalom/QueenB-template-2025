@@ -24,18 +24,18 @@ function handleServiceError(error, res, next) {
   return next(error);
 }
 
-router.post("/", async (req, res, next) => {
+router.post("/", authenticate, async (req, res, next) => {
   try {
-    const { menteeId, mentorProfileId } = req.body;
+    const { mentorProfileId } = req.body;
 
-    if (!menteeId || !mentorProfileId) {
+    if (!mentorProfileId) {
       return res.status(400).json({
-        error: "menteeId and mentorProfileId are required",
+        error: "mentorProfileId is required",
       });
     }
 
     const request = await createMentoringRequest({
-      menteeId,
+      menteeId: req.auth.userId,
       mentorProfileId,
     });
 
@@ -47,17 +47,18 @@ router.post("/", async (req, res, next) => {
 
 router.get("/mentor/me", authenticate, async (req, res, next) => {
   try {
-    const requests = await getMentoringRequestsByMentorUser(req.auth.userId);
+    const requests = await getMentoringRequestsByMentorUser(req.auth.userId, req.query);
     return res.json(requests);
   } catch (error) {
     return handleServiceError(error, res, next);
   }
 });
 
-router.get("/mentee/:menteeId", async (req, res, next) => {
+router.get("/mentee/:menteeId", authenticate, async (req, res, next) => {
   try {
+    if (Number(req.params.menteeId) !== Number(req.auth.userId)) return res.status(403).json({ error: "Access denied" });
     const requests = await getMentoringRequestsByMentee(
-      req.params.menteeId
+      req.params.menteeId, req.query
     );
 
     return res.json(requests);
@@ -122,19 +123,11 @@ router.post("/:requestId/reschedule-slots", authenticate, async (req, res, next)
   }
 });
 
-router.patch("/:requestId/decline-slots", async (req, res, next) => {
+router.patch("/:requestId/decline-slots", authenticate, async (req, res, next) => {
   try {
-    const { menteeId } = req.body;
-
-    if (!menteeId) {
-      return res.status(400).json({
-        error: "menteeId is required",
-      });
-    }
-
     const request = await declineOfferedSlots({
       requestId: req.params.requestId,
-      menteeId,
+      menteeId: req.auth.userId,
     });
 
     return res.json(request);
@@ -143,19 +136,11 @@ router.patch("/:requestId/decline-slots", async (req, res, next) => {
   }
 });
 
-router.patch("/:requestId/cancel", async (req, res, next) => {
+router.patch("/:requestId/cancel", authenticate, async (req, res, next) => {
   try {
-    const { menteeId } = req.body;
-
-    if (!menteeId) {
-      return res.status(400).json({
-        error: "menteeId is required",
-      });
-    }
-
     const request = await cancelMentoringRequest({
       requestId: req.params.requestId,
-      menteeId,
+      menteeId: req.auth.userId,
     });
 
     return res.json(request);

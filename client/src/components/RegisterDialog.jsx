@@ -81,6 +81,7 @@ const initialValues = {
   yearsOfExperience: "",
   githubUrl: "",
   linkedinUrl: "",
+  background: "",
   technologies: [],
   jobTitle: "",
   workplace: "",
@@ -136,6 +137,10 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
       nextErrors.confirmPassword = t("validation.passwordsMustMatch");
     }
 
+    if (values.background.trim().length < 2) {
+      nextErrors.background = t("validation.backgroundMin");
+    }
+
     if (values.wantsToBeMentor) {
 
       if (values.mentoringTopics.length === 0) {
@@ -170,6 +175,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
       lastName,
       email: values.email,
       password: values.password,
+      background: values.background,
       yearsOfExperience: values.yearsOfExperience ? Number(values.yearsOfExperience) : undefined,
       githubUrl: values.githubUrl || undefined,
       linkedinUrl: values.linkedinUrl || undefined,
@@ -345,6 +351,17 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
 
               <Stack spacing={2.5}>
                 <TextField
+                  label={t("auth.backgroundRequired")}
+                  value={values.background}
+                  onChange={(event) => setField("background", event.target.value)}
+                  error={Boolean(errors.background)}
+                  helperText={errors.background}
+                  multiline
+                  minRows={3}
+                  required
+                  fullWidth
+                />
+                <TextField
                   label={
                     <>
                       {t("auth.yearsOptional")}{" "}
@@ -420,7 +437,6 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                     onChange={(event) => setField("jobTitle", event.target.value)}
                     error={Boolean(errors.jobTitle)}
                     helperText={errors.jobTitle}
-                    required
                     fullWidth
                   />
                   <TextField
@@ -429,7 +445,6 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                     onChange={(event) => setField("workplace", event.target.value)}
                     error={Boolean(errors.workplace)}
                     helperText={errors.workplace}
-                    required
                     fullWidth
                   />
                 </Stack>

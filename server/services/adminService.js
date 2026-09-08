@@ -1,4 +1,5 @@
 const prisma = require("../lib/prisma");
+const { normalizePagination, paginationMeta } = require("../lib/pagination");
 
 const ACTIVE_REQUEST_STATUSES = [
   "WAITING_FOR_MENTOR_SLOTS",
@@ -414,17 +415,21 @@ async function getAdminAnalytics(query = {}) {
 }
 
 async function listAdminUsers(query, currentAdminId) {
-  const [users, adminCount] = await Promise.all([
+  const pagination = normalizePagination(query, 20);
+  const where = buildUserWhere(query);
+  const [total, users, adminCount] = await Promise.all([
+    prisma.user.count({ where }),
     prisma.user.findMany({
-      where: buildUserWhere(query),
+      where,
       select: USER_SUMMARY_SELECT,
       orderBy: { createdAt: "desc" },
-      take: 100,
+      skip: pagination.skip,
+      take: pagination.pageSize,
     }),
     prisma.user.count({ where: { isAdmin: true } }),
   ]);
 
-  return users.map((user) => serializeUser(user, adminCount, currentAdminId));
+  return { data: users.map((user) => serializeUser(user, adminCount, currentAdminId)), pagination: paginationMeta({ ...pagination, total }) };
 }
 
 async function getAdminUserDetail(userId, currentAdminId) {
@@ -602,14 +607,19 @@ async function updateMentorProfile(mentorProfileId, input = {}) {
 }
 
 async function listAdminMeetings(query = {}) {
-  const meetings = await prisma.meeting.findMany({
-    where: buildMeetingWhere(query),
+  const pagination = normalizePagination(query, 20);
+  const where = buildMeetingWhere(query);
+  const [total, meetings] = await Promise.all([
+    prisma.meeting.count({ where }),
+    prisma.meeting.findMany({
+    where,
     include: MEETING_INCLUDE,
     orderBy: { scheduledStart: "desc" },
-    take: 200,
-  });
+    skip: pagination.skip,
+    take: pagination.pageSize,
+  })]);
 
-  return meetings.map(serializeMeeting);
+  return { data: meetings.map(serializeMeeting), pagination: paginationMeta({ ...pagination, total }) };
 }
 
 async function getAdminMeetingDetail(meetingId) {

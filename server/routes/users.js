@@ -38,7 +38,7 @@ router.patch("/profile", authenticate, async (req, res, next) => {
   }
 
   try {
-    const mentorFields = ["background", "mentoringTopics", "meetingCapacity", "meetingDurationMinutes"];
+    const mentorFields = ["mentoringTopics", "meetingCapacity", "meetingDurationMinutes"];
     const user = mentorFields.some((field) => Object.hasOwn(req.body, field))
       ? await updateMentorProfile(req.auth.userId, req.body)
       : await updateUserProfile(req.auth.userId, req.body);
@@ -55,7 +55,7 @@ router.patch("/profile", authenticate, async (req, res, next) => {
 // GET /api/users - Get all users
 router.get("/", async (req, res, next) => {
   try {
-    const users = await getAllUsers();
+    const users = await getAllUsers(req.query);
     res.json(users);
   } catch (error) {
     next(error);

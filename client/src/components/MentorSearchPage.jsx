@@ -10,6 +10,7 @@ import {
   Box,
   CircularProgress,
   MenuItem,
+  Pagination,
   TextField,
   Typography,
 } from "@mui/material";
@@ -34,6 +35,8 @@ function MentorSearchPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ pageCount: 1, total: 0 });
 
   const currentUser = JSON.parse(
     localStorage.getItem("queensMatchUser") || "null"
@@ -55,14 +58,15 @@ function MentorSearchPage() {
 
         const [mentorsResponse, requestsResponse] =
           await Promise.all([
-            axios.get("/api/mentors"),
+            axios.get("/api/mentors", { params: { page, pageSize: 12, ...filters } }),
             axios.get(
               `/api/mentoring-requests/mentee/${menteeId}`
             ),
           ]);
 
-        setMentors(mentorsResponse.data);
-        setRequests(requestsResponse.data);
+        setMentors(mentorsResponse.data.data || mentorsResponse.data);
+        setPagination(mentorsResponse.data.pagination || { pageCount: 1, total: mentorsResponse.data.length });
+        setRequests(requestsResponse.data.data || requestsResponse.data);
       } catch (requestError) {
         console.error(requestError);
         setError(t("errors.loadMentors"));
@@ -72,7 +76,12 @@ function MentorSearchPage() {
     }
 
     loadData();
-  }, [menteeId]);
+  }, [menteeId, page, filters, t]);
+
+  const changeFilter = (key, value) => {
+    setFilters((current) => ({ ...current, [key]: value }));
+    setPage(1);
+  };
 
 const getRequestStatus = useCallback((mentorProfileId) => {
     const mentorRequests = requests
@@ -173,34 +182,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
     );
   }, [mentors]);
 
-  const filteredMentors = useMemo(() => {
-    return mentorsWithStatus.filter((mentor) => {
-      if (
-        filters.jobTitle &&
-        mentor.jobTitle !== filters.jobTitle
-      ) {
-        return false;
-      }
-
-      if (
-        filters.workplace &&
-        mentor.workplace !== filters.workplace
-      ) {
-        return false;
-      }
-
-      if (
-        filters.topic &&
-        !mentor.mentoringTopics.includes(
-          filters.topic
-        )
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [mentorsWithStatus, filters]);
+  const filteredMentors = mentorsWithStatus;
 
   const handleRequestClick = async (mentor) => {
     try {
@@ -267,10 +249,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
             label={t("mentors.jobTitle")}
             value={filters.jobTitle}
             onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                jobTitle: event.target.value,
-              }))
+              changeFilter("jobTitle", event.target.value)
             }
             fullWidth
           >
@@ -291,10 +270,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
             label={t("mentors.company")}
             value={filters.workplace}
             onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                workplace: event.target.value,
-              }))
+              changeFilter("workplace", event.target.value)
             }
             fullWidth
           >
@@ -315,10 +291,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
             label={t("mentors.topic")}
             value={filters.topic}
             onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                topic: event.target.value,
-              }))
+              changeFilter("topic", event.target.value)
             }
             fullWidth
           >
@@ -361,6 +334,9 @@ const getRequestStatus = useCallback((mentorProfileId) => {
               />
             ))}
           </Box>
+        )}
+        {pagination.pageCount > 1 && (
+          <Pagination sx={{ mt: 4, display: "flex", justifyContent: "center" }} count={pagination.pageCount} page={page} onChange={(_, nextPage) => setPage(nextPage)} color="primary" />
         )}
     </AppPage>
   );

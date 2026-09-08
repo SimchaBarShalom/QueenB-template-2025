@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import { Alert, Box, Button, Stack, TextField, Typography } from "@mui/material";
 import { queenbColors } from "../theme";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -21,7 +22,8 @@ function ContactSection() {
   const { t } = useLanguage();
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
-  const [notice, setNotice] = useState(false);
+  const [notice, setNotice] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -45,14 +47,23 @@ function ContactSection() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!validate()) {
       return;
     }
 
-    setNotice(true);
+    try {
+      setLoading(true);
+      await axios.post("/api/contact", values);
+      setValues(initialValues);
+      setNotice({ severity: "success", text: t("contact.success") });
+    } catch (error) {
+      setNotice({ severity: "error", text: t("contact.error") });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -85,8 +96,8 @@ function ContactSection() {
         </Typography>
 
         {notice && (
-          <Alert severity="info" sx={{ mb: 3 }} onClose={() => setNotice(false)}>
-            {t("contact.notice")}
+          <Alert severity={notice.severity} sx={{ mb: 3 }} onClose={() => setNotice(null)}>
+            {notice.text}
           </Alert>
         )}
 
@@ -143,7 +154,7 @@ function ContactSection() {
               minRows={4}
               sx={fieldSx}
             />
-            <Button type="submit" variant="contained" size="large" sx={{ borderRadius: 999, py: 1.2 }}>
+            <Button type="submit" variant="contained" size="large" disabled={loading} sx={{ borderRadius: 999, py: 1.2 }}>
               {t("contact.submit")}
             </Button>
           </Stack>

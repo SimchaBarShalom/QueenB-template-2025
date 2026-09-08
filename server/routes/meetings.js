@@ -18,20 +18,20 @@ function handleServiceError(error, res, next) {
   return next(error);
 }
 
-router.post("/select-slot", async (req, res, next) => {
+router.post("/select-slot", authenticate, async (req, res, next) => {
   try {
-    const { requestId, slotId, menteeId } = req.body;
+    const { requestId, slotId } = req.body;
 
-    if (!requestId || !slotId || !menteeId) {
+    if (!requestId || !slotId) {
       return res.status(400).json({
-        error: "requestId, slotId and menteeId are required",
+        error: "requestId and slotId are required",
       });
     }
 
     const meeting = await createMeetingFromSlot({
       requestId,
       slotId,
-      menteeId,
+      menteeId: req.auth.userId,
     });
 
     return res.status(201).json(meeting);

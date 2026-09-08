@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { AppSurface } from "./AppPrimitives";
+import CountUp from "./CountUp";
 
 function DashboardSummaryCard({ icon: Icon, title, value, subtitle }) {
   return (
@@ -32,7 +33,7 @@ function DashboardSummaryCard({ icon: Icon, title, value, subtitle }) {
           </Typography>
 
           <Typography variant="h6" noWrap>
-            {value}
+            {typeof value === "number" ? <CountUp value={value} /> : value}
           </Typography>
 
           {subtitle && (

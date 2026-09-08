@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Queens Match — Project Architecture</title>
+  <style>
+    :root { --pink:#d94f86; --deep:#8f2455; --pale:#fff3f8; --ink:#2d2230; --muted:#6f5967; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#fff8fb; color:var(--ink); font-family:Arial,"Noto Sans Hebrew",sans-serif; }
+    header { padding:32px 6vw 22px; background:linear-gradient(135deg,#fff,#f8e1ec); border-bottom:4px solid #efb4cc; }
+    h1 { margin:0 0 8px; color:var(--deep); font-size:clamp(28px,4vw,48px); }
+    header p { margin:0; color:var(--muted); font-size:18px; }
+    main { width:min(1500px,92vw); margin:28px auto 60px; display:grid; gap:28px; }
+    section { background:white; border:2px solid #efb4cc; border-radius:22px; padding:20px; box-shadow:0 8px 24px rgba(143,36,85,.08); }
+    h2 { color:var(--deep); margin:0 0 6px; font-size:28px; }
+    .explain { margin:0 0 14px; color:var(--muted); line-height:1.6; font-size:17px; }
+    img.diagram { display:block; width:100%; max-height:620px; object-fit:contain; background:#fff; border-radius:14px; }
+    .links { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+    a { color:var(--deep); font-weight:700; text-decoration:none; border:1px solid #efb4cc; border-radius:999px; padding:7px 13px; background:var(--pale); }
+    .note { background:#fff7fb; border-right:5px solid var(--pink); padding:12px 16px; line-height:1.6; }
+    footer { width:min(1500px,92vw); margin:0 auto 40px; color:var(--muted); font-size:14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Queens Match — תרשימי פרויקט</h1>
+    <p>תרשימים להצגה, המבוססים על הקוד הנוכחי. ורוד = רכיב פעיל; קו מקווקו = יכולת שלא מחוברת ב־MVP.</p>
+  </header>
+  <main>
+    <section>
+      <h2>1. ארכיטקטורת המערכת</h2>
+      <p class="explain">React שולח בקשות דרך Axios אל Express. ה־routes מעבירים את העבודה ל־services, Prisma קורא וכותב PostgreSQL, ו־Nodemailer שולח email דרך Gmail SMTP.</p>
+      <img class="diagram" src="diagrams/system-architecture.svg" alt="ארכיטקטורת מערכת Queens Match">
+      <div class="links"><a href="diagrams/system-architecture.png">PNG</a><a href="diagrams/system-architecture.mmd">Mermaid source</a></div>
+    </section>
+    <section>
+      <h2>2. זרימת פגישה</h2>
+      <p class="explain">בקשה עוברת מתגובה של mentor להצעת slots, בחירת mentee, יצירת Meeting, התראות, outcome ומשוב. Calendar/Meet מסומן במפורש כלא ממומש.</p>
+      <img class="diagram" src="diagrams/meeting-workflow.svg" alt="זרימת פגישה">
+      <div class="links"><a href="diagrams/meeting-workflow.png">PNG</a><a href="diagrams/meeting-workflow.mmd">Mermaid source</a></div>
+    </section>
+    <section>
+      <h2>3. תפקידים ועמודים</h2>
+      <p class="explain">ה־shell המשותף כולל layout, navbar, profile, messages, i18n ו־RTL. הגישה ל־admin דורשת משתמשת עם <code>isAdmin=true</code>, והאזורים האישיים דורשים JWT.</p>
+      <img class="diagram" src="diagrams/roles-and-pages.svg" alt="תפקידים ועמודים">
+      <div class="links"><a href="diagrams/roles-and-pages.png">PNG</a><a href="diagrams/roles-and-pages.mmd">Mermaid source</a></div>
+    </section>
+    <section>
+      <h2>4. יחסי בסיס הנתונים</h2>
+      <p class="explain">זהו ER מצומצם של המודלים המרכזיים: משתמשת, פרופיל mentor, בקשה, rounds, slots, meetings, feedback והתראות.</p>
+      <img class="diagram" src="diagrams/database-relationships.svg" alt="יחסי בסיס הנתונים">
+      <div class="links"><a href="diagrams/database-relationships.png">PNG</a><a href="diagrams/database-relationships.mmd">Mermaid source</a></div>
+    </section>
+    <section>
+      <h2>5. בחירת מועד — sequence</h2>
+      <p class="explain">לחיצה על בחירת מועד מובילה ל־POST מאומת, בדיקות בשירות, transaction ליצירת Meeting ועדכון Request, שליחת email ו־HTTP 201. אין קריאה ל־Google Calendar בקוד.</p>
+      <img class="diagram" src="diagrams/request-sequence.svg" alt="רצף בחירת מועד">
+      <div class="links"><a href="diagrams/request-sequence.png">PNG</a><a href="diagrams/request-sequence.mmd">Mermaid source</a></div>
+    </section>
+    <div class="note"><strong>הערת דיוק להצגה:</strong> קיימת אינטגרציית Gmail/Nodemailer, אבל לא קיימת אינטגרציה פעילה עם Google OAuth, Google Calendar או Google Meet. ה־FullCalendar הוא calendar פנימי בצד ה־admin.</div>
+  </main>
+  <footer>מקור: קבצי client/src, server/routes, server/services, server/prisma/schema.prisma ו־server/prisma/migrations.</footer>
+</body>
+</html>

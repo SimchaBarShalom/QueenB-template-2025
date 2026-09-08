@@ -9,6 +9,7 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
+  Pagination,
   Select,
   Stack,
   Switch,
@@ -50,15 +51,17 @@ function AdminUsersPage() {
   const [success, setSuccess] = useState("");
   const [pendingAction, setPendingAction] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, pageCount: 1 });
 
-  async function loadUsers() {
+  async function loadUsers(requestPage = pagination.page) {
     try {
       setLoading(true);
       setError("");
       const response = await apiClient.get("/api/admin/users", {
-        params: { search: search || undefined, capability: capability || undefined },
+        params: { search: search || undefined, capability: capability || undefined, page: requestPage, pageSize: 20 },
       });
-      setUsers(response.data);
+      setUsers(response.data.data || response.data);
+      setPagination(response.data.pagination || { page: 1, pageCount: 1 });
       setSelectedIds([]);
     } catch (requestError) {
       console.error(requestError);
@@ -69,15 +72,21 @@ function AdminUsersPage() {
   }
 
   useEffect(() => {
-    loadUsers();
+    loadUsers(1);
     // Initial load uses URL/default filter state; filter changes are applied explicitly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const applyFilters = () => {
+    setPagination((current) => ({ ...current, page: 1 }));
     setSearchParams({ ...(search ? { search } : {}), ...(capability ? { capability } : {}) });
-    loadUsers();
+    loadUsers(1);
   };
+
+  // The page effect intentionally uses the latest loading state without
+  // recreating the request function on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!loading) loadUsers(); }, [pagination.page]);
 
   const updateAdmin = async (user, isAdmin) => {
     try {
@@ -259,6 +268,7 @@ function AdminUsersPage() {
         onClose={() => setPendingAction(null)}
         onConfirm={confirmPendingAction}
       />
+      {pagination.pageCount > 1 && <Pagination sx={{ mt: 3 }} count={pagination.pageCount} page={pagination.page} onChange={(_, page) => setPagination((current) => ({ ...current, page }))} />}
     </AdminLayout>
   );
 }

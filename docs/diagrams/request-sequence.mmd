@@ -1,0 +1,24 @@
+%% Queens Match — current repository evidence; Google Calendar is not implemented
+sequenceDiagram
+  actor M as Mentee
+  participant R as React
+  participant X as Axios
+  participant API as Express route
+  participant S as meetingsService
+  participant DB as Prisma / PostgreSQL
+  participant E as Nodemailer / Gmail
+  participant G as Google Calendar / Meet
+  M->>R: בחירת מועד
+  R->>X: POST /api/mentoring-requests/:id/select-slot
+  X->>API: Bearer JWT + slotId
+  API->>S: selectMentoringRequestSlot
+  S->>DB: בדיקות request, slot, capacity
+  S->>DB: transaction: Meeting + Request + notification
+  DB-->>S: SCHEDULED / MATCHED
+  S->>E: email best effort
+  E-->>S: success או caught error
+  S-->>API: meeting
+  API-->>R: HTTP 201
+  R-->>M: הפגישה מופיעה
+  S-->>G: אין קריאה בקוד
+

@@ -4,16 +4,6 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
 const DEV_PASSWORD = "Password123!";
-const MENTEE_EMAILS = [
-
-  "noa@queenb.org",
-  "dana@queenb.org",
-  "yael@queenb.org",
-  "tamar@queenb.org",
-  "maya@queenb.org",
-  "ronit@queenb.org",
-];
-
 function hoursFromNow(hours) {
   return new Date(Date.now() + hours * 60 * 60 * 1000);
 }
@@ -52,38 +42,6 @@ async function upsertMentee({ email, fullName, jobTitle, workplace, yearsOfExper
   return user;
 }
 
-async function replaceDemoRequests(mentorProfileId) {
-  const demoRequests = await prisma.mentoringRequest.findMany({
-    where: {
-      mentorProfileId,
-      mentee: { email: { in: MENTEE_EMAILS } },
-    },
-    select: { id: true },
-  });
-  const requestIds = demoRequests.map((request) => request.id);
-
-  if (requestIds.length === 0) {
-    return;
-  }
-
-  await prisma.notification.deleteMany({ where: { requestId: { in: requestIds } } });
-  await prisma.attendanceConfirmation.deleteMany({
-    where: { meeting: { requestId: { in: requestIds } } },
-  });
-  await prisma.meetingOutcomeConfirmation.deleteMany({
-    where: { meeting: { requestId: { in: requestIds } } },
-  });
-  await prisma.feedback.deleteMany({
-    where: { meeting: { requestId: { in: requestIds } } },
-  });
-  await prisma.meeting.deleteMany({ where: { requestId: { in: requestIds } } });
-  await prisma.offeredSlot.deleteMany({
-    where: { schedulingRound: { requestId: { in: requestIds } } },
-  });
-  await prisma.schedulingRound.deleteMany({ where: { requestId: { in: requestIds } } });
-  await prisma.mentoringRequest.deleteMany({ where: { id: { in: requestIds } } });
-}
-
 function addDays(date, days) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
@@ -114,12 +72,196 @@ async function ensureRequest({ menteeId, mentorProfileId, status, createdAt, upd
   });
 }
 
+async function createRequestIfMissing(data) {
+  const requestData = data.data || data;
+  const existing = await prisma.mentoringRequest.findFirst({
+    where: { menteeId: requestData.menteeId, mentorProfileId: requestData.mentorProfileId, status: requestData.status },
+    orderBy: { id: "asc" },
+  });
+  return existing || prisma.mentoringRequest.create({ data: requestData });
+}
+
 async function upsertMeeting({ requestId, attemptNumber, scheduledStart, scheduledEnd, status }) {
   return prisma.meeting.upsert({
     where: { requestId_attemptNumber: { requestId, attemptNumber } },
     update: { scheduledStart, scheduledEnd, status },
     create: { requestId, attemptNumber, scheduledStart, scheduledEnd, status },
   });
+}
+
+const DEMO_MENTOR_NAMES = [
+  "יעל כהן", "מיכל לוי", "נועה בן דוד", "שירה אברהם", "תמר פרץ",
+  "רותם מזרחי", "דנה פרידמן", "אורית אשכנזי", "מאיה שוורץ", "ליאת ברק",
+  "ענבל שלום", "קרן דוידי", "אפרת מלכה", "מורן ישראלי", "אביגיל רום",
+  "הדר גולן", "סיון אלון", "רוני קפלן", "גלית סגל", "שרון לביא",
+];
+
+const DEMO_MENTEE_NAMES = [
+  "אביגיל כהן", "אלה לוי", "אמה בן דוד", "בר כהן", "גילי אברהם",
+  "דניאל פרץ", "הילה מזרחי", "ורד פרידמן", "זוהר אשכנזי", "חני שוורץ",
+  "טל ברק", "יובל שלום", "כינרת דוידי", "ליה מלכה", "מאי ישראלי",
+  "נטע רום", "ספיר גולן", "עדי אלון", "פז קפלן", "צופיה סגל",
+  "קרן לביא", "רעות כהן", "שני לוי", "תהל בן דוד", "אור אברהם",
+  "איילת פרץ", "בינה מזרחי", "גאיה פרידמן", "דפנה אשכנזי", "הילה שוורץ",
+  "ורד ברק", "זיו שלום", "חן דוידי", "לילך מלכה", "מיכאלה ישראלי",
+  "נעמה רום", "עופרי גולן", "פנינה אלון", "צאלה קפלן", "רוני סגל",
+];
+
+async function upsertDemoUser({ email, fullName, jobTitle, workplace, yearsOfExperience, technologies }) {
+  const passwordHash = await bcrypt.hash(DEV_PASSWORD, 10);
+  const user = await prisma.user.upsert({
+    where: { email },
+    update: { fullName, jobTitle, workplace, yearsOfExperience },
+    create: { email, passwordHash, fullName, jobTitle, workplace, yearsOfExperience },
+  });
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { technologies: { set: technologies.map((technology) => ({ id: technology.id })) } },
+  });
+  return user;
+}
+
+async function ensureDemoRound(requestId, roundNumber, type, startTime, durationMinutes) {
+  const existing = await prisma.schedulingRound.findUnique({
+    where: { requestId_roundNumber: { requestId, roundNumber } },
+    include: { offeredSlots: true },
+  });
+  if (existing) return existing;
+  return prisma.schedulingRound.create({
+    data: {
+      requestId,
+      roundNumber,
+      type,
+      offeredSlots: {
+        create: [0, 2].map((offset) => ({
+          startTime: addDays(startTime, offset),
+          endTime: minutesFrom(addDays(startTime, offset), durationMinutes),
+        })),
+      },
+    },
+    include: { offeredSlots: true },
+  });
+}
+
+async function ensureDemoNotification({ recipientId, requestId, meetingId, type, createdAt }) {
+  const existing = await prisma.notification.findFirst({
+    where: { recipientId, requestId: requestId || null, meetingId: meetingId || null, type, channel: "IN_APP" },
+  });
+  if (existing) return existing;
+  return prisma.notification.create({
+    data: { recipientId, requestId, meetingId, type, channel: "IN_APP", status: "SENT", createdAt },
+  });
+}
+
+async function seedExpandedDemoData({ technologies, mentoringTopics }) {
+  const jobTitles = ["מהנדסת תוכנה", "מפתחת Frontend", "מנהלת מוצר", "אנליסטית נתונים", "מעצבת UX/UI"];
+  const workplaces = ["Wix", "Monday.com", "Intel", "Fiverr", "סטארטאפ בתחום הבריאות"];
+  const mentors = [];
+
+  for (let index = 0; index < DEMO_MENTOR_NAMES.length; index += 1) {
+    const user = await upsertDemoUser({
+      email: `demo-mentor-${index + 1}@queenb.org`,
+      fullName: DEMO_MENTOR_NAMES[index],
+      jobTitle: jobTitles[index % jobTitles.length],
+      workplace: workplaces[index % workplaces.length],
+      yearsOfExperience: 4 + (index % 13),
+      technologies: technologies.slice(index % 3, (index % 3) + 3),
+    });
+    const profile = await prisma.mentorProfile.upsert({
+      where: { userId: user.id },
+      update: {
+        background: `${user.fullName} מביאה ניסיון מעשי בהובלת מוצרים וצוותים טכנולוגיים.`,
+        meetingCapacity: 4 + (index % 5),
+        meetingDurationMinutes: [30, 45, 60][index % 3],
+        isActive: true,
+        mentoringTopics: { set: mentoringTopics.slice(index % 3, (index % 3) + 3).map((topic) => ({ id: topic.id })) },
+      },
+      create: {
+        userId: user.id,
+        background: `${user.fullName} מביאה ניסיון מעשי בהובלת מוצרים וצוותים טכנולוגיים.`,
+        meetingCapacity: 4 + (index % 5),
+        meetingDurationMinutes: [30, 45, 60][index % 3],
+        mentoringTopics: { connect: mentoringTopics.slice(index % 3, (index % 3) + 3).map((topic) => ({ id: topic.id })) },
+      },
+    });
+    mentors.push({ user, profile });
+  }
+
+  const mentees = [];
+  for (let index = 0; index < DEMO_MENTEE_NAMES.length; index += 1) {
+    mentees.push(await upsertDemoUser({
+      email: `demo-mentee-${index + 1}@queenb.org`,
+      fullName: DEMO_MENTEE_NAMES[index],
+      jobTitle: ["מפתחת בתחילת הדרך", "סטודנטית למדעי המחשב", "בודקת תוכנה", "מנהלת פרויקטים"][index % 4],
+      workplace: ["QueenB Bootcamp", "אוניברסיטת תל אביב", "חברת סטארטאפ", "פרילנס"][index % 4],
+      yearsOfExperience: index % 5,
+      technologies: technologies.slice(index % 4, (index % 4) + 2),
+    }));
+  }
+
+  const now = new Date();
+  const statuses = [
+    "WAITING_FOR_MENTOR_SLOTS", "WAITING_FOR_MENTOR_SLOTS", "WAITING_FOR_MENTEE_SELECTION",
+    "MATCHED", "ATTENDANCE_CONFIRMED", "COMPLETED", "FEEDBACK_COMPLETED", "CANCELLED",
+    "NOT_COMPLETED", "REJECTED",
+  ];
+
+  for (let index = 0; index < mentees.length; index += 1) {
+    const mentee = mentees[index];
+    const mentor = mentors[(index * 3) % mentors.length];
+    const status = statuses[index % statuses.length];
+    const createdAt = addDays(now, -30 + index);
+    const request = await prisma.mentoringRequest.findFirst({
+      where: { menteeId: mentee.id, mentorProfileId: mentor.profile.id },
+    }) || await prisma.mentoringRequest.create({
+      data: { menteeId: mentee.id, mentorProfileId: mentor.profile.id, status, createdAt, updatedAt: createdAt },
+    });
+
+    await prisma.mentoringRequest.update({ where: { id: request.id }, data: { status, createdAt, updatedAt: createdAt } });
+    const duration = mentor.profile.meetingDurationMinutes;
+    let start = status === "MATCHED" || status === "ATTENDANCE_CONFIRMED"
+      ? atHour(addDays(now, 1 + (index % 10)), 10 + (index % 6))
+      : atHour(addDays(now, -(2 + (index % 20))), 9 + (index % 8));
+
+    if (status === "WAITING_FOR_MENTEE_SELECTION" || status === "MATCHED" || status === "ATTENDANCE_CONFIRMED") {
+      const round = await ensureDemoRound(request.id, 1, "INITIAL", addDays(now, 2 + index), duration);
+      if (status === "MATCHED" || status === "ATTENDANCE_CONFIRMED") {
+        start = round.offeredSlots[0]?.startTime || start;
+        const meeting = await prisma.meeting.upsert({
+          where: { requestId_attemptNumber: { requestId: request.id, attemptNumber: 1 } },
+          update: { scheduledStart: start, scheduledEnd: minutesFrom(start, duration), status: status === "MATCHED" ? "SCHEDULED" : "ATTENDANCE_CONFIRMED", selectedSlotId: round.offeredSlots[0]?.id },
+          create: { requestId: request.id, attemptNumber: 1, scheduledStart: start, scheduledEnd: minutesFrom(start, duration), status: status === "MATCHED" ? "SCHEDULED" : "ATTENDANCE_CONFIRMED", selectedSlotId: round.offeredSlots[0]?.id },
+        });
+        await ensureDemoNotification({ recipientId: mentor.user.id, requestId: request.id, meetingId: meeting.id, type: "MEETING_MATCHED", createdAt });
+      } else {
+        await ensureDemoNotification({ recipientId: mentee.id, requestId: request.id, type: "SLOTS_AVAILABLE", createdAt });
+      }
+    }
+
+    if (["COMPLETED", "FEEDBACK_COMPLETED", "NOT_COMPLETED"].includes(status)) {
+      const meeting = await prisma.meeting.upsert({
+        where: { requestId_attemptNumber: { requestId: request.id, attemptNumber: 1 } },
+        update: { scheduledStart: start, scheduledEnd: minutesFrom(start, duration), status: status === "NOT_COMPLETED" ? "NOT_COMPLETED" : "COMPLETED" },
+        create: { requestId: request.id, attemptNumber: 1, scheduledStart: start, scheduledEnd: minutesFrom(start, duration), status: status === "NOT_COMPLETED" ? "NOT_COMPLETED" : "COMPLETED" },
+      });
+      if (status === "FEEDBACK_COMPLETED") {
+        for (const author of [mentee, mentor.user]) {
+          await prisma.feedback.upsert({
+            where: { meetingId_authorId: { meetingId: meeting.id, authorId: author.id } },
+            update: {},
+            create: { meetingId: meeting.id, authorId: author.id, answers: { rating: 4 + (index % 2), text: "פגישה מועילה ומעשירה." } },
+          });
+        }
+      } else if (status === "COMPLETED") {
+        await ensureDemoNotification({ recipientId: mentee.id, requestId: request.id, meetingId: meeting.id, type: "FEEDBACK_REMINDER", createdAt });
+      }
+    }
+
+    if (status === "CANCELLED" || status === "REJECTED") {
+      await ensureDemoNotification({ recipientId: mentee.id, requestId: request.id, type: "REQUEST_REJECTED", createdAt });
+    }
+  }
 }
 
 async function main() {
@@ -135,6 +277,29 @@ async function main() {
       isAdmin: true,
     },
   });
+
+  const restoredUsers = [
+    { email: "dan626399@gmail.com", fullName: "Dan", background: "לא צוין" },
+    { email: "dandan@gmail.com", fullName: "Dan", background: "לא צוין" },
+    { email: "danidani@gmail.com", fullName: "Dani", background: "לא צוין" },
+  ];
+
+  for (const restoredUser of restoredUsers) {
+    await prisma.user.upsert({
+      where: { email: restoredUser.email },
+      update: {
+        passwordHash,
+        fullName: restoredUser.fullName,
+        background: restoredUser.background,
+      },
+      create: {
+        email: restoredUser.email,
+        passwordHash,
+        fullName: restoredUser.fullName,
+        background: restoredUser.background,
+      },
+    });
+  }
 
   const mentorUser = await prisma.user.upsert({
     where: { email: "mentor@queenb.org" },
@@ -307,13 +472,11 @@ async function main() {
     technologies: [technologies[1], technologies[3]],
   });
 
-  await replaceDemoRequests(mentorProfile.id);
-
   const durationMinutes = mentorProfile.meetingDurationMinutes;
   const declinedStart = hoursFromNow(-24);
   const declinedEnd = minutesFrom(declinedStart, durationMinutes);
 
-  await prisma.mentoringRequest.create({
+  await createRequestIfMissing({
     data: {
       menteeId: communityMember.id,
       mentorProfileId: mentorProfile.id,
@@ -321,7 +484,7 @@ async function main() {
     },
   });
 
-  await prisma.mentoringRequest.create({
+  await createRequestIfMissing({
     data: {
       menteeId: noa.id,
       mentorProfileId: mentorProfile.id,
@@ -352,7 +515,7 @@ async function main() {
 
   const upcomingSlotStart = hoursFromNow(48);
   const extraSlotStart = hoursFromNow(72);
-  await prisma.mentoringRequest.create({
+  await createRequestIfMissing({
     data: {
       menteeId: dana.id,
       mentorProfileId: mentorProfile.id,
@@ -379,7 +542,7 @@ async function main() {
   });
 
   const scheduledStart = hoursFromNow(24);
-  await prisma.mentoringRequest.create({
+  await createRequestIfMissing({
     data: {
       menteeId: yael.id,
       mentorProfileId: mentorProfile.id,
@@ -403,7 +566,7 @@ async function main() {
   });
 
   const completedStart = hoursFromNow(-72);
-  await prisma.mentoringRequest.create({
+  await createRequestIfMissing({
     data: {
       menteeId: tamar.id,
       mentorProfileId: mentorProfile.id,
@@ -421,7 +584,7 @@ async function main() {
 
   const blockedInitialStart = hoursFromNow(-120);
   const blockedExtraStart = hoursFromNow(-96);
-  await prisma.mentoringRequest.create({
+  await createRequestIfMissing({
     data: {
       menteeId: maya.id,
       mentorProfileId: mentorProfile.id,
@@ -468,7 +631,7 @@ async function main() {
   });
 
   const outcomeStart = hoursFromNow(-4);
-  await prisma.mentoringRequest.create({
+  await createRequestIfMissing({
     data: {
       menteeId: ronit.id,
       mentorProfileId: mentorProfile.id,
@@ -580,6 +743,9 @@ async function main() {
       answers: { rating: 5, note: "Demo feedback submitted by mentor." },
     },
   });
+
+  await seedExpandedDemoData({ technologies, mentoringTopics });
+  console.log(`Seeded ${DEMO_MENTOR_NAMES.length} Hebrew mentors and ${DEMO_MENTEE_NAMES.length} Hebrew mentees with lifecycle demo data.`);
 }
 
 main()

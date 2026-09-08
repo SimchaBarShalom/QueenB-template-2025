@@ -25,8 +25,8 @@ function AdminCalendarPage() {
       try {
         setLoading(true);
         setError("");
-        const response = await apiClient.get("/api/admin/meetings");
-        setMeetings(response.data);
+        const response = await apiClient.get("/api/admin/meetings", { params: { page: 1, pageSize: 50 } });
+        setMeetings(response.data.data || response.data);
       } catch (requestError) {
         console.error(requestError);
         setError(t("errors.loadCalendar"));

@@ -4,8 +4,7 @@ import { Avatar, Divider, IconButton, ListItemIcon, Menu, MenuItem, Typography }
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
-import VolunteerActivismIcon from "@mui/icons-material/VolunteerActivism";
-import { getSwitchableAreas, isMentorUser } from "../utils/areaRouting";
+import { getSwitchableAreas } from "../utils/areaRouting";
 import { useLanguage } from "../i18n/LanguageContext";
 
 function UserMenu({ currentUser, onLogout }) {
@@ -61,15 +60,6 @@ function UserMenu({ currentUser, onLogout }) {
             {t(area.labelKey)}
           </MenuItem>
         ))}
-
-        {!isMentorUser(currentUser) && !currentUser.isAdmin && (
-          <MenuItem onClick={() => handleNavigate("/profile")}>
-            <ListItemIcon>
-              <VolunteerActivismIcon fontSize="small" />
-            </ListItemIcon>
-            {t("nav.joinAsMentor")}
-          </MenuItem>
-        )}
 
         <Divider />
 

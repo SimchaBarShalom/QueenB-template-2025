@@ -55,7 +55,7 @@ function formValuesFromUser(user) {
     githubUrl: user.githubUrl || "",
     linkedinUrl: user.linkedinUrl || "",
     technologies: user.technologies || [],
-    background: user.mentorProfile?.background || "",
+    background: user.background || user.mentorProfile?.background || "",
     mentoringTopics: user.mentorProfile?.mentoringTopics || [],
     meetingCapacity: user.mentorProfile?.meetingCapacity ?? "",
     meetingDurationMinutes: user.mentorProfile?.meetingDurationMinutes ?? 45,
@@ -126,7 +126,7 @@ function ProfilePage({ user, onUserUpdated }) {
       nextErrors.fullName = t("validation.fullName");
     }
     const needsMentorDetails = Boolean(user.mentorProfile) || !user.isAdmin;
-    if (needsMentorDetails && values.background.trim().length < 2) {
+    if (values.background.trim().length < 2) {
       nextErrors.background = t("validation.backgroundMin");
     }
     if (needsMentorDetails && values.mentoringTopics.length === 0) {
@@ -169,6 +169,7 @@ function ProfilePage({ user, onUserUpdated }) {
     try {
       const baseProfile = {
         fullName: values.fullName,
+        background: values.background,
         jobTitle: values.jobTitle,
         workplace: values.workplace,
         yearsOfExperience: values.yearsOfExperience === "" ? null : Number(values.yearsOfExperience),
@@ -389,11 +390,11 @@ function ProfilePage({ user, onUserUpdated }) {
                 </Box>
               )}
 
-              {user.mentorProfile?.background && (
+              {(user.background || user.mentorProfile?.background) && (
                 <Box>
                   <Typography color="text.secondary">{t("profile.about")}</Typography>
                   <Typography sx={{ whiteSpace: "pre-wrap" }}>
-                    {user.mentorProfile.background}
+                    {user.background || user.mentorProfile.background}
                   </Typography>
                 </Box>
               )}

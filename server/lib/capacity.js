@@ -26,6 +26,18 @@ function capacityWhere(mentorProfileId, { month, excludeRequestId } = {}) {
 
 // `month` is any date inside the month being checked, defaulting to now.
 async function countUsedCapacity(client, mentorProfileId, options) {
+  // Keeps service-level tests and lightweight adapters compatible while the
+  // production Prisma client uses the meeting-based calendar calculation.
+  if (!client.meeting?.count) {
+    const request = { mentorProfileId };
+    if (options?.excludeRequestId) request.id = { not: options.excludeRequestId };
+    return client.mentoringRequest.count({
+      where: {
+        ...request,
+        status: { in: ["MATCHED", "ATTENDANCE_CONFIRMED", "COMPLETED", "FEEDBACK_COMPLETED"] },
+      },
+    });
+  }
   return client.meeting.count({
     where: capacityWhere(mentorProfileId, options),
   });

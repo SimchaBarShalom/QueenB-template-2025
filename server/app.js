@@ -14,6 +14,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/contact", require("./routes/contact"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/mentors", require("./routes/mentors"));
 app.use("/api/mentoring-requests", require("./routes/mentoringRequests"));

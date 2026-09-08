@@ -1,0 +1,12 @@
+%% Queens Match — current repository evidence
+flowchart LR
+  UI["React + MUI<br/>RTL + i18n"] --> AX["Axios<br/>Bearer JWT"]
+  AX --> API["Express REST API<br/>routes"]
+  API --> MW["JWT / Admin<br/>middleware"]
+  MW --> S["Services<br/>requests · meetings · admin"]
+  S --> P["Prisma ORM"]
+  P --> DB[("PostgreSQL")]
+  S --> N["Nodemailer"] --> G["Gmail SMTP<br/>email exists"]
+  S -. "לא מחובר בקוד" .-> O["Google OAuth"]
+  O -. "אין API / token" .-> C["Google Calendar / Meet"]
+

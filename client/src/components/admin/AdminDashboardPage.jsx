@@ -10,6 +10,7 @@ import { AdminPageHeader, AdminSectionTitle, AdminSurface, AdminStatusBadge } fr
 import { AdminError, AdminLoading } from "./AdminState";
 import { alertTypeLabel, formatDateTime, meetingStatusLabel } from "./adminFormatters";
 import { useLanguage } from "../../i18n/LanguageContext";
+import CountUp from "../CountUp";
 
 const CARDS = [
   { key: "usersCount", labelKey: "admin.dashboard.users", actionKey: "admin.dashboard.manageUsers", path: "/admin/users", icon: <GroupsIcon /> },
@@ -42,7 +43,7 @@ function AdminDashboardPage() {
         setSummary(summaryResponse.data);
         setAnalytics(analyticsResponse.data);
         setAlerts(alertsResponse.data);
-        setMeetings(meetingsResponse.data);
+        setMeetings(meetingsResponse.data.data || meetingsResponse.data);
       } catch (requestError) {
         console.error(requestError);
         setError(t("errors.loadAdmin"));
@@ -79,7 +80,7 @@ function AdminDashboardPage() {
                 <Box sx={{ color: "primary.main", display: "flex", p: 0.75, borderRadius: 1, bgcolor: "#fff0f6" }}>{card.icon}</Box>
                 <Box sx={{ minWidth: 0, flexGrow: 1 }}>
                   <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
-                    {summary?.[card.key] ?? 0}
+                    <CountUp value={summary?.[card.key] ?? 0} />
                   </Typography>
                   <Typography color="text.secondary" sx={{ fontWeight: 700, mt: 0.5 }}>{t(card.labelKey)}</Typography>
                   <Typography variant="body2" color="primary.main" sx={{ fontWeight: 800, mt: 0.75 }}>{t(card.actionKey)}</Typography>

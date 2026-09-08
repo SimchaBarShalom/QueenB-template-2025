@@ -68,10 +68,12 @@ enum NotificationType {
   POST_MEETING_CHECK // ask both sides whether the meeting happened
   FEEDBACK_REMINDER // recurring reminder (every two days) to submit feedback
   MENTOR_THANK_YOU // automatic thank-you message to the mentor
+  MEETING_CANCELLED_BY_MENTOR // mentee notified when her mentor cancels
 }
 
 enum NotificationChannel {
   IN_APP
+  EMAIL
   WHATSAPP
 }
 
@@ -94,6 +96,7 @@ model User {
   email             String   @unique
   passwordHash      String
   fullName          String
+  background        String   @default("לא צוין")
   jobTitle          String?
   workplace         String?
   yearsOfExperience Int?

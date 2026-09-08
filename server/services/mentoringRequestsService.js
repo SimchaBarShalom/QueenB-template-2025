@@ -3,6 +3,7 @@ const { countUsedCapacity } = require("../lib/capacity");
 const { currentMonthRange } = require("../lib/dates");
 const { sendEmail } = require("./emailService");
 const { createMeetingFromSlot } = require("./meetingsService");
+const { normalizePagination, paginationMeta } = require("../lib/pagination");
 
 const MENTOR_REQUEST_INCLUDE = {
   mentee: {
@@ -272,11 +273,11 @@ async function createMentoringRequest({ menteeId, mentorProfileId }) {
   return request;
 }
 
-async function getMentoringRequestsByMentee(menteeId) {
-  const requests = await prisma.mentoringRequest.findMany({
-    where: {
-      menteeId: Number(menteeId),
-    },
+async function getMentoringRequestsByMentee(menteeId, query = {}) {
+  const pagination = normalizePagination(query, 20);
+  const where = { menteeId: Number(menteeId), ...(query.status ? { status: query.status } : {}) };
+  const [total, requests] = await Promise.all([prisma.mentoringRequest.count({ where }), prisma.mentoringRequest.findMany({
+    where,
 
     include: {
       mentorProfile: {
@@ -322,12 +323,14 @@ async function getMentoringRequestsByMentee(menteeId) {
     orderBy: {
       createdAt: "desc",
     },
-  });
+    skip: pagination.skip,
+    take: pagination.pageSize,
+  })]);
 
-  return requests;
+  return { data: requests, pagination: paginationMeta({ ...pagination, total }) };
 }
 
-async function getMentoringRequestsByMentorUser(userId) {
+async function getMentoringRequestsByMentorUser(userId, query = {}) {
   const mentorProfile = await prisma.mentorProfile.findUnique({
     where: { userId: Number(userId) },
     select: { id: true },
@@ -337,11 +340,14 @@ async function getMentoringRequestsByMentorUser(userId) {
     throw createServiceError("Only mentors can access mentor meetings", 403);
   }
 
-  return prisma.mentoringRequest.findMany({
-    where: { mentorProfileId: mentorProfile.id },
+  const pagination = normalizePagination(query, 20);
+  const where = { mentorProfileId: mentorProfile.id, ...(query.status ? { status: query.status } : {}) };
+  const [total, data] = await Promise.all([prisma.mentoringRequest.count({ where }), prisma.mentoringRequest.findMany({
+    where,
     include: MENTOR_REQUEST_INCLUDE,
-    orderBy: { createdAt: "desc" },
-  });
+    orderBy: { createdAt: "desc" }, skip: pagination.skip, take: pagination.pageSize,
+  })]);
+  return { data, pagination: paginationMeta({ ...pagination, total }) };
 }
 
 async function getOwnedPendingRequest(requestId, userId) {
@@ -462,6 +468,12 @@ async function offerMentoringRequestSlots({
   confirmOverCapacity = false,
 }) {
   const request = await getOwnedPendingRequest(requestId, userId);
+  if (!Array.isArray(slots) || slots.length === 0) {
+    const usedCapacity = await countUsedCapacity(prisma, request.mentorProfile.id);
+    if (usedCapacity >= request.mentorProfile.meetingCapacity) {
+      throw createServiceError("הגעת למכסת הפגישות שלך", 409);
+    }
+  }
   const normalizedSlots = validateAndNormalizeSlots(
     slots,
     request.mentorProfile.meetingDurationMinutes

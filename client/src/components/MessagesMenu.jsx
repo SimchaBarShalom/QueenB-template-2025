@@ -24,6 +24,7 @@ const NOTIFICATION_TYPES = [
   "ATTENDANCE_CONFIRMATION_REQUEST",
   "POST_MEETING_CHECK",
   "FEEDBACK_REMINDER",
+  "MEETING_CANCELLED_BY_MENTOR",
 ];
 
 function messageFromNotification(notification, t) {
@@ -41,6 +42,8 @@ function MessagesMenu({ currentUser }) {
   const { t } = useLanguage();
   const [anchorEl, setAnchorEl] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageCount, setPageCount] = useState(1);
   const [seenIds, setSeenIds] = useState(() => {
     try {
       return JSON.parse(window.localStorage.getItem(storageKey(currentUser.id)) || "[]");
@@ -52,12 +55,15 @@ function MessagesMenu({ currentUser }) {
 
   const loadMessages = useCallback(async () => {
     try {
-      const response = await apiClient.get("/api/notifications/me");
-      setMessages(response.data.map((notification) => messageFromNotification(notification, t)));
+      const response = await apiClient.get("/api/notifications/me", { params: { page, pageSize: 20 } });
+      const payload = response.data.data ? response.data : { data: response.data, pagination: { pageCount: 1 } };
+      const nextMessages = payload.data.map((notification) => messageFromNotification(notification, t));
+      setMessages((current) => page === 1 ? nextMessages : [...current, ...nextMessages]);
+      setPageCount(payload.pagination.pageCount);
     } catch {
       // The meetings page displays API errors; the navbar should remain usable.
     }
-  }, [t]);
+  }, [t, page]);
 
   useEffect(() => {
     loadMessages();
@@ -149,6 +155,7 @@ function MessagesMenu({ currentUser }) {
             </Box>
           ))
         )}
+        {page < pageCount && <Button size="small" fullWidth onClick={() => setPage((current) => current + 1)}>{t("common.loadMore", "Load more")}</Button>}
       </Menu>
     </>
   );

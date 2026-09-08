@@ -1,0 +1,39 @@
+%% Queens Match — central Prisma models only
+erDiagram
+  USER ||--o| MENTOR_PROFILE : has
+  USER ||--o{ MENTORING_REQUEST : files
+  MENTOR_PROFILE ||--o{ MENTORING_REQUEST : receives
+  MENTORING_REQUEST ||--o{ SCHEDULING_ROUND : contains
+  SCHEDULING_ROUND ||--o{ OFFERED_SLOT : offers
+  MENTORING_REQUEST ||--o{ MEETING : attempts
+  OFFERED_SLOT ||--o| MEETING : selected_by
+  MEETING ||--o{ FEEDBACK : receives
+  MEETING ||--o{ OUTCOME_CONFIRMATION : records
+  USER ||--o{ NOTIFICATION : receives
+  USER {
+    int id PK
+    string email UK
+    boolean isAdmin
+  }
+  MENTOR_PROFILE {
+    int id PK
+    int userId UK
+    int meetingCapacity
+    int meetingDurationMinutes
+    boolean isActive
+  }
+  MENTORING_REQUEST {
+    int id PK
+    int menteeId FK
+    int mentorProfileId FK
+    string status
+  }
+  MEETING {
+    int id PK
+    int requestId FK
+    int selectedSlotId UK
+    int attemptNumber
+    datetime scheduledStart
+    string status
+  }
+

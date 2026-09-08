@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 import {
   Box,
@@ -40,7 +40,10 @@ function MentorCard({ mentor, onRequestClick }) {
     technologies,
     requestStatus,
     remainingCapacity,
+    isFull,
+    background,
   } = mentor;
+  const [expanded, setExpanded] = useState(false);
 
   return (
     // הכרטיס הראשי של המנטורית.
@@ -78,6 +81,13 @@ function MentorCard({ mentor, onRequestClick }) {
       >
         {jobTitle} · {workplace}
       </Typography>
+
+      <Typography variant="body2" sx={{ mb: 1.5, display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: expanded ? "unset" : 2, overflow: "hidden", whiteSpace: "pre-wrap" }}>
+        {background}
+      </Typography>
+      {background && background.length > 120 && (
+        <ButtonBaseReadMore expanded={expanded} onClick={() => setExpanded((value) => !value)} label={expanded ? t("mentors.readLess") : t("mentors.readMore")} />
+      )}
 
       {/* תחומי המנטורינג של המנטורית */}
       <Stack
@@ -164,7 +174,7 @@ function MentorCard({ mentor, onRequestClick }) {
           mt: "auto",
         }}
       >
-        {requestStatus === "none" ? (
+        {requestStatus === "none" && !isFull ? (
           // אם עדיין אין בקשה פעילה למנטורית,
           // מציגים כפתור ורוד שאפשר ללחוץ עליו.
           <Box
@@ -247,12 +257,16 @@ function MentorCard({ mentor, onRequestClick }) {
             }}
           >
             {/* הטקסט נקבע לפי הסטטוס */}
-            {t(STATUS_KEYS[requestStatus])}
+            {isFull && requestStatus === "none" ? t("mentors.full") : t(STATUS_KEYS[requestStatus])}
           </Box>
         )}
       </Box>
     </AppSurface>
   );
+}
+
+function ButtonBaseReadMore({ label, onClick }) {
+  return <Box component="button" type="button" onClick={onClick} sx={{ border: 0, bgcolor: "transparent", color: "primary.main", p: 0, mb: 1.5, alignSelf: "flex-start", cursor: "pointer", fontWeight: 700 }}>{label}</Box>;
 }
 
 // ייצוא הקומפוננטה כדי שנוכל להשתמש בה

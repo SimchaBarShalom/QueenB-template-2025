@@ -1,5 +1,6 @@
 const prisma = require("../lib/prisma");
 const { sanitizeUser } = require("./authService");
+const { normalizePagination, paginationMeta } = require("../lib/pagination");
 
 const USER_INCLUDE = {
   technologies: true,
@@ -173,13 +174,19 @@ function createServiceError(message, statusCode) {
   return error;
 }
 
-async function getAllUsers() {
-  const users = await prisma.user.findMany({
+async function getAllUsers(query = {}) {
+  const pagination = normalizePagination(query, 20);
+  const [total, users] = await Promise.all([
+    prisma.user.count(),
+    prisma.user.findMany({
     orderBy: { createdAt: "asc" },
     include: USER_INCLUDE,
-  });
+      skip: pagination.skip,
+      take: pagination.pageSize,
+    }),
+  ]);
 
-  return users.map(sanitizeUser);
+  return { data: users.map(sanitizeUser), pagination: paginationMeta({ ...pagination, total }) };
 }
 
 async function createMentorProfile(userId, input) {
@@ -202,6 +209,7 @@ async function createMentorProfile(userId, input) {
     where: { id: userId },
     data: {
       fullName: input.fullName.trim(),
+      background: input.background.trim(),
       jobTitle: optionalText(input.jobTitle),
       workplace: optionalText(input.workplace),
       yearsOfExperience:
@@ -248,6 +256,7 @@ async function updateMentorProfile(userId, input) {
   const data = {};
 
   if (Object.hasOwn(input, "fullName")) data.fullName = input.fullName.trim();
+  if (Object.hasOwn(input, "background")) data.background = input.background.trim();
   if (Object.hasOwn(input, "jobTitle")) data.jobTitle = optionalText(input.jobTitle);
   if (Object.hasOwn(input, "workplace")) data.workplace = optionalText(input.workplace);
   if (Object.hasOwn(input, "yearsOfExperience")) {
@@ -271,7 +280,10 @@ async function updateMentorProfile(userId, input) {
   }
 
   const mentorProfileData = {};
-  if (Object.hasOwn(input, "background")) mentorProfileData.background = input.background.trim();
+  if (Object.hasOwn(input, "background")) {
+    data.background = input.background.trim();
+    mentorProfileData.background = input.background.trim();
+  }
   if (Object.hasOwn(input, "meetingCapacity")) {
     mentorProfileData.meetingCapacity = Number(input.meetingCapacity);
   }
@@ -311,6 +323,7 @@ async function updateUserProfile(userId, input) {
 
   const data = {};
   if (Object.hasOwn(input, "fullName")) data.fullName = input.fullName.trim();
+  if (Object.hasOwn(input, "background")) data.background = input.background.trim();
   if (Object.hasOwn(input, "jobTitle")) data.jobTitle = optionalText(input.jobTitle);
   if (Object.hasOwn(input, "workplace")) data.workplace = optionalText(input.workplace);
   if (Object.hasOwn(input, "yearsOfExperience")) {

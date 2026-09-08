@@ -1,9 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Link as RouterLink, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   Snackbar,
   Stack,
@@ -36,7 +35,7 @@ import {
   offerRescheduleSlots,
   submitMeetingFeedback,
 } from "../services/meetingsService";
-import { AppPage, AppPageHeader, AppSectionTitle } from "./AppPrimitives";
+import { AppPage } from "./AppPrimitives";
 import { formatDate as formatDateLocale, formatTime as formatTimeLocale } from "../i18n/locales";
 import { useLanguage } from "../i18n/LanguageContext";
 
@@ -373,12 +372,6 @@ function MentorMeetingsPage({ currentUser }) {
 
   return (
     <AppPage maxWidth="md">
-        <AppPageHeader title={t("meetings.mentorTitle")} subtitle={t("meetings.mentorSubtitle")} actions={
-          <Button component={RouterLink} to="/mentee" variant="outlined">
-            {t("meetings.switchToMentee")}
-          </Button>
-        } />
-
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
@@ -387,7 +380,6 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "past" && (
         <Box component="section" id="past-section">
-          <AppSectionTitle title={t("meetings.tabPast")} />
           <Stack spacing={2}>
             {pastMeetings.length === 0 ? (
               <EmptyState>{t("meetings.emptyPast")}</EmptyState>
@@ -408,7 +400,6 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "upcoming" && (
         <Box component="section" id="upcoming-section">
-          <AppSectionTitle title={t("meetings.tabUpcoming")} />
           <Stack spacing={2}>
             {upcomingMeetings.length === 0 ? (
               <EmptyState>{t("meetings.emptyUpcoming")}</EmptyState>
@@ -428,7 +419,6 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "pending" && (
         <Box component="section" id="pending-section">
-          <AppSectionTitle title={t("meetings.tabPending")} />
           <Stack spacing={2}>
             {pendingRequests.length === 0 ? (
               <EmptyState>{t("meetings.emptyPending")}</EmptyState>
@@ -449,7 +439,6 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "offered" && (
         <Box component="section" id="offered-section">
-          <AppSectionTitle title={t("meetings.tabOffered")} />
           <Stack spacing={2}>
             {offeredRequests.length === 0 ? (
               <EmptyState>{t("meetings.emptyOffered")}</EmptyState>
@@ -464,7 +453,6 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "closed" && (
           <Box component="section" id="closed-section">
-            <AppSectionTitle title={t("meetings.tabClosedMonth")} />
             <Stack spacing={2}>
               {monthlyBlocks.length === 0 ? (
                 <EmptyState>{t("meetings.emptyClosed")}</EmptyState>

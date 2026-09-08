@@ -197,7 +197,7 @@ async function createMeetingFromSlot({ requestId, slotId, menteeId }) {
         );
 
         if (usedCapacity >= request.mentorProfile.meetingCapacity) {
-          throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה בחודש זה", 409);
+          throw createServiceError("המנטורית הגיעה למכסת הפגישות שלה", 409);
         }
       }
 
@@ -258,15 +258,23 @@ async function cancelMeeting({ meetingId, userId }) {
         { request: { mentorProfile: { userId: Number(userId) } } },
       ],
     },
-    include: { request: true },
+    include: {
+      request: {
+        include: {
+          mentee: { select: { id: true, fullName: true, email: true } },
+          mentorProfile: { include: { user: { select: { id: true, fullName: true, email: true } } } },
+        },
+      },
+    },
   });
 
   if (!meeting) {
     throw createServiceError("Meeting cannot be cancelled", 409);
   }
 
-  return prisma.$transaction(async (transaction) => {
-    const updatedMeeting = await transaction.meeting.update({
+  const actorIsMentor = meeting.request?.mentorProfile?.user?.id === Number(userId);
+  const updatedMeeting = await prisma.$transaction(async (transaction) => {
+    const result = await transaction.meeting.update({
       where: { id: meeting.id },
       data: { status: "CANCELLED" },
     });
@@ -276,8 +284,39 @@ async function cancelMeeting({ meetingId, userId }) {
       data: { status: "CANCELLED" },
     });
 
-    return updatedMeeting;
+    if (actorIsMentor) {
+      await transaction.notification.create({
+        data: {
+          recipientId: meeting.request.mentee.id,
+          requestId: meeting.requestId,
+          meetingId: meeting.id,
+          type: "MEETING_CANCELLED_BY_MENTOR",
+          channel: "IN_APP",
+        },
+      });
+    }
+
+    return result;
   });
+
+  if (actorIsMentor) {
+    const mentor = meeting.request.mentorProfile.user;
+    const mentee = meeting.request.mentee;
+    const date = new Date(meeting.scheduledStart).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
+    const time = new Date(meeting.scheduledStart).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
+    try {
+      await sendEmail({
+        to: mentee.email,
+        subject: "הפגישה בוטלה | Queen Match",
+        text: `היי ${mentee.fullName},\n\n${mentor.fullName} ביטלה את הפגישה שלכם.\nתאריך: ${date}\nשעה: ${time}\n\nצוות Queen Match`,
+        html: `<div dir="rtl"><p>היי ${mentee.fullName},</p><p><strong>${mentor.fullName}</strong> ביטלה את הפגישה שלכם.</p><p>תאריך: ${date}<br />שעה: ${time}</p><p>צוות Queen Match</p></div>`,
+      });
+    } catch (error) {
+      console.error("Mentor cancellation email delivery failed:", error);
+    }
+  }
+
+  return updatedMeeting;
 }
 
 // A mentee cannot offer new times, so her reschedule action returns the request

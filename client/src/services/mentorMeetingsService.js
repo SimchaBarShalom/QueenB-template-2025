@@ -10,9 +10,9 @@ function authConfig() {
   return { headers: { Authorization: `Bearer ${token}` } };
 }
 
-export async function getMentorMeetingRequests() {
-  const response = await axios.get("/api/mentoring-requests/mentor/me", authConfig());
-  return response.data;
+export async function getMentorMeetingRequests(options = {}) {
+  const response = await axios.get("/api/mentoring-requests/mentor/me", { ...authConfig(), params: options });
+  return response.data.data || response.data;
 }
 
 export async function rejectMentorRequest(requestId) {

@@ -136,6 +136,12 @@ and then share the repository with the rest of the team.
    - Inactive mentor demo: `inactive-mentor@queenb.org`
    - Admin alert demo mentee: `mentee-alerts@queenb.org`
 
+   The expanded demo seed also creates accounts `demo-mentor-1@queenb.org` through
+   `demo-mentor-20@queenb.org` and `demo-mentee-1@queenb.org` through
+   `demo-mentee-40@queenb.org`. They all use the same development-only password
+   `Password123!`. The seed is additive and upsert-only; running it again does not
+   reset or delete existing records.
+
 ### Running the Application
 
 #### Development Mode (Recommended)

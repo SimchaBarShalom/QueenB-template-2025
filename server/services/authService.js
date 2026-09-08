@@ -19,6 +19,7 @@ function sanitizeUser(user) {
     id: user.id,
     email: user.email,
     fullName: user.fullName,
+    background: user.background || "לא צוין",
     jobTitle: user.jobTitle || null,
     workplace: user.workplace || null,
     yearsOfExperience: user.yearsOfExperience ?? null,
@@ -33,7 +34,7 @@ function sanitizeUser(user) {
 
 function validateRegistrationInput(input) {
   const errors = [];
-  const { email, password, firstName, lastName, wantsToBeMentor } = input;
+  const { email, password, firstName, lastName, background, wantsToBeMentor } = input;
 
   if (!firstName || firstName.trim().length < 2) {
     errors.push("First name must be at least 2 characters");
@@ -49,6 +50,10 @@ function validateRegistrationInput(input) {
 
   if (!password || password.length < 8) {
     errors.push("Password must be at least 8 characters");
+  }
+
+  if (typeof background !== "string" || background.trim().length < 2 || background.trim().length > 2000) {
+    errors.push("Professional background must be between 2 and 2000 characters");
   }
 
   if (wantsToBeMentor) {
@@ -103,10 +108,12 @@ async function registerUser(input) {
 
   const wantsToBeMentor = Boolean(input.wantsToBeMentor);
 
+  const derivedBackground = input.background?.trim() || [input.jobTitle?.trim(), input.workplace?.trim()].filter(Boolean).join(" — ") || "לא צוין";
   const data = {
     email: input.email.trim().toLowerCase(),
     passwordHash,
     fullName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+    background: derivedBackground,
     yearsOfExperience: input.yearsOfExperience ? Number(input.yearsOfExperience) : null,
     githubUrl: input.githubUrl?.trim() || null,
     linkedinUrl: input.linkedinUrl?.trim() || null,
@@ -125,19 +132,9 @@ if (wantsToBeMentor) {
   data.jobTitle = jobTitle;
   data.workplace = workplace;
 
-  let background = "לא צוין";
-
-  if (jobTitle && workplace) {
-    background = `${jobTitle} — ${workplace}`;
-  } else if (jobTitle) {
-    background = jobTitle;
-  } else if (workplace) {
-    background = workplace;
-  }
-
   data.mentorProfile = {
     create: {
-      background,
+      background: derivedBackground,
       meetingCapacity: Number(input.meetingCapacity),
       meetingDurationMinutes: Number(input.meetingDurationMinutes),
 

@@ -12,13 +12,14 @@ const transporter = nodemailer.createTransport({
 
 // פונקציה כללית לשליחת מייל.
 // אפשר להעביר לה נמען, נושא, טקסט רגיל ו-HTML.
-async function sendEmail({ to, subject, text, html }) {
+async function sendEmail({ to, subject, text, html, replyTo }) {
   return transporter.sendMail({
     // זה השם והכתובת שיופיעו כשולח של המייל.
     from: `"Queen Match" <${process.env.SMTP_USER}>`,
 
     // כתובת המייל של הנמען.
     to,
+    replyTo,
 
     // נושא המייל.
     subject,

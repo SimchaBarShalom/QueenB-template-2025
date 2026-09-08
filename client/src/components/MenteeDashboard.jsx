@@ -11,7 +11,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Stack,
   Typography,
 } from "@mui/material";
 
@@ -70,8 +69,8 @@ function MenteeDashboard({ currentUser }) {
             ),
           ]);
 
-        setMentors(mentorsResponse.data);
-        setRequests(requestsResponse.data);
+        setMentors(mentorsResponse.data.data || mentorsResponse.data);
+        setRequests(requestsResponse.data.data || requestsResponse.data);
       } catch (requestError) {
         console.error(requestError);
         setError(t("errors.loadHome"));
@@ -165,7 +164,7 @@ function MenteeDashboard({ currentUser }) {
   );
 
   const suggestedMentors = useMemo(() => {
-    return mentors.slice(0, 2).map((mentor) => ({
+    return mentors.filter((mentor) => !mentor.isFull).slice(0, 3).map((mentor) => ({
       ...mentor,
       requestStatus: getRequestStatus(
         mentor.mentorProfileId
@@ -273,58 +272,10 @@ function MenteeDashboard({ currentUser }) {
           />
         </Box>
 
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1.5}
-          sx={{ mb: 5 }}
-        >
-          <Button
-            component={RouterLink}
-            to="/mentee/mentors"
-            variant="contained"
-            sx={{ px: 3 }}
-          >
-            {t("menteeDashboard.searchMentor")}
-          </Button>
-
-          <Button
-            component={RouterLink}
-            to="/mentee/meetings"
-            variant="outlined"
-            sx={{ px: 3 }}
-          >
-            {t("menteeDashboard.allMeetings")}
-          </Button>
-
-          <Button
-            component={RouterLink}
-            to="/mentee/meetings?tab=waiting-mentor-section"
-            variant="outlined"
-            sx={{ px: 3 }}
-          >
-            {t("menteeDashboard.showRequests")}
-          </Button>
-
-          {!currentUser.isAdmin && !currentUser.mentorProfile && (
-            <Button component={RouterLink} to="/profile" variant="outlined" sx={{ px: 3 }}>
-              {t("menteeDashboard.joinAsMentor")}
-            </Button>
-          )}
-        </Stack>
-
-        <AppSectionTitle title={t("menteeDashboard.suggested")} action={
-          <Button
-            component={RouterLink}
-            to="/mentee/mentors"
-            sx={{
-              fontWeight: 600,
-              px: 0,
-              minWidth: 0,
-            }}
-          >
-            {t("menteeDashboard.allMentors")}
-          </Button>
-        } />
+        <AppSectionTitle title={t("menteeDashboard.suggested")} />
+        <Button component={RouterLink} to="/mentee/mentors" sx={{ mb: 2, px: 0, minWidth: 0, fontWeight: 600 }}>
+          {t("menteeDashboard.allMentors")}
+        </Button>
 
         {suggestedMentors.length === 0 ? (
           <Typography color="text.secondary">

@@ -7,6 +7,7 @@ import MessagesMenu from "./MessagesMenu";
 import UserMenu from "./UserMenu";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useLanguage } from "../i18n/LanguageContext";
+import { queenbColors } from "../theme";
 
 const activeButtonSx = {
   color: "#fff",
@@ -22,7 +23,7 @@ function isCurrentItem(item, location) {
   return item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
 }
 
-function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel }) {
+function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel, showJoinAsMentor = false }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { t, direction } = useLanguage();
@@ -34,8 +35,8 @@ function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel }) {
     <AppBar className="role-navbar" position="sticky" color="inherit" elevation={0} sx={{ bgcolor: "#fff", borderBottom: "1px solid #f6d3e0" }}>
       <Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 72 } }}>
         <Box sx={{ width: "100%", maxWidth: 1200, mx: "auto", px: { xs: 2, md: 4 }, display: "flex", alignItems: "center", gap: { xs: 1, md: 3 } }}>
-          <Box component={RouterLink} to={homePath} sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-            <QueensMatchLogo height={48} sx={{ height: { xs: 40, md: 48 }, maxWidth: { xs: 142, sm: 180, md: "100%" } }} />
+          <Box component={RouterLink} to={homePath} sx={{ display: "flex", alignItems: "center", flexShrink: showJoinAsMentor ? 1 : 0 }}>
+            <QueensMatchLogo height={48} sx={{ height: { xs: 40, md: 48 }, maxWidth: { xs: showJoinAsMentor ? 112 : 142, sm: 180, md: "100%" } }} />
           </Box>
           <Stack component="nav" aria-label={navAria} direction="row" spacing={0.5} sx={{ display: { xs: "none", md: "flex" }, alignItems: "center", flexGrow: 1, justifyContent: "center" }}>
             {items.map((item) => {
@@ -47,6 +48,33 @@ function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel }) {
           <Box sx={{ display: { xs: "none", sm: "block" } }}>
             <LanguageSwitcher />
           </Box>
+          {showJoinAsMentor && (
+            <Button
+              component={RouterLink}
+              to="/profile"
+              size="small"
+              sx={{
+                minHeight: { xs: 36, sm: 38 },
+                width: "max-content",
+                minWidth: { xs: 0, sm: 168 },
+                maxWidth: "none",
+                flexShrink: 0,
+                px: { xs: 1, sm: 1.5, md: 2 },
+                borderRadius: 2,
+                whiteSpace: "nowrap",
+                overflow: "visible",
+                color: queenbColors.pink,
+                bgcolor: queenbColors.pinkPale,
+                border: `1px solid ${queenbColors.pink}55`,
+                fontWeight: 700,
+                lineHeight: 1.2,
+                fontSize: { xs: "0.72rem", sm: "0.85rem", md: "0.9rem" },
+                "&:hover": { bgcolor: "#ffd1df", borderColor: queenbColors.pink },
+              }}
+            >
+              {t("nav.joinAsMentor")}
+            </Button>
+          )}
           <MessagesMenu currentUser={currentUser} />
           <Box sx={{ display: { xs: "none", sm: "block" } }}><UserMenu currentUser={currentUser} onLogout={onLogout} /></Box>
           <IconButton onClick={() => setMobileOpen(true)} aria-label={t("nav.openMenu")} sx={{ display: { xs: "inline-flex", md: "none" }, color: "text.primary" }}><MenuIcon /></IconButton>

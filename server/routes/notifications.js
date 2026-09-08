@@ -6,7 +6,7 @@ const router = express.Router();
 
 router.get("/me", authenticate, async (req, res, next) => {
   try {
-    return res.json(await getNotificationsForUser(req.auth.userId));
+    return res.json(await getNotificationsForUser(req.auth.userId, req.query));
   } catch (error) {
     return next(error);
   }

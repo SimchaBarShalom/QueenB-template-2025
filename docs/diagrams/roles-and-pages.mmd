@@ -1,0 +1,12 @@
+%% Queens Match — current repository evidence
+flowchart TB
+  SH["Shared<br/>AppLayout · Navbar · Profile · Messages · i18n · RTL"]
+  SH --> M["MENTEE<br/>/mentee<br/>/mentee/mentors<br/>/mentee/meetings<br/>בקשות · בחירת מועד · feedback"]
+  SH --> T["MENTOR<br/>/mentor<br/>/mentor/meetings<br/>פרופיל · slots · quota · reschedule"]
+  SH --> A["ADMIN<br/>/admin · users · meetings<br/>calendar · alerts<br/>ניהול ו־analytics"]
+  AUTH["JWT תקין"] --> M
+  AUTH --> T
+  ADMIN["isAdmin = true"] --> A
+  M -. "אין גישה" .-> A
+  T -. "אין גישה" .-> A
+

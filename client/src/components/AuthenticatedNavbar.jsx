@@ -44,7 +44,9 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
         ]),
   ];
 
-  return <RoleNavbar currentUser={currentUser} onLogout={onLogout} homePath={homePath} items={items} />;
+  const showJoinAsMentor = !currentUser?.isAdmin && !mentor;
+
+  return <RoleNavbar currentUser={currentUser} onLogout={onLogout} homePath={homePath} items={items} showJoinAsMentor={showJoinAsMentor} />;
 }
 
 export default AuthenticatedNavbar;

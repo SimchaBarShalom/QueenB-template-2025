@@ -9,6 +9,7 @@ import {
   FormControl,
   InputLabel,
   MenuItem,
+  Pagination,
   Select,
   Stack,
   Switch,
@@ -48,8 +49,9 @@ function AdminMeetingsPage() {
   const [success, setSuccess] = useState("");
   const [pendingAction, setPendingAction] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [pagination, setPagination] = useState({ page: 1, pageCount: 1 });
 
-  async function loadMeetings(nextFilters = filters) {
+  async function loadMeetings(nextFilters = filters, requestPage = pagination.page) {
     try {
       setLoading(true);
       setError("");
@@ -62,9 +64,12 @@ function AdminMeetingsPage() {
           endDate: nextFilters.endDate || undefined,
           missingFeedback: nextFilters.missingFeedback ? "true" : undefined,
           noShow: nextFilters.noShow ? "true" : undefined,
+          page: requestPage,
+          pageSize: 20,
         },
       });
-      setMeetings(response.data);
+      setMeetings(response.data.data || response.data);
+      setPagination(response.data.pagination || { page: 1, pageCount: 1 });
       setSelectedIds([]);
     } catch (requestError) {
       console.error(requestError);
@@ -75,7 +80,7 @@ function AdminMeetingsPage() {
   }
 
   useEffect(() => {
-    loadMeetings(filters);
+    loadMeetings(filters, 1);
     // Initial load uses URL/default filter state; filter changes are applied explicitly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -83,13 +88,19 @@ function AdminMeetingsPage() {
   const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
 
   const applyFilters = () => {
+    setPagination((current) => ({ ...current, page: 1 }));
     const params = {};
     Object.entries(filters).forEach(([key, value]) => {
       if (value) params[key] = String(value);
     });
     setSearchParams(params);
-    loadMeetings(filters);
+    loadMeetings(filters, 1);
   };
+
+  // The page effect intentionally uses the latest filter/loading values without
+  // recreating the request function on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (!loading) loadMeetings(filters); }, [pagination.page]);
 
   const updateStatus = async (meeting, status) => {
     try {
@@ -308,6 +319,7 @@ function AdminMeetingsPage() {
         onClose={() => setPendingAction(null)}
         onConfirm={confirmPendingAction}
       />
+      {pagination.pageCount > 1 && <Pagination sx={{ mt: 3 }} count={pagination.pageCount} page={pagination.page} onChange={(_, page) => setPagination((current) => ({ ...current, page }))} />}
     </AdminLayout>
   );
 }

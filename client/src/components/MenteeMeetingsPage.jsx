@@ -4,7 +4,6 @@ import axios from "axios";
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   Stack,
   Typography,
@@ -27,7 +26,7 @@ import {
   submitMeetingFeedback,
 } from "../services/meetingsService";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
-import { AppPage, AppPageHeader, AppSurface } from "./AppPrimitives";
+import { AppPage } from "./AppPrimitives";
 import {
   DEFAULT_MENTEE_MEETING_TAB,
   getMenteeMeetingTabFromSearch,
@@ -36,13 +35,6 @@ import {
 } from "../utils/meetingNav";
 import { formatDate as formatDateLocale, formatTime as formatTimeLocale } from "../i18n/locales";
 import { useLanguage } from "../i18n/LanguageContext";
-
-const SECTION_TABS = [
-  { id: "completed-section", labelKey: "meetings.tabCompleted" },
-  { id: "scheduled-section", labelKey: "meetings.tabScheduled" },
-  { id: "waiting-mentor-section", labelKey: "meetings.tabWaitingMentor" },
-  { id: "waiting-mentee-section", labelKey: "meetings.tabWaitingMentee" },
-];
 
 function formatDate(dateValue, language) {
   if (!dateValue) return "";
@@ -122,7 +114,7 @@ function MenteeMeetingsPage() {
           `/api/mentoring-requests/mentee/${menteeId}`
         );
 
-        setRequests(response.data);
+        setRequests(response.data.data || response.data);
       } catch (requestError) {
         console.error(requestError);
         setError(t("errors.loadMeetings"));
@@ -132,7 +124,7 @@ function MenteeMeetingsPage() {
     }
 
     loadRequests();
-  }, [menteeId]);
+  }, [menteeId, t]);
 
   const handleCancelRequest = async (request) => {
   try {
@@ -208,7 +200,7 @@ function MenteeMeetingsPage() {
 
   const reloadRequests = async () => {
     const response = await axios.get(`/api/mentoring-requests/mentee/${menteeId}`);
-    setRequests(response.data);
+    setRequests(response.data.data || response.data);
   };
 
   const handleCancelMeeting = async (meeting) => {
@@ -418,54 +410,17 @@ function MenteeMeetingsPage() {
 
   return (
     <AppPage maxWidth="md">
-        <AppPageHeader title={t("meetings.menteeTitle")} subtitle={t("meetings.menteeSubtitle")} />
-
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
 
-        <AppSurface
-          component={Stack}
-          direction="row"
-          spacing={1}
-          flexWrap="wrap"
-          rowGap={1}
-          sx={{
-            position: "sticky",
-            top: { xs: 64, md: 72 },
-            zIndex: 1,
-            p: 1,
-            mb: 4,
-          }}
-        >
-          {SECTION_TABS.map((tab) => (
-            <Button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              variant={activeTab === tab.id ? "contained" : "text"}
-              size="small"
-              sx={{ fontWeight: activeTab === tab.id ? 700 : 400 }}
-            >
-              {t(tab.labelKey)}
-            </Button>
-          ))}
-        </AppSurface>
         {activeTab === "completed-section" && (
         <Box
           component="section"
           id="completed-section"
         >
-          <Typography
-            variant="h5"
-            component="h2"
-            sx={{ mb: 2 }}
-          >
-            {t("meetings.tabCompleted")}
-          </Typography>
-
           <Stack spacing={2}>
             {completedMeetings.length === 0 ? (
               <Typography color="text.secondary">
@@ -491,14 +446,6 @@ function MenteeMeetingsPage() {
           component="section"
           id="scheduled-section"
         >
-          <Typography
-            variant="h5"
-            component="h2"
-            sx={{ mb: 2 }}
-          >
-            {t("meetings.tabScheduled")}
-          </Typography>
-
           <Stack spacing={2}>
             {scheduledMeetings.length === 0 ? (
               <Typography color="text.secondary">
@@ -523,14 +470,6 @@ function MenteeMeetingsPage() {
           component="section"
           id="waiting-mentor-section"
         >
-          <Typography
-            variant="h5"
-            component="h2"
-            sx={{ mb: 2 }}
-          >
-            {t("meetings.tabWaitingMentor")}
-          </Typography>
-
           <Stack spacing={2}>
             {waitingForMentorSlots.length === 0 ? (
               <Typography color="text.secondary">
@@ -556,14 +495,6 @@ function MenteeMeetingsPage() {
           component="section"
           id="waiting-mentee-section"
         >
-          <Typography
-            variant="h5"
-            component="h2"
-            sx={{ mb: 2 }}
-          >
-            {t("meetings.tabWaitingMentee")}
-          </Typography>
-
           <Stack spacing={2}>
             {waitingForMenteeSelection.length ===
             0 ? (
