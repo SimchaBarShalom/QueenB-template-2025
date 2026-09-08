@@ -6,6 +6,7 @@ const {
   validateLoginInput,
 } = require("../services/authService");
 const { createAuthToken } = require("../services/authTokenService");
+const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -48,6 +49,10 @@ router.post("/login", async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
+});
+
+router.get("/me", requireAuth, async (req, res) => {
+  return res.json({ user: req.user });
 });
 
 module.exports = router;

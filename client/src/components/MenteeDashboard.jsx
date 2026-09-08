@@ -11,7 +11,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Container,
   Stack,
   Typography,
 } from "@mui/material";
@@ -22,6 +21,7 @@ import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 
 import MentorCard from "./MentorCard";
 import DashboardSummaryCard from "./DashboardSummaryCard";
+import { AppPage, AppPageHeader, AppSectionTitle } from "./AppPrimitives";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
 function formatDate(dateValue) {
@@ -34,6 +34,7 @@ function formatTime(dateValue) {
     minute: "2-digit",
   });
 }
+
 const ACTIVE_STATUSES = [
   "WAITING_FOR_MENTOR_SLOTS",
   "WAITING_FOR_MENTEE_SELECTION",
@@ -82,8 +83,6 @@ function MenteeDashboard({ currentUser }) {
     loadDashboard();
   }, [menteeId]);
 
-
-
   const activeRequestsCount = useMemo(() => {
     return requests.filter((request) =>
       ACTIVE_STATUSES.includes(request.status)
@@ -117,50 +116,56 @@ function MenteeDashboard({ currentUser }) {
     return meetings[0] || null;
   }, [requests]);
 
-  const getRequestStatus = useCallback((mentorProfileId) => {
-    const mentorRequests = requests.filter(
-      (request) =>
-        request.mentorProfileId === mentorProfileId &&
-        ACTIVE_STATUSES.includes(request.status)
-    );
+  const getRequestStatus = useCallback(
+    (mentorProfileId) => {
+      const mentorRequests = requests.filter(
+        (request) =>
+          request.mentorProfileId === mentorProfileId &&
+          ACTIVE_STATUSES.includes(request.status)
+      );
 
-    const scheduledRequest = mentorRequests.find(
-      (request) =>
-        request.status === "MATCHED" ||
-        request.status === "ATTENDANCE_CONFIRMED"
-    );
+      const scheduledRequest = mentorRequests.find(
+        (request) =>
+          request.status === "MATCHED" ||
+          request.status === "ATTENDANCE_CONFIRMED"
+      );
 
-    if (scheduledRequest) {
-      return "scheduled";
-    }
-
-    if (mentorRequests.length > 0) {
-      return "pending";
-    }
-
-    const blockedThisMonth = requests.some((request) => {
-      if (request.mentorProfileId !== mentorProfileId || request.status !== "CANCELLED") {
-        return false;
+      if (scheduledRequest) {
+        return "scheduled";
       }
 
-      const extraSlotsUsed = (request.schedulingRounds || []).some(
-        (round) => round.type === "EXTRA_SLOTS"
-      );
-      const updatedAt = new Date(request.updatedAt);
+      if (mentorRequests.length > 0) {
+        return "pending";
+      }
+
       const now = new Date();
+      const blockedThisMonth = requests.some((request) => {
+        if (
+          request.mentorProfileId !== mentorProfileId ||
+          request.status !== "CANCELLED"
+        ) {
+          return false;
+        }
 
-      return (
-        extraSlotsUsed &&
-        updatedAt.getFullYear() === now.getFullYear() &&
-        updatedAt.getMonth() === now.getMonth()
-      );
-    });
+        const extraSlotsUsed = (
+          request.schedulingRounds || []
+        ).some((round) => round.type === "EXTRA_SLOTS");
+        const updatedAt = new Date(request.updatedAt);
 
-    return blockedThisMonth ? "blocked" : "none";
-}, [requests]);
+        return (
+          extraSlotsUsed &&
+          updatedAt.getFullYear() === now.getFullYear() &&
+          updatedAt.getMonth() === now.getMonth()
+        );
+      });
+
+      return blockedThisMonth ? "blocked" : "none";
+    },
+    [requests]
+  );
 
   const suggestedMentors = useMemo(() => {
-    return mentors.slice(0, 3).map((mentor) => ({
+    return mentors.slice(0, 2).map((mentor) => ({
       ...mentor,
       requestStatus: getRequestStatus(
         mentor.mentorProfileId
@@ -207,15 +212,8 @@ function MenteeDashboard({ currentUser }) {
   }
 
   return (
-    <Box sx={{ py: { xs: 3, md: 5 } }}>
-      <Container maxWidth="lg">
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ mb: 3 }}
-        >
-          שלום, {currentUser.fullName}
-        </Typography>
+    <AppPage>
+        <AppPageHeader title="מסך הבית" subtitle={`שלום, ${currentUser.fullName}`} />
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -276,7 +274,7 @@ function MenteeDashboard({ currentUser }) {
             component={RouterLink}
             to="/mentee/mentors"
             variant="contained"
-            sx={{ borderRadius: 999, px: 3 }}
+            sx={{ px: 3 }}
           >
             חפשי מנטורית
           </Button>
@@ -285,7 +283,7 @@ function MenteeDashboard({ currentUser }) {
             component={RouterLink}
             to="/mentee/meetings"
             variant="outlined"
-            sx={{ borderRadius: 999, px: 3 }}
+            sx={{ px: 3 }}
           >
             לכל הפגישות
           </Button>
@@ -294,30 +292,31 @@ function MenteeDashboard({ currentUser }) {
             component={RouterLink}
             to="/mentee/meetings#waiting-mentor-section"
             variant="outlined"
-            sx={{ borderRadius: 999, px: 3 }}
+            sx={{ px: 3 }}
           >
             הציגי בקשות
           </Button>
+
+          {!currentUser.isAdmin && !currentUser.mentorProfile && (
+            <Button component={RouterLink} to="/profile" variant="outlined" sx={{ px: 3 }}>
+              הצטרפי כמנטורית
+            </Button>
+          )}
         </Stack>
 
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="baseline"
-          sx={{ mb: 2.5 }}
-        >
-          <Typography variant="h5" component="h2">
-            מנטוריות שאולי יתאימו לך
-          </Typography>
-
+        <AppSectionTitle title="מנטוריות שאולי יתאימו לך" action={
           <Button
             component={RouterLink}
             to="/mentee/mentors"
-            sx={{ fontWeight: 600 }}
+            sx={{
+              fontWeight: 600,
+              px: 0,
+              minWidth: 0,
+            }}
           >
             לכל המנטוריות
           </Button>
-        </Stack>
+        } />
 
         {suggestedMentors.length === 0 ? (
           <Typography color="text.secondary">
@@ -327,11 +326,12 @@ function MenteeDashboard({ currentUser }) {
           <Box
             sx={{
               display: "grid",
+
               gridTemplateColumns: {
                 xs: "1fr",
-                sm: "1fr 1fr",
-                md: "repeat(3, 1fr)",
+                sm: "repeat(3, minmax(0, 1fr))",
               },
+
               gap: 3,
             }}
           >
@@ -344,8 +344,7 @@ function MenteeDashboard({ currentUser }) {
             ))}
           </Box>
         )}
-      </Container>
-    </Box>
+    </AppPage>
   );
 }
 

@@ -31,19 +31,17 @@ When the React client runs through Create React App, API calls may use relative 
 }
 ```
 
-## Roles
+## Roles and Capabilities
 
-Supported roles:
+The database does not store a single role enum on `User`. Capabilities are derived from these fields:
 
 ```text
-MENTEE
-MENTOR
-ADMIN
+Mentee: every registered user can act as a mentee
+Mentor: User has a MentorProfile row
+Admin: User.isAdmin is true
 ```
 
-Only `MENTEE` and `MENTOR` can register through the public registration form.
-
-`ADMIN` users are created through seed data.
+Admin users can be created through seed data or through the admin user-management API. Removing admin access is blocked when the target is the current admin or the last remaining admin.
 
 ## User Object
 
@@ -53,9 +51,15 @@ Safe user responses use this shape:
 {
   "id": 1,
   "email": "mentee@queenb.org",
-  "firstName": "Mentee",
-  "lastName": "Example",
-  "role": "MENTEE",
+  "fullName": "Example Mentee",
+  "jobTitle": "Junior Developer",
+  "workplace": "QueenB Bootcamp",
+  "yearsOfExperience": 1,
+  "githubUrl": null,
+  "linkedinUrl": null,
+  "technologies": ["React"],
+  "isAdmin": false,
+  "mentorProfile": null,
   "createdAt": "2026-09-03T12:00:00.000Z"
 }
 ```
@@ -94,7 +98,7 @@ Request:
   "lastName": "Levi",
   "email": "dana@example.com",
   "password": "StrongPass123!",
-  "role": "MENTEE"
+  "wantsToBeMentor": false
 }
 ```
 
@@ -105,11 +109,12 @@ Response `201`:
   "user": {
     "id": 1,
     "email": "dana@example.com",
-    "firstName": "Dana",
-    "lastName": "Levi",
-    "role": "MENTEE",
+    "fullName": "Dana Levi",
+    "isAdmin": false,
+    "mentorProfile": null,
     "createdAt": "2026-09-03T12:00:00.000Z"
-  }
+  },
+  "token": "jwt-token"
 }
 ```
 
@@ -136,7 +141,7 @@ Request:
 ```json
 {
   "email": "mentee@queenb.org",
-  "password": "Mentee123!"
+  "password": "Password123!"
 }
 ```
 
@@ -147,11 +152,12 @@ Response `200`:
   "user": {
     "id": 1,
     "email": "mentee@queenb.org",
-    "firstName": "Mentee",
-    "lastName": "Example",
-    "role": "MENTEE",
+    "fullName": "Example Mentee",
+    "isAdmin": false,
+    "mentorProfile": null,
     "createdAt": "2026-09-03T12:00:00.000Z"
-  }
+  },
+  "token": "jwt-token"
 }
 ```
 
@@ -163,77 +169,260 @@ Invalid credentials response `401`:
 }
 ```
 
-## Auth Scope Decision Before Phase 2
+### `GET /api/auth/me`
 
-The current base implementation has basic registration and login, but it does not have real session security yet. The frontend stores the returned user in `localStorage`, and the server does not verify a token on protected routes.
-
-Before Phase 2 feature work splits across three members, add one shared auth foundation branch:
-
-```text
-chore/auth-middleware-and-me
-```
-
-That branch should add:
-
-- JWT creation on register/login.
-- `GET /api/auth/me`.
-- Express authentication middleware.
-- Express role middleware.
-- Frontend auth state that restores the user after refresh by calling `/api/auth/me`.
-- A shared Axios client that attaches the JWT.
-- Protected frontend routes for logged-in users.
-- Admin-only frontend routes for admin pages.
-
-Recommended token response shape after this upgrade:
-
-```json
-{
-  "user": {
-    "id": 1,
-    "email": "mentee@queenb.org",
-    "firstName": "Mentee",
-    "lastName": "Example",
-    "role": "MENTEE",
-    "createdAt": "2026-09-03T12:00:00.000Z"
-  },
-  "token": "jwt-token"
-}
-```
-
-Recommended authenticated request header:
+Requires:
 
 ```text
 Authorization: Bearer jwt-token
 ```
 
-Recommended `GET /api/auth/me` response:
+Response `200`:
 
 ```json
 {
   "user": {
     "id": 1,
     "email": "mentee@queenb.org",
-    "firstName": "Mentee",
-    "lastName": "Example",
-    "role": "MENTEE",
+    "fullName": "Example Mentee",
+    "isAdmin": false,
+    "mentorProfile": null,
     "createdAt": "2026-09-03T12:00:00.000Z"
   }
 }
 ```
 
-This should be done before mentor/admin/mentee feature branches start because all Phase 2 features need consistent role checks.
+Missing, invalid, or expired token response `401`.
 
-## Future Phase 2 Endpoints
+## Mentor Search
 
-These are planned but not implemented in the base:
+### `GET /api/mentors`
+
+Returns public mentor cards for active mentor profiles only. Admin APIs can see active and inactive mentor profiles.
+
+## Admin API
+
+All admin endpoints require:
 
 ```text
-GET /api/mentor-profile/me
-PUT /api/mentor-profile/me
-GET /api/mentors
-GET /api/mentors/:id
-GET /api/admin/users
-GET /api/admin/users/:id
+Authorization: Bearer jwt-token
 ```
 
-All future protected endpoints should require JWT authentication. Admin endpoints should also require `ADMIN` role.
+Non-admin users receive `403`.
+
+### `GET /api/admin/summary`
+
+Returns operational counts:
+
+```json
+{
+  "usersCount": 5,
+  "mentorsCount": 2,
+  "activeMentorsCount": 1,
+  "scheduledMeetingsCount": 1,
+  "completedMeetingsCount": 2,
+  "pendingRequestsCount": 2,
+  "unresolvedAlertsCount": 3
+}
+```
+
+### `GET /api/admin/analytics`
+
+Returns dashboard analytics for the last 3, 6, or 12 months. The default is 6 months. It includes monthly user/request/meeting activity, meeting status breakdown, completed-meeting feedback completion, and completed meetings by active mentor. Feedback answers are never returned.
+
+Query parameter:
+
+```text
+months=3|6|12
+```
+
+### `GET /api/admin/users`
+
+Query parameters:
+
+```text
+search
+capability=admin|mentor|mentee
+```
+
+Returns safe user summaries with `capabilities` and `permissions` metadata for disabled admin controls.
+
+### `GET /api/admin/users/:id`
+
+Returns safe profile fields, capability badges, counts, recent requests, and recent meetings. Full meeting history should be read through `/api/admin/meetings`.
+
+### `PATCH /api/admin/users/:id/admin`
+
+Request:
+
+```json
+{
+  "isAdmin": true
+}
+```
+
+Blocks removing admin access from yourself and removing the last admin.
+
+### `PATCH /api/admin/users/:id/profile`
+
+Updates safe user profile fields only.
+
+Request:
+
+```json
+{
+  "fullName": "Dana Levi",
+  "jobTitle": "Frontend Developer",
+  "workplace": "QueenB",
+  "yearsOfExperience": 2,
+  "githubUrl": "https://github.com/example",
+  "linkedinUrl": "https://linkedin.com/in/example",
+  "technologies": ["React", "Node.js"]
+}
+```
+
+Email, password fields, and `passwordHash` are ignored and must not be writable through this endpoint.
+
+### `PATCH /api/admin/mentors/:mentorProfileId/visibility`
+
+Request:
+
+```json
+{
+  "isActive": false
+}
+```
+
+Inactive mentor profiles are hidden from public mentor search.
+
+### `PATCH /api/admin/mentors/:mentorProfileId/profile`
+
+Updates an existing mentor profile. This endpoint does not create or remove mentor profiles.
+
+Request:
+
+```json
+{
+  "background": "Frontend and career mentoring",
+  "meetingCapacity": 4,
+  "meetingDurationMinutes": 45,
+  "isActive": true,
+  "mentoringTopics": ["CV Review", "React"]
+}
+```
+
+### `GET /api/admin/meetings`
+
+Query parameters:
+
+```text
+status=SCHEDULED|ATTENDANCE_CONFIRMED|COMPLETED|NOT_COMPLETED|RESCHEDULED|CANCELLED
+mentorId
+menteeId
+startDate
+endDate
+missingFeedback=true
+noShow=true
+```
+
+Response items include meeting status, request status, mentor/mentee safe identity fields, topics, attendance confirmations, outcome confirmations, and feedback status only. Feedback answers are not returned.
+
+### `GET /api/admin/meetings/:id`
+
+Returns a single meeting detail using the same safe shape as list items.
+
+### `PATCH /api/admin/meetings/:id/status`
+
+Request:
+
+```json
+{
+  "status": "COMPLETED"
+}
+```
+
+Supported admin MVP status changes:
+
+```text
+COMPLETED
+NOT_COMPLETED
+CANCELLED
+```
+
+Marking a meeting completed/not completed also updates the parent request status. Cancelling an active meeting cancels the parent request only when no active sibling meeting remains.
+
+### `PATCH /api/admin/meetings/:id/schedule`
+
+Updates the scheduled start and end time for a future active meeting only.
+
+Request:
+
+```json
+{
+  "scheduledStart": "2026-09-10T14:00:00.000Z",
+  "scheduledEnd": "2026-09-10T14:45:00.000Z"
+}
+```
+
+Allowed only when the meeting status is `SCHEDULED` or `ATTENDANCE_CONFIRMED` and the current meeting end time is still in the future. `scheduledEnd` must be after `scheduledStart`. If the meeting points to a selected offered slot, that slot is updated to match.
+
+### `PATCH /api/admin/requests/:id/cancel`
+
+Cancels an active request and any scheduled/attendance-confirmed meetings under it. Historical completed or not-completed meetings remain unchanged.
+
+### `GET /api/admin/alerts`
+
+Query parameters:
+
+```text
+type=NO_SHOW|MISSING_FEEDBACK|STALE_REQUEST|PAST_PENDING_MEETING|MENTOR_LOAD
+resolved=resolved|unresolved
+```
+
+Alerts are derived from current records. Admin resolution rows are stored in `AdminAlertResolution` by alert key and remain valid until the source record changes materially.
+
+### `PATCH /api/admin/alerts/:alertKey/resolve`
+
+Marks a derived alert as handled.
+
+### `PATCH /api/admin/alerts/:alertKey/unresolve`
+
+Reopens a handled alert by removing its resolution row.
+
+## Current Status Contracts
+
+`MentoringRequest.status` values:
+
+```text
+WAITING_FOR_MENTOR_SLOTS
+WAITING_FOR_MENTEE_SELECTION
+REJECTED
+MATCHED
+ATTENDANCE_CONFIRMED
+COMPLETED
+NOT_COMPLETED
+FEEDBACK_COMPLETED
+CANCELLED
+```
+
+`Meeting.status` values:
+
+```text
+SCHEDULED
+ATTENDANCE_CONFIRMED
+COMPLETED
+NOT_COMPLETED
+RESCHEDULED
+CANCELLED
+```
+
+## Future Admin Improvements
+
+Planned but intentionally outside the Admin MVP:
+
+- User/profile deactivation.
+- Creating or removing mentor profiles.
+- Editing emails, passwords, notes, or feedback.
+- Admin audit log.
+- Week/day/list calendar views.
+- Export and richer analytics.

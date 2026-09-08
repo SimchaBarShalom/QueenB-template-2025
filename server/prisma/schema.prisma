@@ -121,6 +121,8 @@ model User {
   meetingOutcomeConfirmations MeetingOutcomeConfirmation[]
   feedbackAuthored            Feedback[]
   notifications               Notification[]
+  adminAlertResolutions       AdminAlertResolution[]
+  assignedAdminAlerts         AdminAlertResolution[] @relation("AssignedAdminAlerts")
 }
 
 // Extendable, normalized list of languages/technologies. Never a
@@ -149,6 +151,7 @@ model MentorProfile {
   // resets on the 1st and a cancelled or rescheduled meeting frees its seat.
   meetingCapacity        Int
   meetingDurationMinutes Int
+  isActive               Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -366,4 +369,36 @@ model Notification {
 
   @@index([status])
   @@index([scheduledAt])
+}
+
+// Admin-only acknowledgement for derived operational alerts. Alerts are
+// generated from source records; a resolution stays valid while materializedAt
+// still matches the current source record state.
+model AdminAlertResolution {
+  id Int @id @default(autoincrement())
+
+  alertKey       String   @unique
+  alertType      String
+  entityType     String
+  entityId       Int
+  materializedAt DateTime
+  resolvedAt     DateTime @default(now())
+
+  resolvedById Int
+  resolvedBy   User @relation(fields: [resolvedById], references: [id])
+
+  priority        String   @default("normal")
+  assignedAdminId Int?
+  assignedAdmin   User?    @relation("AssignedAdminAlerts", fields: [assignedAdminId], references: [id])
+  notes           String?
+  queueUpdatedAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([alertType])
+  @@index([entityType, entityId])
+  @@index([resolvedById])
+  @@index([assignedAdminId])
+  @@index([priority])
 }

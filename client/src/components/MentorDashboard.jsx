@@ -4,9 +4,7 @@ import {
   Alert,
   Box,
   Button,
-  Card,
   CircularProgress,
-  Container,
   Stack,
   Typography,
 } from "@mui/material";
@@ -15,6 +13,7 @@ import EventNoteIcon from "@mui/icons-material/EventNote";
 import GroupsIcon from "@mui/icons-material/Groups";
 
 import DashboardSummaryCard from "./DashboardSummaryCard";
+import { AppPage, AppPageHeader, AppSectionTitle, AppSurface } from "./AppPrimitives";
 import { getMentorMeetingRequests } from "../services/mentorMeetingsService";
 import { getMentorMeetingsPath } from "../utils/meetingNav";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
@@ -48,14 +47,12 @@ function getTopic(request) {
 
 function PreviewCard({ to, title, subtitle, detail }) {
   return (
-    <Card
+    <AppSurface
       component={RouterLink}
       to={to}
       variant="outlined"
       sx={{
-        p: 2.5,
-        borderRadius: 3,
-        borderColor: "#f6d3e0",
+        p: 2,
         textDecoration: "none",
         color: "inherit",
         display: "block",
@@ -71,7 +68,7 @@ function PreviewCard({ to, title, subtitle, detail }) {
       {detail && (
         <Typography sx={{ fontWeight: 600, mt: 0.75 }}>{detail}</Typography>
       )}
-    </Card>
+    </AppSurface>
   );
 }
 
@@ -137,7 +134,7 @@ function MentorDashboard({ currentUser }) {
         )
         .map((meeting) => ({
           ...meeting,
-          menteeName: request.mentee?.fullName || "חניכה",
+          menteeName: request.mentee?.fullName || "מנטית",
           topic: getTopic(request),
         }))
     );
@@ -157,7 +154,7 @@ function MentorDashboard({ currentUser }) {
     const items = pendingRequests.map((request) => ({
       id: `request-${request.id}`,
       to: getMentorMeetingsPath("pending"),
-      title: request.mentee?.fullName || "חניכה",
+      title: request.mentee?.fullName || "מנטית",
       subtitle: "בקשה ממתינה להצעת זמנים",
       detail: getTopic(request),
       sortTime: new Date(request.createdAt).getTime(),
@@ -165,7 +162,7 @@ function MentorDashboard({ currentUser }) {
 
     requests.forEach((request) => {
       (request.meetings || []).forEach((meeting) => {
-        const menteeName = request.mentee?.fullName || "חניכה";
+        const menteeName = request.mentee?.fullName || "מנטית";
         const endTimestamp = new Date(meeting.scheduledEnd).getTime();
         const startLabel = `${formatDate(meeting.scheduledStart)} · ${formatTime(
           meeting.scheduledStart
@@ -224,11 +221,8 @@ function MentorDashboard({ currentUser }) {
   }
 
   return (
-    <Box sx={{ py: { xs: 3, md: 5 } }}>
-      <Container maxWidth="lg">
-        <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
-          שלום, {currentUser.fullName}
-        </Typography>
+    <AppPage>
+        <AppPageHeader title="מסך הבית" subtitle={`שלום, ${currentUser.fullName}`} />
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -283,7 +277,7 @@ function MentorDashboard({ currentUser }) {
             component={RouterLink}
             to={getMentorMeetingsPath("pending")}
             variant="contained"
-            sx={{ borderRadius: 999, px: 3 }}
+            sx={{ px: 3 }}
           >
             בקשות שממתינות לך
           </Button>
@@ -292,7 +286,7 @@ function MentorDashboard({ currentUser }) {
             component={RouterLink}
             to={getMentorMeetingsPath("upcoming")}
             variant="outlined"
-            sx={{ borderRadius: 999, px: 3 }}
+            sx={{ px: 3 }}
           >
             פגישות קרובות
           </Button>
@@ -301,22 +295,13 @@ function MentorDashboard({ currentUser }) {
             component={RouterLink}
             to="/profile"
             variant="outlined"
-            sx={{ borderRadius: 999, px: 3 }}
+            sx={{ px: 3 }}
           >
             עריכת פרופיל
           </Button>
         </Stack>
 
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="baseline"
-          sx={{ mb: 2.5 }}
-        >
-          <Typography variant="h5" component="h2">
-            דורש את תשומת ליבך
-          </Typography>
-
+        <AppSectionTitle title="דורש את תשומת ליבך" action={
           <Button
             component={RouterLink}
             to={getMentorMeetingsPath(
@@ -326,7 +311,7 @@ function MentorDashboard({ currentUser }) {
           >
             לבקשות הממתינות
           </Button>
-        </Stack>
+        } />
 
         {attentionItems.length === 0 ? (
           <Typography color="text.secondary" sx={{ mb: 5 }}>
@@ -357,16 +342,7 @@ function MentorDashboard({ currentUser }) {
           </Box>
         )}
 
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="baseline"
-          sx={{ mb: 2.5 }}
-        >
-          <Typography variant="h5" component="h2">
-            פגישות קרובות
-          </Typography>
-
+        <AppSectionTitle title="פגישות קרובות" action={
           <Button
             component={RouterLink}
             to={getMentorMeetingsPath("upcoming")}
@@ -374,7 +350,7 @@ function MentorDashboard({ currentUser }) {
           >
             לכל הפגישות
           </Button>
-        </Stack>
+        } />
 
         {upcomingMeetings.length === 0 ? (
           <Typography color="text.secondary">אין פגישות מתוכננות כרגע.</Typography>
@@ -403,8 +379,7 @@ function MentorDashboard({ currentUser }) {
             ))}
           </Box>
         )}
-      </Container>
-    </Box>
+    </AppPage>
   );
 }
 

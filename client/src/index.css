@@ -1,18 +1,85 @@
 html {
   scroll-behavior: smooth;
-  /* Reserves the scrollbar's width permanently so opening a dialog (which
-     hides the page scrollbar) never shifts the page content sideways. */
+
+  /* שומר מקום קבוע ל-scrollbar כדי שהעמוד לא יקפוץ
+     כשנפתח Dialog או כשה-scrollbar נעלם */
   scrollbar-gutter: stable;
 }
 
 body {
   margin: 0;
   direction: rtl;
-  font-family: Arial, "Noto Sans Hebrew", -apple-system, BlinkMacSystemFont, "Segoe UI", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
+
+  font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif;
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.admin-root { font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif; }
+
+.admin-root .MuiTypography-root,
+.admin-root .MuiButton-root,
+.admin-root .MuiInputBase-root,
+.admin-root .MuiInputLabel-root,
+.admin-root .MuiChip-root,
+.role-navbar .MuiTypography-root,
+.role-navbar .MuiButton-root,
+.role-navbar .MuiListItemText-root {
+  font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif;
+}
+
+.admin-root .MuiTableCell-root {
+  text-align: right;
+  font-family: "Assistant", "Noto Sans Hebrew", Arial, sans-serif;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  border-bottom-color: #f3d9e3;
+}
+
+.admin-root .MuiButton-root,
+.role-navbar .MuiButton-root,
+.admin-root .MuiIconButton-root,
+.role-navbar .MuiIconButton-root,
+.admin-root .MuiInputBase-root {
+  border-radius: 8px;
+}
+
+.admin-root .MuiButton-root:focus-visible,
+.role-navbar .MuiButton-root:focus-visible,
+.admin-root .MuiIconButton-root:focus-visible,
+.role-navbar .MuiIconButton-root:focus-visible,
+.admin-root .MuiInputBase-root.Mui-focused,
+.role-navbar .MuiListItemButton-root:focus-visible {
+  outline: 3px solid rgba(230, 49, 122, 0.28);
+  outline-offset: 2px;
+}
+
+.fc {
+  font-family: "Rubik", "Assistant", "Arial", sans-serif;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.fc .fc-button-primary {
+  background-color: #E6317A;
+  border-color: #E6317A;
+}
+
+.fc .fc-button-primary:hover,
+.fc .fc-button-primary:focus {
+  background-color: #c91e63;
+  border-color: #c91e63;
+}
+
+.fc .fc-event {
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 1px 3px;
 }
 
 code {
@@ -20,7 +87,10 @@ code {
     monospace;
 }
 
-* {
+/* מונע מ-padding / border להגדיל אלמנטים מעבר לרוחב שהוגדר להם */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -28,10 +98,13 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* מונע מכל האתר לזוז ימינה ושמאלה */
 html,
 body,
 #root {
   width: 100%;
   max-width: 100%;
+  min-height: 100%;
   overflow-x: hidden;
 }

@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Box,
+  Button,
   CircularProgress,
-  Container,
   Snackbar,
   Stack,
   Typography,
@@ -35,6 +35,7 @@ import {
   offerRescheduleSlots,
   submitMeetingFeedback,
 } from "../services/meetingsService";
+import { AppPage, AppPageHeader, AppSectionTitle } from "./AppPrimitives";
 
 function formatDate(value) {
   return new Date(value).toLocaleDateString("he-IL");
@@ -56,7 +57,7 @@ function toMeetingView(request, meeting, currentUserId) {
   return {
     id: meeting.id,
     requestId: request.id,
-    menteeName: request.mentee?.fullName || "חניכה",
+    menteeName: request.mentee?.fullName || "מנטית",
     topic: getTopic(request),
     date: formatDate(meeting.scheduledStart),
     startTime: formatTime(meeting.scheduledStart),
@@ -85,7 +86,7 @@ function toRequestView(request) {
   return {
     id: request.id,
     status: request.status,
-    menteeName: request.mentee?.fullName || "חניכה",
+    menteeName: request.mentee?.fullName || "מנטית",
     topic: getTopic(request),
     requestDate: formatDate(request.createdAt),
     needsNewSlots,
@@ -253,7 +254,7 @@ function MentorMeetingsPage({ currentUser }) {
       replaceRequest(
         await offerMentorSlots(slotRequest.id, slots, { confirmOverCapacity })
       );
-      showNotification("success", "הזמנים נשלחו לחניכה.");
+      showNotification("success", "הזמנים נשלחו למנטית.");
       return true;
     } catch (requestError) {
       const capacity = requestError.response?.data;
@@ -293,7 +294,7 @@ function MentorMeetingsPage({ currentUser }) {
       setAction({ requestId: rescheduleMeeting.requestId, type: "reschedule" });
       await offerRescheduleSlots(rescheduleMeeting.requestId, slots);
       await loadRequests();
-      showNotification("success", "הזמנים החדשים נשלחו לחניכה.");
+      showNotification("success", "הזמנים החדשים נשלחו למנטית.");
       return true;
     } catch (requestError) {
       showNotification(
@@ -355,11 +356,12 @@ function MentorMeetingsPage({ currentUser }) {
   }
 
   return (
-    <Box sx={{ py: { xs: 3, md: 5 } }}>
-      <Container maxWidth="md">
-        <Typography variant="h4" component="h1" sx={{ mb: 3 }}>
-          הפגישות שלי
-        </Typography>
+    <AppPage maxWidth="md">
+        <AppPageHeader title="הפגישות שלי" subtitle="בקשות נכנסות, מועדים ומשוב במקום אחד." actions={
+          <Button component={RouterLink} to="/mentee" variant="outlined">
+            מעבר לאזור המנטיות
+          </Button>
+        } />
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -369,9 +371,7 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "past" && (
         <Box component="section" id="past-section">
-          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-            פגישות שהתקיימו
-          </Typography>
+          <AppSectionTitle title="פגישות שהתקיימו" />
           <Stack spacing={2}>
             {pastMeetings.length === 0 ? (
               <EmptyState>אין עדיין היסטוריית פגישות.</EmptyState>
@@ -392,9 +392,7 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "upcoming" && (
         <Box component="section" id="upcoming-section">
-          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-            פגישות קרובות
-          </Typography>
+          <AppSectionTitle title="פגישות קרובות" />
           <Stack spacing={2}>
             {upcomingMeetings.length === 0 ? (
               <EmptyState>אין פגישות מתוכננות כרגע.</EmptyState>
@@ -413,9 +411,7 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "pending" && (
         <Box component="section" id="pending-section">
-          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-            בקשות שממתינות לך
-          </Typography>
+          <AppSectionTitle title="בקשות שממתינות לך" />
           <Stack spacing={2}>
             {pendingRequests.length === 0 ? (
               <EmptyState>אין בקשות שממתינות לטיפול.</EmptyState>
@@ -436,12 +432,10 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "offered" && (
         <Box component="section" id="offered-section">
-          <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-            זמנים שהצעת
-          </Typography>
+          <AppSectionTitle title="זמנים שהצעת" />
           <Stack spacing={2}>
             {offeredRequests.length === 0 ? (
-              <EmptyState>אין הצעות זמנים שממתינות לבחירת חניכה.</EmptyState>
+              <EmptyState>אין הצעות זמנים שממתינות לבחירת מנטית.</EmptyState>
             ) : (
               offeredRequests.map((request) => (
                 <MentorOfferedSlotsCard key={request.id} request={request} />
@@ -453,9 +447,7 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "closed" && (
           <Box component="section" id="closed-section">
-            <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
-              בקשות שנסגרו החודש
-            </Typography>
+            <AppSectionTitle title="בקשות שנסגרו החודש" />
             <Stack spacing={2}>
               {monthlyBlocks.length === 0 ? (
                 <EmptyState>אין בקשות שנסגרו החודש.</EmptyState>
@@ -467,7 +459,7 @@ function MentorMeetingsPage({ currentUser }) {
             </Stack>
           </Box>
         )}
-      </Container>
+
 
       <OfferSlotsDialog
         open={Boolean(slotRequest)}
@@ -510,7 +502,7 @@ function MentorMeetingsPage({ currentUser }) {
           {notification.message}
         </Alert>
       </Snackbar>
-    </Box>
+    </AppPage>
   );
 }
 

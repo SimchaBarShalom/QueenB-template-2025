@@ -12,6 +12,7 @@ import {
   Toolbar,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import QueensMatchLogo from "./QueensMatchLogo";
 
 
 const CENTER_LINKS = [
@@ -21,12 +22,6 @@ const CENTER_LINKS = [
 
 ];
 
-// The public navbar has three PHYSICAL zones that must stay put regardless
-// of RTL text direction: logo always physical-left, nav links always
-// physical-center, auth actions always physical-right. Wrapping the row in
-// dir="ltr" makes flex/grid placement follow plain left-to-right physical
-// order while the Hebrew labels inside still render correctly (Unicode
-// bidi handles glyph order regardless of the container's dir).
 function Navbar({ onOpenLogin, onOpenRegister }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -34,7 +29,6 @@ function Navbar({ onOpenLogin, onOpenRegister }) {
     <AppBar position="fixed" color="inherit" elevation={0} sx={{ bgcolor: "#fff", borderBottom: "1px solid #f6d3e0" }}>
       <Toolbar disableGutters sx={{ minHeight: { xs: 64, md: 76 } }}>
         <Box
-          dir="ltr"
           sx={{
             width: "100%",
             maxWidth: 1280,
@@ -42,76 +36,43 @@ function Navbar({ onOpenLogin, onOpenRegister }) {
             pl: { xs: 1, md: 1.5 },
             pr: { xs: 2, md: 4 },
             display: "grid",
-            gridTemplateColumns: { xs: "1fr auto", md: "1fr auto 1fr" },
+            gridTemplateColumns: { xs: "auto 1fr", md: "1fr auto 1fr" },
             alignItems: "center",
             columnGap: 2,
           }}
         >
-          {/* physical LEFT: logo - deliberately large and unboxed (no pale
-              background container), close to the edge */}
           <Box
             component={RouterLink}
             to="/"
-            sx={{ justifySelf: "start", display: "flex", alignItems: "center" }}
+            sx={{ justifySelf: "end", display: "flex", alignItems: "center" }}
           >
-           <Box
-  component="img"
-  src="/queen-match-logo.png"
-  alt="Queen Match By QueenB"
-  sx={{
-    display: "block",
-    height: {
-      xs: 55,
-      md: 72,
-    },
-    width: "auto",
-    maxWidth: {
-      xs: 170,
-      md: 220,
-    },
-    objectFit: "contain",
-  }}
-/>
+            <QueensMatchLogo height={48} sx={{ height: { xs: 40, md: 48 }, maxWidth: { xs: 142, sm: 180, md: "100%" } }} />
           </Box>
 
-          {/* physical CENTER: main navigation links (desktop only) */}
-          <Box
-            sx={{
-              justifySelf: "center",
-              display: { xs: "none", md: "flex" },
-              alignItems: "center",
-              gap: 3,
-            }}
-          >
+          <Box sx={{ justifySelf: "center", display: { xs: "none", md: "flex" }, alignItems: "center", gap: 1.5 }}>
+            <Button onClick={onOpenRegister} variant="contained" sx={{ color: "#fff", px: 2.25 }}>
+              הרשמה
+            </Button>
+            <Button onClick={onOpenLogin} sx={{ color: "primary.main", fontWeight: 400 }}>
+              התחברות
+            </Button>
             {CENTER_LINKS.map((link) => (
               <Button
                 key={link.href}
                 component="a"
                 href={link.href}
-                sx={{ color: "text.primary", fontWeight: 600 }}
+                sx={{ color: "text.primary", fontWeight: 400 }}
               >
                 {link.label}
               </Button>
             ))}
           </Box>
 
-          {/* physical RIGHT: auth actions (desktop) / hamburger (mobile) */}
-          <Box sx={{ justifySelf: "end", display: { xs: "none", md: "flex" }, alignItems: "center", gap: 1.5 }}>
-            <Button onClick={onOpenLogin} sx={{ color: "primary.main", fontWeight: 700 }}>
-              התחברות
-            </Button>
-            <Button
-              onClick={onOpenRegister}
-              variant="contained"
-              sx={{ color: "#fff", borderRadius: 999, px: 3, py: 1 }}
-            >
-              הרשמה
-            </Button>
-          </Box>
+          <Box sx={{ justifySelf: "start", display: { xs: "none", md: "block" } }} />
 
           <IconButton
             onClick={() => setMobileOpen(true)}
-            sx={{ display: { xs: "flex", md: "none" }, justifySelf: "end" }}
+            sx={{ display: { xs: "flex", md: "none" }, justifySelf: "start" }}
             aria-label="פתיחת תפריט"
           >
             <MenuIcon />
@@ -121,6 +82,14 @@ function Navbar({ onOpenLogin, onOpenRegister }) {
 
       <Drawer anchor="right" open={mobileOpen} onClose={() => setMobileOpen(false)}>
         <Box sx={{ width: 260, pt: 2 }} dir="rtl">
+          <Box sx={{ px: 2, pb: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+            <Button fullWidth variant="contained" onClick={() => { setMobileOpen(false); onOpenRegister(); }} sx={{ color: "#fff" }}>
+              הרשמה
+            </Button>
+            <Button fullWidth variant="outlined" onClick={() => { setMobileOpen(false); onOpenLogin(); }}>
+              התחברות
+            </Button>
+          </Box>
           <List>
             {CENTER_LINKS.map((link) => (
               <ListItemButton
@@ -133,30 +102,6 @@ function Navbar({ onOpenLogin, onOpenRegister }) {
               </ListItemButton>
             ))}
           </List>
-          <Box sx={{ px: 2, pb: 2, display: "flex", flexDirection: "column", gap: 1.5 }}>
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={() => {
-                setMobileOpen(false);
-                onOpenRegister();
-              }}
-              sx={{ color: "#fff", borderRadius: 999 }}
-            >
-              הרשמה
-            </Button>
-            <Button
-              fullWidth
-              variant="outlined"
-              onClick={() => {
-                setMobileOpen(false);
-                onOpenLogin();
-              }}
-              sx={{ borderRadius: 999 }}
-            >
-              התחברות
-            </Button>
-          </Box>
         </Box>
       </Drawer>
     </AppBar>

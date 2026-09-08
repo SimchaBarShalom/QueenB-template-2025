@@ -38,7 +38,7 @@ function getTheme(direction = "rtl") {
     },
 
     typography: {
-      fontFamily: "Arial, 'Noto Sans Hebrew', 'Noto Sans Arabic', sans-serif",
+      fontFamily: "Assistant, 'Noto Sans Hebrew', Arial, sans-serif",
 
       h3: {
         fontWeight: 800,
@@ -53,8 +53,42 @@ function getTheme(direction = "rtl") {
       },
 
       button: {
-        fontWeight: 700,
+        fontWeight: 400,
         textTransform: "none",
+      },
+    },
+
+    components: {
+      MuiButton: {
+        styleOverrides: {
+          root: { borderRadius: 8, minHeight: 36, fontWeight: 400 },
+          contained: { fontWeight: 700 },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          outlined: { borderColor: "#f1d1dd" },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: { backgroundColor: "#fff", borderRadius: 8 },
+          notchedOutline: { borderColor: "#f1d1dd" },
+        },
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          root: { borderBottomColor: "#f3d9e3", paddingTop: 12, paddingBottom: 12 },
+          head: { fontWeight: 700, color: "#1f2937", backgroundColor: "#fff8fb" },
+        },
+      },
+      MuiChip: {
+        styleOverrides: { root: { borderRadius: 6, fontWeight: 700 } },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: { borderRadius: 8, borderColor: "#f1d1dd", boxShadow: "0 8px 24px rgba(74, 31, 52, 0.055)" },
+        },
       },
     },
   });

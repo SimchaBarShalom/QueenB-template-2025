@@ -13,7 +13,7 @@ const translations = {
         login: "התחברות",
         logout: "יציאה",
         profile: "פרופיל",
-        menteeArea: "אזור חניכה",
+        menteeArea: "אזור מנטיות",
         mentorArea: "אזור מנטורית",
         adminArea: "ניהול",
         findMentor: "מציאת מנטורית",
@@ -104,7 +104,7 @@ const translations = {
         filterByStatus: "סינון לפי סטטוס",
         allStatuses: "כל הסטטוסים",
         mentorLabel: "מנטורית",
-        menteeLabel: "חניכה",
+        menteeLabel: "מנטית",
         statusLabels: {
           WAITING_FOR_MENTOR_SLOTS: "ממתינה להצעת זמנים מהמנטורית",
           WAITING_FOR_MENTEE_SELECTION: "ממתינה לבחירת זמן",

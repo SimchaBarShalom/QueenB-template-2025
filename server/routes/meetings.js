@@ -1,6 +1,8 @@
 const express = require("express");
 const authenticate = require("../middleware/authenticate");
 const {
+  createMeetingFromSlot,
+  cancelMeeting,
   confirmMeetingOutcome,
   submitMeetingFeedback,
 } = require("../services/meetingsService");
@@ -15,6 +17,47 @@ function handleServiceError(error, res, next) {
   return next(error);
 }
 
+router.post("/select-slot", async (req, res, next) => {
+  try {
+    const { requestId, slotId, menteeId } = req.body;
+
+    if (!requestId || !slotId || !menteeId) {
+      return res.status(400).json({
+        error: "requestId, slotId and menteeId are required",
+      });
+    }
+
+    const meeting = await createMeetingFromSlot({
+      requestId,
+      slotId,
+      menteeId,
+    });
+
+    return res.status(201).json(meeting);
+  } catch (error) {
+    return handleServiceError(error, res, next);
+  }
+});
+
+router.patch("/:meetingId/cancel", async (req, res, next) => {
+  try {
+    const { menteeId } = req.body;
+
+    if (!menteeId) {
+      return res.status(400).json({ error: "menteeId is required" });
+    }
+
+    const meeting = await cancelMeeting({
+      meetingId: req.params.meetingId,
+      menteeId,
+    });
+
+    return res.json(meeting);
+  } catch (error) {
+    return handleServiceError(error, res, next);
+  }
+});
+
 router.patch("/:meetingId/outcome", authenticate, async (req, res, next) => {
   try {
     const meeting = await confirmMeetingOutcome({
@@ -22,6 +65,7 @@ router.patch("/:meetingId/outcome", authenticate, async (req, res, next) => {
       userId: req.auth.userId,
       occurred: req.body.occurred,
     });
+
     return res.json(meeting);
   } catch (error) {
     return handleServiceError(error, res, next);
@@ -36,6 +80,7 @@ router.post("/:meetingId/feedback", authenticate, async (req, res, next) => {
       rating: req.body.rating,
       text: req.body.text,
     });
+
     return res.status(201).json(feedback);
   } catch (error) {
     return handleServiceError(error, res, next);
