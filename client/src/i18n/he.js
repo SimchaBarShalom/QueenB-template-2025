@@ -25,6 +25,8 @@ const he = {
     switchToMentor: "מעבר לאזור מנטורית",
     switchToAdmin: "מעבר למסך הבית",
     joinAsMentor: "הצטרפי כמנטורית",
+    googleCalendar: "Google Calendar",
+    googleCalendarConnected: "Google Calendar ✓",
     signOut: "התנתקות",
   },
   language: {
@@ -97,6 +99,7 @@ const he = {
     loadMeetingsAdmin: "לא הצלחנו לטעון פגישות.",
     loadMeeting: "לא הצלחנו לטעון את פרטי הפגישה.",
     loadCalendar: "לא הצלחנו לטעון את לוח השנה.",
+    connectGoogleCalendar: "לא ניתן להתחבר ל-Google Calendar. נסי שוב.",
     loadAlerts: "לא הצלחנו לטעון התראות.",
     updatePermissions: "עדכון הרשאות נכשל.",
     saveUser: "שמירת פרטי המשתמשת נכשלה.",

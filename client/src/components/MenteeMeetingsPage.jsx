@@ -336,6 +336,7 @@ function MenteeMeetingsPage() {
             meeting.scheduledEnd,
             language
           ),
+          meetLink: meeting.googleMeetLink,
           topic: getTopic(request, t("roles.mentoring")),
         }))
   );

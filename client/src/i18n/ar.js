@@ -25,6 +25,8 @@ const ar = {
     switchToMentor: "الانتقال إلى منطقة الموجهة",
     switchToAdmin: "الانتقال إلى الشاشة الرئيسية",
     joinAsMentor: "انضمي كموجهة",
+    googleCalendar: "Google Calendar",
+    googleCalendarConnected: "Google Calendar ✓",
     signOut: "تسجيل الخروج",
   },
   language: {
@@ -97,6 +99,7 @@ const ar = {
     loadMeetingsAdmin: "تعذّر تحميل اللقاءات.",
     loadMeeting: "تعذّر تحميل تفاصيل اللقاء.",
     loadCalendar: "تعذّر تحميل التقويم.",
+    connectGoogleCalendar: "تعذّر الاتصال بـ Google Calendar. حاولي مرة أخرى.",
     loadAlerts: "تعذّر تحميل التنبيهات.",
     updatePermissions: "فشل تحديث الصلاحيات.",
     saveUser: "فشل حفظ تفاصيل المستخدمة.",

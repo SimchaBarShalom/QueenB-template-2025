@@ -1,6 +1,7 @@
 const prisma = require("../lib/prisma");
 const { countUsedCapacity } = require("../lib/capacity");
 const { sendEmail } = require("./emailService");
+const { createCalendarEvent, isConnected: isGoogleCalendarConnected } = require("./googleCalendarService");
 
 function createServiceError(message, statusCode) {
   const error = new Error(message);
@@ -172,6 +173,10 @@ async function createMeetingFromSlot({ requestId, slotId, menteeId }) {
     throw createServiceError("The selected time is no longer available", 409);
   }
 
+  if (!(await isGoogleCalendarConnected(request.mentorProfile.userId))) {
+    throw createServiceError("המנטורית עדיין לא חיברה את Google Calendar שלה, ולכן לא ניתן לקבוע פגישה עם קישור Google Meet.", 409);
+  }
+
   const activeMeeting = await prisma.meeting.findFirst({
     where: {
       status: { in: ["SCHEDULED", "ATTENDANCE_CONFIRMED"] },
@@ -187,7 +192,7 @@ async function createMeetingFromSlot({ requestId, slotId, menteeId }) {
     );
   }
 
-  const meeting = await prisma.$transaction(
+  let meeting = await prisma.$transaction(
     async (transaction) => {
       if (!request.capacityOverride) {
         const usedCapacity = await countUsedCapacity(
@@ -238,6 +243,27 @@ async function createMeetingFromSlot({ requestId, slotId, menteeId }) {
     },
     { isolationLevel: "Serializable" }
   );
+
+  try {
+    const calendarEvent = await createCalendarEvent({
+      organizerUserId: request.mentorProfile.userId,
+      title: `Queen Match: ${request.mentorProfile.user.fullName} ו-${request.mentee.fullName}`,
+      description: "פגישת מנטורינג שנקבעה דרך Queen Match.",
+      start: meeting.scheduledStart,
+      end: meeting.scheduledEnd,
+      attendees: [request.mentee.email],
+    });
+    meeting = await prisma.meeting.update({
+      where: { id: meeting.id },
+      data: {
+        googleCalendarEventId: calendarEvent.id,
+        googleCalendarLink: calendarEvent.calendarLink,
+        googleMeetLink: calendarEvent.meetLink,
+      },
+    });
+  } catch (error) {
+    console.error("Google Calendar event creation failed for meeting", meeting.id, error);
+  }
 
   await sendMeetingScheduledEmails({
     mentor: request.mentorProfile.user,

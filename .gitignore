@@ -120,4 +120,7 @@ Desktop.ini
 .idea/
 *.swp
 *.swo
-*~ 
+*~
+
+# Local Google OAuth credentials
+server/secrets/credentials*.json

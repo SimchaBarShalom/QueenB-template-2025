@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import RoleNavbar from "./RoleNavbar";
 import { isMentorUser } from "../utils/areaRouting";
@@ -13,11 +13,20 @@ import {
   getMenteeMeetingsPath,
 } from "../utils/meetingNav";
 import { useLanguage } from "../i18n/LanguageContext";
+import { connectGoogleCalendar, getGoogleCalendarStatus } from "../services/googleCalendarService";
+import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 
 function AuthenticatedNavbar({ currentUser, onLogout }) {
   const location = useLocation();
   const { t } = useLanguage();
   const mentor = isMentorUser(currentUser);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [calendarError, setCalendarError] = useState("");
+  useEffect(() => {
+    if (!mentor || currentUser?.isAdmin) return undefined;
+    getGoogleCalendarStatus().then(({ connected }) => setCalendarConnected(Boolean(connected))).catch(() => setCalendarConnected(false));
+    return undefined;
+  }, [mentor, currentUser?.isAdmin]);
   const showingMentorArea = mentor && !location.pathname.startsWith("/mentee");
   const homePath = showingMentorArea ? "/mentor" : "/mentee";
   const activeMentorTab =
@@ -45,8 +54,16 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
   ];
 
   const showJoinAsMentor = !currentUser?.isAdmin && !mentor;
+  const handleGoogleCalendarClick = async () => {
+    setCalendarError("");
+    try {
+      await connectGoogleCalendar();
+    } catch (error) {
+      setCalendarError(getRequestErrorMessage(error, t("errors.connectGoogleCalendar"), t));
+    }
+  };
 
-  return <RoleNavbar currentUser={currentUser} onLogout={onLogout} homePath={homePath} items={items} showJoinAsMentor={showJoinAsMentor} />;
+  return <RoleNavbar currentUser={currentUser} onLogout={onLogout} homePath={homePath} items={items} showJoinAsMentor={showJoinAsMentor} showGoogleCalendar={mentor && !currentUser?.isAdmin} googleCalendarConnected={calendarConnected} onGoogleCalendarClick={handleGoogleCalendarClick} googleCalendarError={calendarError} />;
 }
 
 export default AuthenticatedNavbar;

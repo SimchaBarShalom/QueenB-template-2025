@@ -87,7 +87,8 @@ export function MentorUpcomingMeetingCard({ meeting, onReschedule, onCancel }) {
         {meeting.date} | {meeting.startTime}–{meeting.endTime}
       </InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{meeting.topic}</Typography>
-      <Stack direction="row" spacing={1}>
+      <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+        {meeting.meetLink && <Button size="small" variant="contained" component="a" href={meeting.meetLink} target="_blank" rel="noopener noreferrer">הצטרפות ל-Google Meet</Button>}
         {!meeting.rescheduleUsed && (
           <Button size="small" variant="outlined" onClick={() => onReschedule(meeting)}>
             שינוי מועד

@@ -61,6 +61,7 @@ function toMeetingView(request, meeting, currentUserId, t, language) {
     date: formatDate(meeting.scheduledStart, language),
     startTime: formatTime(meeting.scheduledStart, language),
     endTime: formatTime(meeting.scheduledEnd, language),
+    meetLink: meeting.googleMeetLink,
     status: meeting.status,
     timestamp: new Date(meeting.scheduledStart).getTime(),
     endTimestamp: new Date(meeting.scheduledEnd).getTime(),
@@ -150,7 +151,7 @@ function MentorMeetingsPage({ currentUser }) {
     } finally {
       if (withSpinner) setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadRequests({ withSpinner: true });

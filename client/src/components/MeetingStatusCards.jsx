@@ -111,7 +111,8 @@ export function ScheduledMeetingCard({ meeting, onReschedule, onCancel }) {
       </InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{meeting.topic}</Typography>
 
-      <Stack direction="row" spacing={1.5} sx={{ mt: 1 }}>
+      <Stack direction="row" spacing={1.5} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+        {meeting.meetLink && <Button size="small" variant="contained" component="a" href={meeting.meetLink} target="_blank" rel="noopener noreferrer" sx={{ borderRadius: 999 }}>הצטרפות ל-Google Meet</Button>}
         <Button size="small" variant="outlined" onClick={() => onReschedule(meeting)} sx={{ borderRadius: 999 }}>
           {t("meetings.reschedule")}
         </Button>

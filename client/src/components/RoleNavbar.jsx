@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
-import { AppBar, Box, Button, Divider, Drawer, IconButton, List, ListItemButton, ListItemText, Stack, Toolbar } from "@mui/material";
+import { Alert, AppBar, Box, Button, Divider, Drawer, IconButton, List, ListItemButton, ListItemText, Snackbar, Stack, Toolbar } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import QueensMatchLogo from "./QueensMatchLogo";
 import MessagesMenu from "./MessagesMenu";
 import UserMenu from "./UserMenu";
@@ -23,13 +24,14 @@ function isCurrentItem(item, location) {
   return item.exact ? location.pathname === item.path : location.pathname.startsWith(item.path);
 }
 
-function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel, showJoinAsMentor = false }) {
+function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel, showJoinAsMentor = false, showGoogleCalendar = false, googleCalendarConnected = false, onGoogleCalendarClick, googleCalendarError = "" }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { t, direction } = useLanguage();
   const navAria = ariaLabel || t("nav.mainAria");
   const drawerAnchor = direction === "rtl" ? "right" : "left";
   const buttonSx = (active) => ({ minHeight: 38, px: 1.75, borderRadius: 2, whiteSpace: "nowrap", fontSize: "0.95rem", ...(active ? activeButtonSx : inactiveButtonSx) });
+  const googleCalendarButtonSx = { minHeight: { xs: 36, sm: 38 }, width: "max-content", minWidth: 0, flexShrink: 0, px: { xs: 1, sm: 1.5, md: 2 }, borderRadius: 2, whiteSpace: "nowrap", color: queenbColors.pink, bgcolor: queenbColors.pinkPale, border: `1px solid ${queenbColors.pink}55`, fontWeight: 700, lineHeight: 1.2, fontSize: { xs: "0.72rem", sm: "0.85rem", md: "0.9rem" }, "&:hover": { bgcolor: "#ffd1df", borderColor: queenbColors.pink } };
 
   return (
     <AppBar className="role-navbar" position="sticky" color="inherit" elevation={0} sx={{ bgcolor: "#fff", borderBottom: "1px solid #f6d3e0" }}>
@@ -75,6 +77,7 @@ function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel, showJoi
               {t("nav.joinAsMentor")}
             </Button>
           )}
+          {showGoogleCalendar && <Button onClick={onGoogleCalendarClick} startIcon={<CalendarMonthIcon />} sx={googleCalendarButtonSx}>{t(googleCalendarConnected ? "nav.googleCalendarConnected" : "nav.googleCalendar")}</Button>}
           <MessagesMenu currentUser={currentUser} />
           <Box sx={{ display: { xs: "none", sm: "block" } }}><UserMenu currentUser={currentUser} onLogout={onLogout} /></Box>
           <IconButton onClick={() => setMobileOpen(true)} aria-label={t("nav.openMenu")} sx={{ display: { xs: "inline-flex", md: "none" }, color: "text.primary" }}><MenuIcon /></IconButton>
@@ -90,10 +93,12 @@ function RoleNavbar({ currentUser, onLogout, homePath, items, ariaLabel, showJoi
               return <ListItemButton key={item.path} component={RouterLink} to={item.path} selected={active} aria-current={active ? "page" : undefined} onClick={() => setMobileOpen(false)} sx={{ mb: 0.5, borderRadius: 2, ...buttonSx(active), "&.Mui-selected, &.Mui-selected:hover": activeButtonSx }}><ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: active ? 700 : 400 }} /></ListItemButton>;
             })}
           </List>
+          {showGoogleCalendar && <Button fullWidth onClick={() => { setMobileOpen(false); onGoogleCalendarClick(); }} startIcon={<CalendarMonthIcon />} sx={{ mt: 1, justifyContent: "flex-start", ...googleCalendarButtonSx }}>{t(googleCalendarConnected ? "nav.googleCalendarConnected" : "nav.googleCalendar")}</Button>}
           <Divider sx={{ my: 2 }} />
           <UserMenu currentUser={currentUser} onLogout={onLogout} />
         </Box>
       </Drawer>
+      <Snackbar open={Boolean(googleCalendarError)} autoHideDuration={6000}><Alert severity="error" variant="filled">{googleCalendarError}</Alert></Snackbar>
     </AppBar>
   );
 }

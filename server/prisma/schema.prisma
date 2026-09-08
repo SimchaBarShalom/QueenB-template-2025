@@ -126,6 +126,7 @@ model User {
   notifications               Notification[]
   adminAlertResolutions       AdminAlertResolution[]
   assignedAdminAlerts         AdminAlertResolution[] @relation("AssignedAdminAlerts")
+  googleCalendarConnection    GoogleCalendarConnection?
 }
 
 // Extendable, normalized list of languages/technologies. Never a
@@ -161,6 +162,16 @@ model MentorProfile {
 
   mentoringTopics           MentoringTopic[]
   mentoringRequestsReceived MentoringRequest[]
+}
+
+model GoogleCalendarConnection {
+  id                    Int      @id @default(autoincrement())
+  userId                Int      @unique
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  encryptedRefreshToken String
+  tokenExpiry           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 }
 
 // Open-ended mentoring areas (mock interviews, career planning, a specific
@@ -271,6 +282,9 @@ model Meeting {
   scheduledStart DateTime
   scheduledEnd   DateTime
   status         MeetingStatus
+  googleCalendarEventId String? @unique
+  googleCalendarLink    String?
+  googleMeetLink        String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

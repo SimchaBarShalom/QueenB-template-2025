@@ -25,6 +25,8 @@ const en = {
     switchToMentor: "Switch to mentor area",
     switchToAdmin: "Switch to home",
     joinAsMentor: "Join as a mentor",
+    googleCalendar: "Google Calendar",
+    googleCalendarConnected: "Google Calendar ✓",
     signOut: "Sign out",
   },
   language: {
@@ -97,6 +99,7 @@ const en = {
     loadMeetingsAdmin: "We couldn’t load meetings.",
     loadMeeting: "We couldn’t load this meeting.",
     loadCalendar: "We couldn’t load the calendar.",
+    connectGoogleCalendar: "We couldn’t connect Google Calendar. Please try again.",
     loadAlerts: "We couldn’t load alerts.",
     updatePermissions: "Couldn’t update permissions.",
     saveUser: "Couldn’t save user details.",
