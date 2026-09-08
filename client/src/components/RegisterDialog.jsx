@@ -9,8 +9,14 @@ import {
   Checkbox,
   CircularProgress,
   Dialog,
+  FormControl,
   FormControlLabel,
+  FormHelperText,
+  FormLabel,
   IconButton,
+  Link,
+  Radio,
+  RadioGroup,
   InputAdornment,
   MenuItem,
   Stack,
@@ -60,6 +66,9 @@ const TECHNOLOGY_SUGGESTIONS = [
   "C#",
 ];
 
+const SALARY_CONFESSION_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLScAEI48E4ofiz9Nwflcl0ipevesef1rjGs7DCyhVTuABhKLbQ/viewform?fbclid=IwY2xjawQro0hleHRuA2FlbQIxMABicmlkETFFSThRdlByem45Sk1YdmNWc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHr9NgWXGqJUOdIML47cx4eZoom92wOLs9yQSsIxsAGFRaqQmlVozD3oLOkk7_aem_ecgYsXjM4wikXICOtF5amQ";
+
 const MEETING_DURATION_OPTIONS = [
   { value: 30, label: "30 דקות" },
   { value: 45, label: "45 דקות" },
@@ -82,6 +91,7 @@ const initialValues = {
   mentoringTopics: [],
   meetingCapacity: "",
   meetingDurationMinutes: 45,
+  filledSalaryConfession: "",
 };
 
 function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
@@ -137,6 +147,10 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
 
       if (!values.meetingCapacity || Number(values.meetingCapacity) <= 0) {
         nextErrors.meetingCapacity = "יש להזין מספר מפגשים";
+      }
+
+      if (values.filledSalaryConfession !== "yes" && values.filledSalaryConfession !== "no") {
+        nextErrors.filledSalaryConfession = "יש לציין האם מילאת את טופס וידויי השכר";
       }
     }
 
@@ -466,6 +480,37 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                     ))}
                   </TextField>
                 </Stack>
+
+                <FormControl
+                  error={Boolean(errors.filledSalaryConfession)}
+                  required
+                >
+                  <FormLabel sx={{ fontWeight: 700, color: "text.primary" }}>
+                    האם מילאת את טופס וידויי שכר של Queen B?
+                  </FormLabel>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1 }}>
+                    הטופס אנונימי ועוזר לפענח את מצב השכר בשוק.{" "}
+                    <Link
+                      href={SALARY_CONFESSION_FORM_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ fontWeight: 700 }}
+                    >
+                      למילוי הטופס
+                    </Link>
+                  </Typography>
+                  <RadioGroup
+                    row
+                    value={values.filledSalaryConfession}
+                    onChange={(event) => setField("filledSalaryConfession", event.target.value)}
+                  >
+                    <FormControlLabel value="yes" control={<Radio />} label="כן" />
+                    <FormControlLabel value="no" control={<Radio />} label="לא" />
+                  </RadioGroup>
+                  {errors.filledSalaryConfession && (
+                    <FormHelperText>{errors.filledSalaryConfession}</FormHelperText>
+                  )}
+                </FormControl>
               </Stack>
             )}
 
