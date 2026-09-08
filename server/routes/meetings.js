@@ -3,7 +3,6 @@ const authenticate = require("../middleware/authenticate");
 const {
   createMeetingFromSlot,
   cancelMeeting,
-  requestMeetingReschedule,
   confirmMeetingOutcome,
   submitMeetingFeedback,
 } = require("../services/meetingsService");
@@ -40,26 +39,20 @@ router.post("/select-slot", async (req, res, next) => {
   }
 });
 
-router.patch("/:meetingId/cancel", authenticate, async (req, res, next) => {
+router.patch("/:meetingId/cancel", async (req, res, next) => {
   try {
+    const { menteeId } = req.body;
+
+    if (!menteeId) {
+      return res.status(400).json({ error: "menteeId is required" });
+    }
+
     const meeting = await cancelMeeting({
       meetingId: req.params.meetingId,
-      userId: req.auth.userId,
+      menteeId,
     });
 
     return res.json(meeting);
-  } catch (error) {
-    return handleServiceError(error, res, next);
-  }
-});
-
-router.patch("/:meetingId/reschedule", authenticate, async (req, res, next) => {
-  try {
-    const request = await requestMeetingReschedule({
-      meetingId: req.params.meetingId,
-      userId: req.auth.userId,
-    });
-    return res.json(request);
   } catch (error) {
     return handleServiceError(error, res, next);
   }

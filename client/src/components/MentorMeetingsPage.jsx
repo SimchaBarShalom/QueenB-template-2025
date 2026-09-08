@@ -32,7 +32,6 @@ import OfferSlotsDialog from "./OfferSlotsDialog";
 import FeedbackDialog from "./FeedbackDialog";
 import {
   confirmMeetingOutcome,
-  cancelMeeting,
   offerRescheduleSlots,
   submitMeetingFeedback,
 } from "../services/meetingsService";
@@ -308,21 +307,6 @@ function MentorMeetingsPage({ currentUser }) {
     }
   };
 
-  const handleCancelMeeting = async (meeting) => {
-    if (!window.confirm("לבטל את הפגישה?") ) return;
-
-    try {
-      setAction({ meetingId: meeting.id, type: "cancel" });
-      await cancelMeeting(meeting.id);
-      await loadRequests();
-      showNotification("success", "הפגישה בוטלה.");
-    } catch (requestError) {
-      showNotification("error", getRequestErrorMessage(requestError, "ביטול הפגישה נכשל."));
-    } finally {
-      setAction(null);
-    }
-  };
-
   const handleOutcome = async (meeting, occurred) => {
     try {
       setAction({ meetingId: meeting.id, type: "outcome" });
@@ -418,7 +402,6 @@ function MentorMeetingsPage({ currentUser }) {
                   key={meeting.id}
                   meeting={meeting}
                   onReschedule={setRescheduleMeeting}
-                  onCancel={handleCancelMeeting}
                 />
               ))
             )}
