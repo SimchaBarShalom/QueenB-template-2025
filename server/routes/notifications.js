@@ -1,5 +1,5 @@
 const express = require("express");
-const authenticate = require("../middleware/authenticate");
+const { authenticate } = require("../middleware/auth");
 const { getNotificationsForUser } = require("../services/notificationsService");
 
 const router = express.Router();

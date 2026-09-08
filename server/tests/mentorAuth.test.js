@@ -17,7 +17,7 @@ const {
   validateRegistrationInput,
 } = require("../services/authService");
 const { createAuthToken } = require("../services/authTokenService");
-const authenticate = require("../middleware/authenticate");
+const { authenticate } = require("../middleware/auth");
 
 function mockResponse() {
   return {

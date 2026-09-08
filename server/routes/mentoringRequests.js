@@ -10,7 +10,7 @@ const {
   cancelMentoringRequest,
   declineOfferedSlots,
 } = require("../services/mentoringRequestsService");
-const authenticate = require("../middleware/authenticate");
+const { authenticate } = require("../middleware/auth");
 
 const router = express.Router();
 
