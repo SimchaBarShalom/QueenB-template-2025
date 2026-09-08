@@ -1,80 +1,222 @@
 # Queen Match
 
-Queen Match is a full-stack mentoring platform for connecting women who want guidance with experienced women who can mentor them. It solves a practical community problem: matching is only the first step, so the platform also gives both sides a clear way to request a mentor, exchange proposed times, schedule a meeting, confirm what happened, and complete feedback.
+Queen Match is a full-stack mentoring platform for women in technology.
 
-## About QueenB
+It connects mentees with mentors and manages the journey from the first request to meeting feedback. Administrators get operational visibility into users, meetings and alerts.
 
-QueenB is a community and educational initiative that supports women entering and growing in technology. Queen Match extends that community model into a structured mentoring experience: mentors share focused professional experience, while mentees can discover relevant support without managing the process through scattered messages and spreadsheets.
+## ✨ What the MVP does
 
-## What this solution adds
+- Public homepage with About, FAQ and Contact sections.
+- Registration and login for mentees and mentors.
+- Searchable directory of active mentors.
+- Filters for topic, job title and workplace.
+- Mentor profiles with topics, experience, meeting duration and monthly capacity.
+- Mentoring requests with mentor responses and proposed time slots.
+- Meeting scheduling, cancellation and one reschedule flow.
+- Outcome confirmation and simple participant feedback.
+- In-app notifications and configurable Gmail SMTP email.
+- Mentor-connected Google Calendar OAuth with Google Calendar events and Google Meet links.
+- Admin dashboard, analytics, user management, meeting management, calendar view and alerts.
+- Hebrew-first RTL interface with English and Arabic translations.
+- Responsive layouts for desktop and mobile.
 
-- A searchable mentor directory with topics, workplace, experience and current monthly capacity.
-- A tracked request and meeting lifecycle instead of an informal one-off introduction.
-- Separate mentor, mentee and admin workspaces with role-aware actions.
-- In-app notifications, email hooks, feedback collection and operational visibility for administrators.
-- A responsive, multilingual interface designed for Hebrew-first RTL use, with English and Arabic translations.
-
-## Capabilities
+## 👥 Roles and capabilities
 
 | Role | Main capabilities |
 | --- | --- |
-| Mentee | Create a profile, search and filter active mentors, send requests, choose from offered slots, manage upcoming/past meetings, confirm outcomes and submit feedback. |
-| Mentor | Create a mentor profile, define topics, duration and monthly capacity, review requests, offer slots, schedule/reschedule or cancel meetings, confirm outcomes and submit feedback. |
-| Admin | View KPIs and analytics, manage users and mentor visibility, inspect meetings, update eligible meeting statuses, use bulk operations, review alerts and open meeting details. |
+| Mentee | Edit a profile, search mentors, send requests, choose proposed slots, manage meetings, confirm outcomes and submit feedback. |
+| Mentor | Create or edit a mentor profile, define topics, capacity and duration, review requests, offer slots, reschedule or cancel meetings, confirm outcomes and submit feedback. |
+| Admin | View KPIs and analytics, manage users and mentor visibility, inspect and update meetings, use bulk actions, review alerts and open details. |
 
-## Main user journey
+## 🧭 Website flow
 
-1. A mentee registers or signs in, completes her profile and searches active mentor cards using job title, workplace and topic filters.
-2. She sends a request. The mentor can accept the workflow and offer one or more available time slots; the mentee selects a slot.
-3. The request becomes a scheduled meeting. Capacity is checked against the mentor’s current calendar month, with server-side rules for active meetings and rescheduling.
-4. Both participants can see the meeting in their dashboard and meeting area. In-app notifications and configured SMTP email messages communicate requests, slot availability, matches, reminders and follow-up actions.
-5. After the scheduled time, both sides confirm whether the meeting occurred. Completed meetings can receive feedback from each participant; no-shows and cancellations follow separate lifecycle states.
+```mermaid
+flowchart TB
+  HOME[Public homepage] --> LOGIN[Login]
+  HOME --> REGISTER[Register]
+  HOME --> ABOUT[About / FAQ / Contact]
 
-Google sign-in is shown in the interface as a future integration, and Google Calendar/Meet event creation is not implemented in this MVP. The current journey ends with the platform’s scheduled meeting record and notification workflow; a future OAuth integration can add calendar invites and Meet links without changing the core request model.
+  LOGIN --> ROUTE[Redirect by capability]
+  REGISTER --> ROUTE
+  ROUTE --> MEE[Mentee area<br/>/mentee · /mentee/mentors · /mentee/meetings]
+  ROUTE --> MEN[Mentor area<br/>/mentor · /mentor/meetings]
+  ROUTE --> ADM[Admin area<br/>/admin · users · meetings · calendar · alerts]
 
-## Technology stack
+  SHARED[Shared authenticated area<br/>/profile · notifications · language switcher]
+  MEE --> SHARED
+  MEN --> SHARED
+  ADM --> SHARED
+  MEE -. role switch .-> MEN
+  MEN -. role switch .-> MEE
 
-| Technology | Use in Queen Match |
-| --- | --- |
-| React 18 | Component-based client application, dashboards, forms and responsive views. |
-| React Router | Public, authenticated mentor/mentee and admin navigation. |
-| Material UI | Accessible controls, cards, tables, dialogs, pagination and responsive layout. |
-| Node.js + Express | REST API, route composition, validation and centralized error handling. |
-| Prisma 6 + PostgreSQL | Typed data access, migrations, relations and lifecycle persistence. |
-| JWT + bcryptjs | Bearer-token sessions and one-way password hashing. |
-| Axios | Client-to-API requests through the development proxy. |
-| Nodemailer | Configurable Gmail SMTP delivery for request, meeting and contact emails. |
-| FullCalendar | Admin month calendar view for meetings. |
+  MEE -. restricted by MenteeOnlyRoute .-> ADM
+  MEN -. restricted by MentorOnlyRoute .-> ADM
+  ADM -. requires isAdmin .-> ADMIN_GUARD[Admin guard]
+```
 
-## Architecture
+Login and Register are separate user journeys. In the current frontend they open as dialogs from the public homepage rather than separate React routes. Authenticated pages are protected by role-aware route guards.
+
+## 🔄 Core mentoring workflow
+
+```mermaid
+flowchart LR
+  A[Mentee searches mentors] --> B[Sends mentoring request]
+  B --> C[Mentor accepts workflow]
+  C --> D[Mentor proposes time slots]
+  D --> E[Mentee selects a slot]
+  E --> F[Meeting is created]
+  F --> G[In-app notification + Gmail email]
+  F --> X[Google Calendar event + Google Meet link]
+  G --> H[Meeting outcome]
+  H --> I[Feedback]
+  F --> J[Cancel or request one reschedule]
+```
+
+The request, scheduling rounds, offered slots and meeting attempts are stored separately. This preserves rescheduling history instead of replacing the original record.
+
+## 🏗️ Architecture
 
 ```mermaid
 flowchart LR
   UI[React client<br/>MUI + RTL] --> API[Express REST API]
-  API --> AUTH[Auth middleware]
+  API --> AUTH[JWT / admin middleware]
   API --> S[Domain services<br/>users · mentors · requests · meetings · admin]
   S --> P[Prisma ORM]
   P --> DB[(PostgreSQL)]
   S --> N[Notifications + email service]
-  N --> SMTP[SMTP / Gmail]
-  S -. planned OAuth/calendar integration .-> G[Google OAuth<br/>Calendar / Meet]
+  N --> SMTP[Nodemailer / Gmail SMTP]
+  S --> O[Google OAuth]
+  O --> G[Google Calendar API<br/>Calendar event + Meet link]
 ```
 
-## Technical highlights
+### Request path example
 
-- Role-based permissions are enforced in the API; a mentor profile identifies mentor capability, while `isAdmin` controls admin access.
-- Requests and meetings model pending slots, mentee selection, scheduled, attendance-confirmed, completed, no-show, rejected, cancelled and feedback-complete states.
-- Mentor capacity is calculated from active meetings in the current calendar month, and cancelled/rescheduled meetings release capacity.
-- Large lists use server-side, filter-aware page pagination with bounded page sizes, including mentor search, requests, notifications and admin users/meetings.
-- Admin summary and analytics queries remain separate from paginated management lists so dashboard totals are not reduced to the current page.
-- Notifications support in-app history and pagination; email delivery is configurable through SMTP environment variables.
-- Hebrew is the default language. Hebrew and Arabic set RTL document direction; English sets LTR. Layouts include desktop and mobile navigation patterns.
+When a mentee selects a slot:
 
-## Local setup
+1. React sends `POST /api/mentoring-requests/:requestId/select-slot` with a Bearer token.
+2. Express authenticates the request and calls the mentoring service.
+3. The service validates ownership, slot availability, meeting conflicts and mentor capacity.
+4. A Prisma transaction creates the meeting, updates the request and creates a notification.
+5. The service creates a Google Calendar event with a Google Meet conference and stores the returned links when the mentor is connected.
+6. Email delivery is attempted through Nodemailer and Gmail SMTP.
+7. The API returns the scheduled meeting to React.
+
+## 🛠️ Technology stack
+
+| Technology | Use in Queen Match |
+| --- | --- |
+| React 18 | Client application, dashboards, forms and reusable components. |
+| React Router | Public, mentee, mentor and admin navigation. |
+| Material UI + Emotion | Accessible controls, cards, dialogs, tables, responsive layout and theme styling. |
+| React i18n layer | Hebrew, English and Arabic translations with RTL support. |
+| Axios | Browser-to-API requests and Bearer token headers. |
+| FullCalendar | Admin monthly calendar view. |
+| Node.js + Express | Server runtime, REST routes, middleware and error handling. |
+| Prisma 6.19.3 | PostgreSQL ORM, relations, constraints and migrations. |
+| PostgreSQL | Persistent relational data store. |
+| bcryptjs | One-way password hashing. |
+| jsonwebtoken | Signed JWT sessions with a seven-day expiration. |
+| googleapis | Google Calendar OAuth, event creation and Google Meet conference links. |
+| Nodemailer | Email delivery through configured Gmail SMTP credentials. |
+| Jest | Server-side unit tests for authentication, mentoring and admin services. |
+
+## 🔌 API groups
+
+| API group | Responsibility |
+| --- | --- |
+| `/api/auth` | Register, login and restore the current session. |
+| `/api/users` | Create and update user and mentor profiles. |
+| `/api/mentors` | List active mentors with filters and pagination. |
+| `/api/mentoring-requests` | Create requests, respond to requests, offer slots and select or cancel slots. |
+| `/api/meetings` | Schedule, cancel, reschedule, confirm outcomes and submit feedback. |
+| `/api/google-calendar` | Check connection, start OAuth, handle the callback, create events and list upcoming events. |
+| `/api/notifications` | Return the authenticated user’s in-app notifications. |
+| `/api/admin` | Summary, analytics, users, meetings, calendar data and alerts. |
+| `/api/contact` | Validate and send contact messages by email. |
+| `/api/health` | Return server health information. |
+
+## 🔐 Authentication and permissions
+
+- Registration validates the input and hashes the password with bcrypt.
+- Login returns a signed JWT containing the user ID.
+- The client stores the token in `localStorage` and sends it as `Authorization: Bearer ...`.
+- The server validates the token before protected operations.
+- Google Calendar uses an OAuth authorization flow for mentors.
+- Google refresh tokens are encrypted with AES-256-GCM before they are stored in PostgreSQL.
+- Admin routes require both authentication and `isAdmin === true`.
+- Mentor capability is derived from the presence of a `MentorProfile`.
+- Services also verify ownership of requests and meetings.
+- Prisma unique constraints and transactions protect important state changes.
+
+## 📊 Data model
+
+The central Prisma models are:
+
+- `User` — identity, profile data and admin flag.
+- `MentorProfile` — mentor-specific topics, duration, capacity and visibility.
+- `GoogleCalendarConnection` — one encrypted Google refresh-token connection per user.
+- `MentoringRequest` — the lifecycle of a mentee’s request to a mentor.
+- `SchedulingRound` and `OfferedSlot` — proposed times and rescheduling history.
+- `Meeting` — each scheduled meeting attempt.
+- `MeetingOutcomeConfirmation` — participant outcome responses.
+- `Feedback` — one feedback record per participant per meeting.
+- `Notification` — in-app and email notification history.
+- `AdminAlertResolution` — admin resolution and queue metadata for derived alerts.
+
+Mentor capacity is calculated for the current calendar month from meetings with capacity-consuming statuses. Cancelled, rescheduled and not-completed meetings release capacity according to `server/lib/capacity.js`.
+
+## 🧪 Tests and quality
+
+- Server tests cover authentication, token handling, admin access, mentor profiles, mentor search, request lifecycle, slots, capacity, rescheduling, meeting outcomes, feedback and admin services.
+- Validation exists in authentication, profile, request, meeting and admin services.
+- Routes are separated from business services.
+- Shared frontend components cover layout, navigation, dialogs, status cards, loading states, errors and empty states.
+- The database schema uses relations, enums, unique constraints and indexes.
+
+Run the server tests with:
+
+```bash
+cd server
+npm test
+```
+
+Build the client with:
+
+```bash
+npm run build
+```
+
+## ⚠️ Limitations & Next Steps
+
+### Current MVP limitations
+
+- Email delivery requires valid `SMTP_USER` and `SMTP_PASSWORD` configuration.
+- Google Calendar requires OAuth credentials, an encryption key and a mentor connection before a mentee can schedule a meeting.
+- If Google event creation fails after the local meeting is created, the error is logged and the meeting may remain without external calendar or Meet links.
+- `AttendanceConfirmation` exists in the Prisma schema, but the current meeting service records outcome confirmations instead of a full two-sided attendance workflow.
+- The `FEEDBACK_COMPLETED` enum exists, but submitting feedback does not currently transition the meeting/request to that status.
+- Analytics are basic backend summaries and monthly calculations; there are no advanced impact dashboards or CSV exports.
+- There is no scheduled background job system for reminders.
+
+### Future ideas
+
+These are not implemented features in the current MVP:
+
+- Integrated support chatbot.
+- Mentee learning groups.
+- Waiting lists for fully booked mentors.
+- Automated meeting reminders and follow-ups.
+- In-app mentor–mentee messaging.
+- Expanded admin analytics and impact tracking.
+
+## 🚀 Local setup
 
 ### Prerequisites
 
-Install Node.js and npm, and have a PostgreSQL database available locally.
+- Node.js and npm.
+- A local PostgreSQL database.
+
+### Install
 
 ```bash
 git clone <repository-url>
@@ -83,17 +225,21 @@ npm install
 npm run install-all
 ```
 
-Create `server/.env` from `server/.env.example` and set:
+Create `server/.env` and set:
 
 ```env
 PORT=5000
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/queens_match?schema=public"
 JWT_SECRET="use-a-long-local-development-secret"
+GOOGLE_CALENDAR_REDIRECT_URI="http://localhost:5000/api/google-calendar/oauth2/callback"
+GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY="replace-with-a-base64-encoded-32-byte-key"
 ```
 
-For email delivery, also configure `SMTP_USER` and `SMTP_PASSWORD`. Keep `.env` out of version control and never use development credentials in production.
+For email delivery, also set `SMTP_USER` and `SMTP_PASSWORD`. Keep `.env` out of version control.
 
-Initialize the database from the server directory:
+For Google Calendar, place an OAuth client credentials file at `server/secrets/credentials.json` or set `GOOGLE_CALENDAR_CREDENTIALS_PATH`. The OAuth redirect URI must match the Google Cloud project configuration.
+
+Initialize the database:
 
 ```bash
 cd server
@@ -103,24 +249,40 @@ npm run prisma:seed
 cd ..
 ```
 
-The additive, upsert-only seed creates baseline and expanded Hebrew demo users, mentors, mentees, requests, meetings, feedback and notifications across multiple dates and lifecycle states. Running it again preserves existing records and does not reset or delete the database. Development-only test accounts and their shared seed password are defined in `server/prisma/seed.js`; do not reuse them outside a local demo.
-
-Run the app in two terminals or together:
+### Run
 
 ```bash
 npm run server   # API: http://localhost:5000
 npm run client   # UI: http://localhost:3000
-# or: npm run dev
+# or run both:
+npm run dev
 ```
 
-Useful checks include `GET http://localhost:5000/api/health`, `npm run build`, and `cd server && npm test`.
+Health check:
 
-## Tests, MVP limits and next steps
+```text
+GET http://localhost:5000/api/health
+```
 
-The server has Jest coverage for authentication, mentor profiles, requests, meetings and admin services. The client uses the Create React App test setup. Before presenting a local demo, run the seed and then `cd server && npm test`; use `npm run build` to verify the client production build.
+The seed script creates local demo users and mentoring data. Use the credentials defined in `server/prisma/seed.js` only for local development.
 
-Current MVP limits include no implemented Google OAuth, Google Calendar event creation or Google Meet link generation; email requires SMTP configuration; and the feedback questionnaire is stored as flexible JSON while the final product questionnaire is still evolving.
+## 📁 Project structure
 
-Future improvements include completing Google integration, adding richer matching recommendations, expanding automated client/API coverage, adding scheduled background delivery for reminders, and introducing production observability and deployment configuration.
+```text
+QueenB-template-2025/
+├── client/                 # React application
+│   └── src/
+│       ├── components/     # Shared, mentee, mentor and admin UI
+│       ├── services/       # Client API helpers
+│       └── i18n/           # Hebrew, English and Arabic translations
+├── server/                 # Express application
+│   ├── routes/             # REST route groups
+│   ├── services/           # Business logic
+│   ├── middleware/         # Authentication and authorization
+│   └── prisma/             # Schema, migrations and seed
+├── docs/                   # Contracts, plans, tests and presentation material
+├── package.json            # Root development scripts
+└── README.md
+```
 
 Queen Match was built in one week by a three-person team.
