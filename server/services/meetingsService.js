@@ -249,12 +249,15 @@ async function createMeetingFromSlot({ requestId, slotId, menteeId }) {
   return meeting;
 }
 
-async function cancelMeeting({ meetingId, menteeId }) {
+async function cancelMeeting({ meetingId, userId }) {
   const meeting = await prisma.meeting.findFirst({
     where: {
       id: Number(meetingId),
       status: { in: ["SCHEDULED", "ATTENDANCE_CONFIRMED"] },
-      request: { is: { menteeId: Number(menteeId) } },
+      OR: [
+        { request: { menteeId: Number(userId) } },
+        { request: { mentorProfile: { userId: Number(userId) } } },
+      ],
     },
     include: { request: true },
   });
@@ -275,6 +278,66 @@ async function cancelMeeting({ meetingId, menteeId }) {
     });
 
     return updatedMeeting;
+  });
+}
+
+// A mentee cannot offer new times, so her reschedule action returns the request
+// to the mentor's queue. The mentor's existing reschedule-slots action remains
+// responsible for offering the replacement times.
+async function requestMeetingReschedule({ meetingId, userId }) {
+  const meeting = await prisma.meeting.findFirst({
+    where: {
+      id: Number(meetingId),
+      status: { in: ["SCHEDULED", "ATTENDANCE_CONFIRMED"] },
+      request: { is: { menteeId: Number(userId) } },
+    },
+    include: {
+      request: {
+        include: {
+          mentorProfile: { select: { userId: true } },
+          schedulingRounds: { select: { roundNumber: true, type: true }, orderBy: { roundNumber: "desc" } },
+        },
+      },
+    },
+  });
+
+  if (!meeting || meeting.scheduledStart.getTime() <= Date.now()) {
+    throw createServiceError("Only your upcoming meeting can be rescheduled", 409);
+  }
+
+  if (meeting.request.schedulingRounds.some((round) => round.type === "RESCHEDULE_BEFORE_MEETING")) {
+    throw createServiceError("The meeting has already been rescheduled once", 409);
+  }
+
+  return prisma.$transaction(async (transaction) => {
+    const requestUpdate = await transaction.mentoringRequest.updateMany({
+      where: { id: meeting.requestId, status: { in: ["MATCHED", "ATTENDANCE_CONFIRMED"] } },
+      data: { status: "WAITING_FOR_MENTOR_SLOTS" },
+    });
+
+    if (requestUpdate.count !== 1) {
+      throw createServiceError("This meeting was already changed", 409);
+    }
+
+    await transaction.meeting.update({ where: { id: meeting.id }, data: { status: "RESCHEDULED" } });
+    await transaction.schedulingRound.create({
+      data: {
+        requestId: meeting.requestId,
+        roundNumber: (meeting.request.schedulingRounds[0]?.roundNumber || 0) + 1,
+        type: "RESCHEDULE_BEFORE_MEETING",
+      },
+    });
+    await transaction.notification.create({
+      data: {
+        recipientId: meeting.request.mentorProfile.userId,
+        requestId: meeting.requestId,
+        meetingId: meeting.id,
+        type: "RESCHEDULE_REQUIRED",
+        channel: "IN_APP",
+      },
+    });
+
+    return transaction.mentoringRequest.findUnique({ where: { id: meeting.requestId } });
   });
 }
 
@@ -404,6 +467,7 @@ async function submitMeetingFeedback({ meetingId, userId, rating, text }) {
 module.exports = {
   createMeetingFromSlot,
   cancelMeeting,
+  requestMeetingReschedule,
   confirmMeetingOutcome,
   submitMeetingFeedback,
 };
