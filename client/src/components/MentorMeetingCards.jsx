@@ -1,13 +1,12 @@
 import React from "react";
-import { Box, Button, Chip, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, Chip, Stack, Typography } from "@mui/material";
 import { queenbColors } from "../theme";
-import { AppSurface, AppStatusBadge } from "./AppPrimitives";
 
 function CardShell({ children }) {
   return (
-    <AppSurface sx={{ p: 2 }}>
+    <Card variant="outlined" sx={{ p: 3, borderRadius: 3, borderColor: "#f6d3e0" }}>
       <Stack spacing={1.2}>{children}</Stack>
-    </AppSurface>
+    </Card>
   );
 }
 
@@ -99,7 +98,15 @@ export function MentorUpcomingMeetingCard({ meeting, onReschedule }) {
 
 function StatusChip({ label }) {
   return (
-    <AppStatusBadge label={label} />
+    <Chip
+      size="small"
+      label={label}
+      sx={{
+        bgcolor: queenbColors.pinkPale,
+        color: queenbColors.pink,
+        fontWeight: 700,
+      }}
+    />
   );
 }
 
@@ -124,7 +131,7 @@ export function MentorPendingRequestCard({
       {request.needsNewSlots && (
         <>
           <Typography variant="body2" sx={{ color: queenbColors.pink, fontWeight: 700 }}>
-            המנטית דחתה את הזמנים שהצעת. יש להציע זמנים חדשים.
+            החניכה דחתה את הזמנים שהצעת. יש להציע זמנים חדשים.
           </Typography>
           {request.offeredSlots.length > 0 && (
             <Box>
@@ -174,7 +181,7 @@ export function MentorMonthlyBlockCard({ notice }) {
       </Stack>
       <Typography sx={{ fontWeight: 600 }}>{notice.topic}</Typography>
       <Typography variant="body2" sx={{ color: queenbColors.pink, fontWeight: 700 }}>
-        המנטית דחתה גם את סבב הזמנים השני. לא ניתן לקבוע פגישה נוספת איתה עד סוף החודש.
+        החניכה דחתה גם את סבב הזמנים השני. לא ניתן לקבוע פגישה נוספת איתה עד סוף החודש.
       </Typography>
       {notice.offeredSlots.length > 0 && (
         <Box>
@@ -199,7 +206,7 @@ export function MentorOfferedSlotsCard({ request }) {
     <CardShell>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h6">{request.menteeName}</Typography>
-        <StatusChip label="ממתינה לבחירת המנטית" />
+        <StatusChip label="ממתינה לבחירת החניכה" />
       </Stack>
 
       <InfoRow>התקבלה בתאריך {request.requestDate}</InfoRow>

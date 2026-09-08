@@ -11,23 +11,66 @@ import {
   Typography,
 } from "@mui/material";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
-import apiClient from "../api/client";
+import { getMentorMeetingRequests } from "../services/mentorMeetingsService";
 import { isMentorUser } from "../utils/areaRouting";
 
-const NOTIFICATION_CONTENT = {
-  MENTORING_REQUEST_RECEIVED: ["בקשת מנטורינג חדשה", "נכנסה בקשה חדשה שממתינה לטיפול שלך."],
-  REQUEST_REJECTED: ["הבקשה נדחתה", "בקשת המנטורינג עודכנה."],
-  SLOTS_AVAILABLE: ["זמנים חדשים זמינים", "נוספו מועדים חדשים לבחירה."],
-  MEETING_MATCHED: ["נקבעה פגישה חדשה", "נבחר מועד לפגישה."],
-  RESCHEDULE_REQUIRED: ["נדרשים זמנים חדשים", "יש בקשה לעדכון מועדי הפגישה."],
-  ATTENDANCE_CONFIRMATION_REQUEST: ["נדרש אישור פגישה", "יש לאשר את תוצאת הפגישה."],
-  POST_MEETING_CHECK: ["עדכון לאחר פגישה", "נדרש לעדכן אם הפגישה התקיימה."],
-  FEEDBACK_REMINDER: ["משוב ממתין", "נשמח לקבל את המשוב שלך על הפגישה."],
-};
+function messageFromRequest(request) {
+  const rounds = request.schedulingRounds || [];
+  const matchedNotification = request.notifications?.find(
+    (notification) => notification.type === "MEETING_MATCHED"
+  );
+  const latestNotification = request.notifications?.find(
+    (notification) => notification.type === "RESCHEDULE_REQUIRED"
+  );
+  const latestRound = rounds[0];
+  const menteeName = request.mentee?.fullName || "החניכה";
 
-function messageFromNotification(notification) {
-  const [title, text] = NOTIFICATION_CONTENT[notification.type] || ["התראה חדשה", "יש עדכון חדש בחשבון שלך."];
-  return { id: `notification:${notification.id}`, title, text, createdAt: notification.createdAt };
+  if (matchedNotification) {
+    const meeting = request.meetings?.find((item) =>
+      ["SCHEDULED", "ATTENDANCE_CONFIRMED"].includes(item.status)
+    );
+    const date = meeting
+      ? new Date(meeting.scheduledStart).toLocaleString("he-IL", {
+          dateStyle: "short",
+          timeStyle: "short",
+        })
+      : "";
+
+    return {
+      id: `notification:${matchedNotification.id}`,
+      title: "נקבעה פגישה חדשה",
+      text: `${menteeName} בחרה מועד${date ? `: ${date}` : ""}.`,
+      createdAt: matchedNotification.createdAt,
+    };
+  }
+
+  if (
+    latestNotification &&
+    request.status === "WAITING_FOR_MENTOR_SLOTS" &&
+    rounds.length > 0
+  ) {
+    return {
+      id: `notification:${latestNotification.id}`,
+      title: "נדרשים זמנים חדשים",
+      text: `${menteeName} דחתה את הזמנים שהצעת וממתינה להצעה חדשה.`,
+      createdAt: latestNotification.createdAt || latestRound?.createdAt || request.updatedAt,
+    };
+  }
+
+  if (
+    latestNotification &&
+    request.status === "CANCELLED" &&
+    rounds.some((round) => round.type === "EXTRA_SLOTS")
+  ) {
+    return {
+      id: `notification:${latestNotification.id}`,
+      title: "הבקשה נסגרה",
+      text: `${menteeName} דחתה גם את סבב הזמנים השני. לא ניתן לקבוע איתה פגישה החודש.`,
+      createdAt: latestNotification.createdAt || request.updatedAt,
+    };
+  }
+
+  return null;
 }
 
 function storageKey(userId) {
@@ -45,15 +88,23 @@ function MessagesMenu({ currentUser }) {
     }
   });
   const navigate = useNavigate();
+  const mentor = isMentorUser(currentUser);
 
   const loadMessages = useCallback(async () => {
+    if (!mentor) return;
+
     try {
-      const response = await apiClient.get("/api/notifications/me");
-      setMessages(response.data.map(messageFromNotification));
+      const requests = await getMentorMeetingRequests();
+      setMessages(
+        requests
+          .map(messageFromRequest)
+          .filter(Boolean)
+          .sort((first, second) => new Date(second.createdAt) - new Date(first.createdAt))
+      );
     } catch {
       // The meetings page displays API errors; the navbar should remain usable.
     }
-  }, []);
+  }, [mentor]);
 
   useEffect(() => {
     loadMessages();
@@ -64,6 +115,8 @@ function MessagesMenu({ currentUser }) {
     [messages, seenIds]
   );
 
+  if (!mentor) return null;
+
   const markSeen = (messageId) => {
     const nextSeenIds = [...new Set([...seenIds, messageId])];
     setSeenIds(nextSeenIds);
@@ -73,19 +126,13 @@ function MessagesMenu({ currentUser }) {
   const openMessage = (messageId) => {
     markSeen(messageId);
     setAnchorEl(null);
-    navigate(
-      currentUser.isAdmin
-        ? "/admin/alerts"
-        : isMentorUser(currentUser)
-          ? "/mentor/meetings"
-          : "/mentee/meetings"
-    );
+    navigate("/mentor/meetings");
   };
 
   return (
     <>
       <IconButton
-        aria-label="התראות"
+        aria-label="הודעות"
         onClick={(event) => {
           setAnchorEl(event.currentTarget);
           loadMessages();
@@ -103,12 +150,12 @@ function MessagesMenu({ currentUser }) {
         onClose={() => setAnchorEl(null)}
         PaperProps={{ sx: { width: 340, maxWidth: "calc(100vw - 32px)", p: 1 } }}
       >
-        <Typography sx={{ px: 1.5, py: 1, fontWeight: 700 }}>התראות</Typography>
+        <Typography sx={{ px: 1.5, py: 1, fontWeight: 700 }}>הודעות חדשות</Typography>
         <Divider />
 
         {visibleMessages.length === 0 ? (
           <Typography color="text.secondary" variant="body2" sx={{ p: 2 }}>
-            אין התראות חדשות.
+            אין הודעות חדשות.
           </Typography>
         ) : (
           visibleMessages.map((message) => (

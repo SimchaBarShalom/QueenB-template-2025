@@ -7,7 +7,9 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Container,
   MenuItem,
+  Paper,
   Snackbar,
   Stack,
   TextField,
@@ -16,8 +18,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 import { isValidFullName } from "../utils/nameUtils";
-import { createMentorProfile, updateMentorProfile, updateUserProfile } from "../services/profileService";
-import { AppPage, AppPageHeader, AppSurface } from "./AppPrimitives";
+import { updateMentorProfile } from "../services/profileService";
 
 const MENTORING_TOPIC_OPTIONS = [
   "קריירה",
@@ -85,7 +86,7 @@ function ProfilePage({ user, onUserUpdated }) {
 
   if (!user) {
     return (
-      <AppPage maxWidth="md">
+      <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 } }}>
         <Alert
           severity="info"
           action={
@@ -96,7 +97,7 @@ function ProfilePage({ user, onUserUpdated }) {
         >
           יש להתחבר כדי לראות את הפרופיל.
         </Alert>
-      </AppPage>
+      </Container>
     );
   }
 
@@ -123,18 +124,16 @@ function ProfilePage({ user, onUserUpdated }) {
     if (!isValidFullName(values.fullName)) {
       nextErrors.fullName = "יש להזין שם פרטי ושם משפחה, לפחות 2 תווים בכל אחד";
     }
-    const needsMentorDetails = Boolean(user.mentorProfile) || !user.isAdmin;
-    if (needsMentorDetails && values.background.trim().length < 2) {
+    if (values.background.trim().length < 2) {
       nextErrors.background = "יש להזין תיאור של לפחות 2 תווים";
     }
-    if (needsMentorDetails && values.mentoringTopics.length === 0) {
+    if (values.mentoringTopics.length === 0) {
       nextErrors.mentoringTopics = "יש לבחור לפחות תחום מנטורינג אחד";
     }
     if (
-      needsMentorDetails &&
-      (!Number.isInteger(Number(values.meetingCapacity)) ||
-        Number(values.meetingCapacity) < 1 ||
-        Number(values.meetingCapacity) > 100)
+      !Number.isInteger(Number(values.meetingCapacity)) ||
+      Number(values.meetingCapacity) < 1 ||
+      Number(values.meetingCapacity) > 100
     ) {
       nextErrors.meetingCapacity = "יש להזין מספר שלם בין 1 ל-100";
     }
@@ -165,27 +164,13 @@ function ProfilePage({ user, onUserUpdated }) {
     setLoading(true);
 
     try {
-      const baseProfile = {
-        fullName: values.fullName,
-        jobTitle: values.jobTitle,
-        workplace: values.workplace,
-        yearsOfExperience: values.yearsOfExperience === "" ? null : Number(values.yearsOfExperience),
-        githubUrl: values.githubUrl,
-        linkedinUrl: values.linkedinUrl,
-        technologies: values.technologies,
-      };
-      const mentorProfile = {
+      const updatedUser = await updateMentorProfile({
         ...values,
         yearsOfExperience:
           values.yearsOfExperience === "" ? null : Number(values.yearsOfExperience),
         meetingCapacity: Number(values.meetingCapacity),
         meetingDurationMinutes: Number(values.meetingDurationMinutes),
-      };
-      const updatedUser = user.mentorProfile
-        ? await updateMentorProfile(mentorProfile)
-        : user.isAdmin
-          ? await updateUserProfile(baseProfile)
-          : await createMentorProfile(mentorProfile);
+      });
 
       onUserUpdated(updatedUser);
       setValues(formValuesFromUser(updatedUser));
@@ -193,7 +178,7 @@ function ProfilePage({ user, onUserUpdated }) {
       setNotification({
         open: true,
         severity: "success",
-        message: user.mentorProfile || user.isAdmin ? "הפרופיל עודכן בהצלחה" : "פרופיל המנטורית נוצר בהצלחה",
+        message: "הפרופיל עודכן בהצלחה",
       });
     } catch (requestError) {
       setNotification({
@@ -207,28 +192,29 @@ function ProfilePage({ user, onUserUpdated }) {
   };
 
   const capabilities = [
-    "מנטית",
+    "חניכה",
     user.mentorProfile && "מנטורית",
     user.isAdmin && "מנהלת",
   ].filter(Boolean);
 
   return (
-    <AppPage maxWidth="md">
-      <AppSurface sx={{ p: { xs: 2, sm: 3 } }}>
+    <Container maxWidth="md" sx={{ py: { xs: 3, md: 5 } }}>
+      <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 4 }, borderRadius: 3, borderColor: "#f6d3e0" }}>
         <Stack spacing={2}>
-          <AppPageHeader title="פרופיל" actions={!editing && (
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography variant="h4" component="h1">
+              פרופיל
+            </Typography>
+            {user.mentorProfile && !editing && (
               <Button variant="outlined" startIcon={<EditIcon />} onClick={startEditing}>
-                {user.mentorProfile || user.isAdmin ? "עריכת פרופיל" : "הצטרפי כמנטורית"}
+                עריכת פרופיל
               </Button>
-            )} />
+            )}
+          </Stack>
 
           {editing ? (
             <Box component="form" onSubmit={handleSubmit} noValidate>
               <Stack spacing={2.5}>
-                {!user.isAdmin && !user.mentorProfile && (
-                  <Alert severity="info">השלימי את פרטי המנטורית כדי להצטרף כמנטורית.</Alert>
-                )}
-
                 <TextField
                   label="שם מלא (שם פרטי ושם משפחה)"
                   value={values.fullName}
@@ -291,7 +277,6 @@ function ProfilePage({ user, onUserUpdated }) {
                   renderInput={(params) => <TextField {...params} label="טכנולוגיות" />}
                 />
 
-                {(!user.isAdmin || user.mentorProfile) && <>
                 <TextField
                   label="אודות / רקע מקצועי"
                   value={values.background}
@@ -347,7 +332,6 @@ function ProfilePage({ user, onUserUpdated }) {
                     ))}
                   </TextField>
                 </Stack>
-                </>}
 
                 <Stack direction="row" spacing={1.5} justifyContent="flex-end">
                   <Button type="button" onClick={cancelEditing} disabled={loading}>
@@ -424,7 +408,7 @@ function ProfilePage({ user, onUserUpdated }) {
             </>
           )}
         </Stack>
-      </AppSurface>
+      </Paper>
 
       <Snackbar
         open={notification.open}
@@ -440,7 +424,7 @@ function ProfilePage({ user, onUserUpdated }) {
           {notification.message}
         </Alert>
       </Snackbar>
-    </AppPage>
+    </Container>
   );
 }
 

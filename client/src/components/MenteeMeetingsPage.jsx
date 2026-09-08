@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  Container,
   Stack,
   Typography,
 } from "@mui/material";
@@ -25,7 +26,6 @@ import {
   submitMeetingFeedback,
 } from "../services/meetingsService";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
-import { AppPage, AppPageHeader, AppSurface } from "./AppPrimitives";
 
 const SECTION_TABS = [
   { id: "completed-section", label: "פגישות שהתקיימו" },
@@ -200,19 +200,6 @@ function MenteeMeetingsPage() {
     setRequests(response.data);
   };
 
-  const handleCancelMeeting = async (meeting) => {
-    try {
-      setActionLoading(true);
-      setError("");
-      await axios.patch(`/api/meetings/${meeting.id}/cancel`, { menteeId });
-      await reloadRequests();
-    } catch (requestError) {
-      setError(getRequestErrorMessage(requestError, "ביטול הפגישה נכשל."));
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const handleOutcome = async (meeting, occurred) => {
     try {
       setActionLoading(true);
@@ -384,8 +371,15 @@ function MenteeMeetingsPage() {
   }
 
   return (
-    <AppPage maxWidth="md">
-        <AppPageHeader title="הפגישות שלי" subtitle="ניהול בקשות, מועדים ומשוב במקום אחד." />
+    <Box sx={{ py: { xs: 3, md: 5 } }}>
+      <Container maxWidth="md">
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ mb: 3 }}
+        >
+          הפגישות שלי
+        </Typography>
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -393,8 +387,7 @@ function MenteeMeetingsPage() {
           </Alert>
         )}
 
-        <AppSurface
-          component={Stack}
+        <Stack
           direction="row"
           spacing={1}
           flexWrap="wrap"
@@ -403,6 +396,9 @@ function MenteeMeetingsPage() {
             position: "sticky",
             top: { xs: 64, md: 72 },
             zIndex: 1,
+            bgcolor: "#fff",
+            border: "1px solid #f6d3e0",
+            borderRadius: 999,
             p: 1,
             mb: 4,
           }}
@@ -414,12 +410,12 @@ function MenteeMeetingsPage() {
               onClick={() => setActiveTab(tab.id)}
               variant={activeTab === tab.id ? "contained" : "text"}
               size="small"
-              sx={{ fontWeight: activeTab === tab.id ? 700 : 400 }}
+              sx={{ borderRadius: 999 }}
             >
               {tab.label}
             </Button>
           ))}
-        </AppSurface>
+        </Stack>
 
         {activeTab === "completed-section" && (
         <Box
@@ -478,7 +474,7 @@ function MenteeMeetingsPage() {
                   key={meeting.id}
                   meeting={meeting}
                   onReschedule={notReady}
-                  onCancel={handleCancelMeeting}
+                  onCancel={notReady}
                 />
               ))
             )}
@@ -558,7 +554,7 @@ function MenteeMeetingsPage() {
           </Stack>
         </Box>
         )}
-
+      </Container>
 
       <SelectSlotDialog
         open={Boolean(slotRequest)}
@@ -584,7 +580,7 @@ function MenteeMeetingsPage() {
         message={infoMessage}
         onClose={() => setInfoMessage("")}
       />
-    </AppPage>
+    </Box>
   );
 }
 

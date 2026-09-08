@@ -9,8 +9,6 @@ Built with Node.js, Express, React, Material UI, PostgreSQL, and Prisma.
 - **RESTful API**: Well-structured backend API with Express.js
 - **PostgreSQL data layer**: Prisma schema, migration, and seed data
 - **Basic authentication**: Registration and login with hashed passwords
-- **JWT sessions**: Login/register return a bearer token, and protected routes can restore the current user through `/api/auth/me`
-- **Admin MVP**: Admin-only dashboard, user management, meeting operations, calendar view, and operational alerts
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 
 ## 🛠️ Tech Stack
@@ -22,7 +20,6 @@ Built with Node.js, Express, React, Material UI, PostgreSQL, and Prisma.
 - **CORS** - Cross-origin resource sharing
 - **Prisma** - PostgreSQL ORM and migration tooling
 - **bcryptjs** - Password hashing
-- **jsonwebtoken** - API session tokens
 - **Nodemon** - Development auto-restart
 
 ### Frontend
@@ -31,7 +28,6 @@ Built with Node.js, Express, React, Material UI, PostgreSQL, and Prisma.
 - **Material UI (MUI)** - Component library
 - **Axios** - HTTP client
 - **React Scripts** - Build tools
-- **FullCalendar** - Admin month calendar
 
 ## 📦 Project Structure
 
@@ -112,7 +108,6 @@ and then share the repository with the rest of the team.
    cd server
    cp .env.example .env
    # Edit DATABASE_URL in .env for your local PostgreSQL database
-   # Edit JWT_SECRET to a long random string
    cd ..
    ```
 
@@ -128,13 +123,9 @@ and then share the repository with the rest of the team.
 
    Seed users:
 
-   All seeded demo users use `Password123!`.
-
-   - Admin: `admin@queenb.org`
-   - Mentor: `mentor@queenb.org`
-   - Mentee: `mentee@queenb.org`
-   - Inactive mentor demo: `inactive-mentor@queenb.org`
-   - Admin alert demo mentee: `mentee-alerts@queenb.org`
+   - Admin: `admin@queenb.org` / `Admin123!`
+   - Mentor: `mentor@queenb.org` / `Mentor123!`
+   - Mentee: `mentee@queenb.org` / `Mentee123!`
 
 ### Running the Application
 
@@ -190,8 +181,6 @@ This will start:
 
 - `POST /api/auth/register` - Register a Mentee or Mentor user
 - `POST /api/auth/login` - Log in with email and password
-- `GET /api/auth/me` - Restore the current user from a bearer token
-- `GET /api/admin/*` - Admin-only management APIs
 
 
 ## 🔧 Development

@@ -1,9 +1,8 @@
 import React from "react";
-import { Box, Button, Stack, Typography } from "@mui/material";
+import { Box, Button, Card, Stack, Typography } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { queenbColors } from "../theme";
-import { AppSurface } from "./AppPrimitives";
 
 // Four status-specific meeting cards for MenteeMeetingsPage. Kept in one
 // file since they share the same card shell and are only ever used
@@ -11,9 +10,9 @@ import { AppSurface } from "./AppPrimitives";
 
 function CardShell({ children }) {
   return (
-    <AppSurface sx={{ p: 2 }}>
+    <Card variant="outlined" sx={{ p: 3, borderRadius: 3, borderColor: "#f6d3e0" }}>
       <Stack spacing={1.2}>{children}</Stack>
-    </AppSurface>
+    </Card>
   );
 }
 

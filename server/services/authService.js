@@ -10,7 +10,6 @@ function sanitizeUser(user) {
         background: user.mentorProfile.background,
         meetingCapacity: user.mentorProfile.meetingCapacity,
         meetingDurationMinutes: user.mentorProfile.meetingDurationMinutes,
-        isActive: user.mentorProfile.isActive,
         mentoringTopics: (user.mentorProfile.mentoringTopics || []).map((topic) => topic.name),
       }
     : null;

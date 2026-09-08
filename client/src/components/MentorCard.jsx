@@ -1,25 +1,12 @@
 import React from "react";
-
-import {
-  Box,
-  Chip,
-  IconButton,
-  Stack,
-  Typography,
-} from "@mui/material";
-
+import { Box, Card, Chip, IconButton, Stack, Typography } from "@mui/material";
 import GitHubIcon from "@mui/icons-material/GitHub";
 import LinkedInIcon from "@mui/icons-material/LinkedIn";
-
 import { queenbColors } from "../theme";
-import { AppSurface } from "./AppPrimitives";
 
-// מיפוי בין סטטוס הבקשה לבין הטקסט שיופיע בכפתור.
-// pending = נשלחה בקשה ועדיין מחכים למנטורית.
-// scheduled = כבר נקבעה פגישה.
 const STATUS_LABELS = {
   pending: "ממתין למענה",
-  scheduled: "הפגישה נקבעה",
+  scheduled: "נקבעה פגישה",
   blocked: "לא ניתן לקבוע החודש",
   full: "המכסה מלאה",
 };
@@ -31,79 +18,36 @@ function MentorCard({ mentor, onRequestClick }) {
     mentor;
 
   return (
-    // הכרטיס הראשי של המנטורית.
-    <AppSurface
+    <Card
+      variant="outlined"
       sx={{
-        // רווח פנימי בתוך הכרטיס.
         p: 3,
-
-        // עיגול הפינות.
-
-        // הכרטיס יתפוס את כל הגובה הזמין.
+        borderRadius: 3,
         height: "100%",
-
-        // Flex מאפשר לנו לשים את הכפתור תמיד בתחתית הכרטיס.
         display: "flex",
         flexDirection: "column",
-
-        // צבע המסגרת של הכרטיס.
+        borderColor: "#f6d3e0",
       }}
     >
-      {/* שם המנטורית */}
-      <Typography
-        variant="h6"
-        component="h3"
-      >
+      <Typography variant="h6" component="h3">
         {fullName}
       </Typography>
-
-      {/* תפקיד ומקום עבודה */}
-      <Typography
-        color="text.secondary"
-        sx={{
-          mb: 1.5,
-        }}
-      >
+      <Typography color="text.secondary" sx={{ mb: 1.5 }}>
         {jobTitle} · {workplace}
       </Typography>
 
-      {/* תחומי המנטורינג של המנטורית */}
-      <Stack
-        direction="row"
-        spacing={1}
-        flexWrap="wrap"
-        rowGap={1}
-        sx={{
-          mb: 1.5,
-        }}
-      >
+      <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1} sx={{ mb: 1.5 }}>
         {mentoringTopics.map((topic) => (
-          // כל תחום מנטורינג מוצג כ-Chip קטן.
           <Chip
             key={topic}
             label={topic}
             size="small"
-            sx={{
-              // רקע ורוד בהיר.
-              bgcolor: queenbColors.pinkPale,
-
-              // טקסט ורוד.
-              color: queenbColors.pink,
-
-              fontWeight: 600,
-            }}
+            sx={{ bgcolor: queenbColors.pinkPale, color: queenbColors.pink, fontWeight: 600 }}
           />
         ))}
       </Stack>
 
-      {/* הטכנולוגיות שהמנטורית מכירה */}
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{
-          mb: 1.5,
-        }}
-      >
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         {technologies.join(" | ")}
       </Typography>
 
@@ -129,8 +73,6 @@ function MentorCard({ mentor, onRequestClick }) {
             <GitHubIcon fontSize="small" />
           </IconButton>
         )}
-
-        {/* אם למנטורית יש LinkedIn, נציג אייקון */}
         {linkedinUrl && (
           <IconButton
             component="a"
@@ -145,104 +87,46 @@ function MentorCard({ mentor, onRequestClick }) {
         )}
       </Stack>
 
-      {/* אזור הכפתור בתחתית הכרטיס */}
-      <Box
-        sx={{
-          // דוחף את הכפתור לתחתית הכרטיס.
-          mt: "auto",
-        }}
-      >
+      <Box sx={{ mt: "auto" }}>
         {requestStatus === "none" ? (
-          // אם עדיין אין בקשה פעילה למנטורית,
-          // מציגים כפתור ורוד שאפשר ללחוץ עליו.
           <Box
             component="button"
             type="button"
             onClick={() => onRequestClick(mentor)}
             sx={{
-              // הכפתור תופס את כל רוחב הכרטיס.
               width: "100%",
-
-              // בלי מסגרת ברירת מחדל של button.
               border: 0,
-
-              // כפתור מעוגל.
               borderRadius: 999,
-
-              // גובה פנימי.
               py: 1.1,
-
-              // צבע ורוד פעיל.
               bgcolor: "primary.main",
-
-              // טקסט לבן.
               color: "#fff",
-
               fontWeight: 700,
               fontSize: 14,
-
-              // מראה של כפתור פעיל.
               cursor: "pointer",
-
-              // שינוי צבע בזמן hover.
-              "&:hover": {
-                bgcolor: "primary.dark",
-              },
+              "&:hover": { bgcolor: "primary.dark" },
             }}
           >
             בקשת פגישה
           </Box>
         ) : (
-          // אם כבר קיימת בקשה או פגישה,
-          // מציגים כפתור disabled שלא ניתן ללחוץ עליו.
           <Box
-            component="button"
-            type="button"
-            disabled
             sx={{
               width: "100%",
-              border: 0,
+              textAlign: "center",
               borderRadius: 999,
               py: 1.1,
-
-              // אם הפגישה כבר נקבעה,
-              // הכפתור יהיה ירוק בהיר.
-              // אם עדיין ממתינים למענה,
-              // הכפתור יהיה ורוד בהיר.
-              bgcolor:
-                requestStatus === "scheduled"
-                  ? "#dff4e5"
-                  : queenbColors.pinkPale,
-
-              // גם צבע הטקסט משתנה לפי הסטטוס.
-              color:
-                requestStatus === "scheduled"
-                  ? "#2e7d32"
-                  : queenbColors.pink,
-
+              bgcolor: queenbColors.pinkPale,
+              color: "text.secondary",
               fontWeight: 700,
               fontSize: 14,
-
-              // לא מציגים cursor של לחיצה.
-              cursor: "default",
-
-              // שומרים על הצבעים גם כשהכפתור disabled.
-              opacity: 1,
-
-              "&:disabled": {
-                opacity: 1,
-              },
             }}
           >
-            {/* הטקסט נקבע לפי הסטטוס */}
             {STATUS_LABELS[requestStatus]}
           </Box>
         )}
       </Box>
-    </AppSurface>
+    </Card>
   );
 }
 
-// ייצוא הקומפוננטה כדי שנוכל להשתמש בה
-// בדף החיפוש ובדשבורד של המנטית.
 export default MentorCard;

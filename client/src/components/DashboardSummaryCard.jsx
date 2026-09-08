@@ -1,12 +1,14 @@
 import React from "react";
-import { Box, Stack, Typography } from "@mui/material";
-import { AppSurface } from "./AppPrimitives";
+import { Box, Card, Stack, Typography } from "@mui/material";
 
 function DashboardSummaryCard({ icon: Icon, title, value, subtitle }) {
   return (
-    <AppSurface
+    <Card
+      variant="outlined"
       sx={{
-        p: 2,
+        p: 3,
+        borderRadius: 3,
+        borderColor: "#f6d3e0",
         height: "100%",
       }}
     >
@@ -42,7 +44,7 @@ function DashboardSummaryCard({ icon: Icon, title, value, subtitle }) {
           )}
         </Box>
       </Stack>
-    </AppSurface>
+    </Card>
   );
 }
 
