@@ -16,7 +16,6 @@ import {
   SlotsToChooseMeetingCard,
 } from "./MeetingStatusCards";
 
-import ComingSoonSnackbar from "./ComingSoonSnackbar";
 import SelectSlotDialog from "./SelectSlotDialog";
 import FeedbackDialog from "./FeedbackDialog";
 import {
@@ -84,7 +83,6 @@ function MenteeMeetingsPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [infoMessage, setInfoMessage] = useState("");
 
   const currentUser = JSON.parse(
     localStorage.getItem("queensMatchUser") || "null"
@@ -120,11 +118,6 @@ function MenteeMeetingsPage() {
     loadRequests();
   }, [menteeId]);
 
-  const notReady = () => {
-    setInfoMessage(
-      "הפעולה תתאפשר בקרוב - התכונה עדיין לא מחוברת לשרת."
-    );
-  };
   const handleCancelRequest = async (request) => {
   try {
     setError("");
@@ -598,10 +591,6 @@ function MenteeMeetingsPage() {
         onSubmit={handleFeedback}
       />
 
-      <ComingSoonSnackbar
-        message={infoMessage}
-        onClose={() => setInfoMessage("")}
-      />
     </AppPage>
   );
 }
