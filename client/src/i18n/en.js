@@ -362,7 +362,6 @@ const en = {
     meetingQuota: "Meeting quota",
     completedThisMonth: "Meetings completed this month",
     upcomingMeetings: "Upcoming meetings",
-    editProfile: "Edit profile",
     needsAttention: "Needs your attention",
     toPending: "View pending requests",
     noAttention: "Nothing needs your attention right now.",

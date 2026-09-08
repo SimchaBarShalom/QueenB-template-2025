@@ -362,7 +362,6 @@ const he = {
     meetingQuota: "מכסת פגישות",
     completedThisMonth: "פגישות שהושלמו החודש",
     upcomingMeetings: "פגישות קרובות",
-    editProfile: "עריכת פרופיל",
     needsAttention: "דורש את תשומת ליבך",
     toPending: "לבקשות הממתינות",
     noAttention: "אין כרגע פריטים שדורשים טיפול.",

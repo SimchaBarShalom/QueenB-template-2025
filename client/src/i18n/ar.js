@@ -362,7 +362,6 @@ const ar = {
     meetingQuota: "حصة اللقاءات",
     completedThisMonth: "اللقاءات المكتملة هذا الشهر",
     upcomingMeetings: "لقاءات قريبة",
-    editProfile: "تعديل الملف الشخصي",
     needsAttention: "يتطلب انتباهكِ",
     toPending: "إلى الطلبات المنتظِرة",
     noAttention: "لا توجد عناصر تتطلب معالجة حاليًا.",

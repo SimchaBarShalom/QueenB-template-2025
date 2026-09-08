@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 import EventNoteIcon from "@mui/icons-material/EventNote";
 import GroupsIcon from "@mui/icons-material/Groups";
@@ -81,15 +81,12 @@ function MentorDashboard({ currentUser }) {
       <DashboardSummaryCard icon={EventNoteIcon} title={t("mentorDashboard.upcomingMeeting")} value={nextMeeting?.menteeName || t("mentorDashboard.noUpcoming")} subtitle={nextMeeting && `${formatDate(nextMeeting.scheduledStart, language)} · ${formatTime(nextMeeting.scheduledStart, language)}`} />
       <DashboardSummaryCard icon={GroupsIcon} title={t("mentorDashboard.meetingQuota")} value={`${usedCapacity} / ${currentUser?.mentorProfile?.meetingCapacity ?? 0}`} />
     </Box>
-    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mb: 5 }}>
-      <Button component={RouterLink} to={getMentorMeetingsPath("pending")} variant="contained">{t("mentorDashboard.pendingRequests")}</Button>
-      <Button component={RouterLink} to={getMentorMeetingsPath("upcoming")} variant="outlined">{t("mentorDashboard.upcomingMeetings")}</Button>
-      <Button component={RouterLink} to="/profile" variant="outlined">{t("mentorDashboard.editProfile")}</Button>
-    </Stack>
-    <AppSectionTitle title={t("mentorDashboard.needsAttention")} action={<Button component={RouterLink} to={getMentorMeetingsPath(pendingRequests.length ? "pending" : "past")}>{t("mentorDashboard.toPending")}</Button>} />
-    {attentionItems.length ? <Box sx={{ ...cardGrid, mb: 5 }}>{attentionItems.slice(0, PREVIEW_LIMIT).map((item) => <PreviewCard key={item.id} {...item} />)}</Box> : <Typography color="text.secondary" sx={{ mb: 5 }}>{t("mentorDashboard.noAttention")}</Typography>}
-    <AppSectionTitle title={t("mentorDashboard.upcomingMeetings")} action={<Button component={RouterLink} to={getMentorMeetingsPath("upcoming")}>{t("mentorDashboard.allMeetings")}</Button>} />
-    {upcomingMeetings.length ? <Box sx={cardGrid}>{upcomingMeetings.slice(0, PREVIEW_LIMIT).map((meeting) => <PreviewCard key={meeting.id} to={getMentorMeetingsPath("upcoming")} title={meeting.menteeName} subtitle={`${formatDate(meeting.scheduledStart, language)} · ${formatTime(meeting.scheduledStart, language)}`} detail={meeting.topic} />)}</Box> : <Typography color="text.secondary">{t("mentorDashboard.noScheduled")}</Typography>}
+    <AppSectionTitle title={t("mentorDashboard.needsAttention")} />
+    {attentionItems.length ? <Box sx={{ ...cardGrid, mb: 1.5 }}>{attentionItems.slice(0, PREVIEW_LIMIT).map((item) => <PreviewCard key={item.id} {...item} />)}</Box> : <Typography color="text.secondary" sx={{ mb: 1.5 }}>{t("mentorDashboard.noAttention")}</Typography>}
+    <Button component={RouterLink} to={getMentorMeetingsPath(pendingRequests.length ? "pending" : "past")} sx={{ mb: 5 }}>{t("mentorDashboard.toPending")}</Button>
+    <AppSectionTitle title={t("mentorDashboard.upcomingMeetings")} />
+    {upcomingMeetings.length ? <Box sx={{ ...cardGrid, mb: 1.5 }}>{upcomingMeetings.slice(0, PREVIEW_LIMIT).map((meeting) => <PreviewCard key={meeting.id} to={getMentorMeetingsPath("upcoming")} title={meeting.menteeName} subtitle={`${formatDate(meeting.scheduledStart, language)} · ${formatTime(meeting.scheduledStart, language)}`} detail={meeting.topic} />)}</Box> : <Typography color="text.secondary" sx={{ mb: 1.5 }}>{t("mentorDashboard.noScheduled")}</Typography>}
+    <Button component={RouterLink} to={getMentorMeetingsPath("upcoming")}>{t("mentorDashboard.allMeetings")}</Button>
   </AppPage>;
 }
 
