@@ -36,7 +36,7 @@
     </section>
     <section>
       <h2>2. זרימת פגישה</h2>
-      <p class="explain">בקשה עוברת מתגובה של mentor להצעת slots, בחירת mentee, יצירת Meeting, התראות, outcome ומשוב. Calendar/Meet מסומן במפורש כלא ממומש.</p>
+    <p class="explain">בקשה עוברת מתגובה של mentor להצעת slots, בחירת mentee, יצירת Meeting, התראות, outcome ומשוב. חיבור Calendar/Meet מתבצע דרך Google OAuth עבור mentor-יות.</p>
       <img class="diagram" src="diagrams/meeting-workflow.svg" alt="זרימת פגישה">
       <div class="links"><a href="diagrams/meeting-workflow.png">PNG</a><a href="diagrams/meeting-workflow.mmd">Mermaid source</a></div>
     </section>
@@ -54,11 +54,11 @@
     </section>
     <section>
       <h2>5. בחירת מועד — sequence</h2>
-      <p class="explain">לחיצה על בחירת מועד מובילה ל־POST מאומת, בדיקות בשירות, transaction ליצירת Meeting ועדכון Request, שליחת email ו־HTTP 201. אין קריאה ל־Google Calendar בקוד.</p>
+      <p class="explain">לחיצה על בחירת מועד מובילה ל־POST מאומת, בדיקות בשירות, transaction ליצירת Meeting ועדכון Request, שליחת email ו־HTTP 201. לאחר מכן מתבצע best effort של Google Calendar ו־Meet אם mentor-ית חיברה יומן.</p>
       <img class="diagram" src="diagrams/request-sequence.svg" alt="רצף בחירת מועד">
       <div class="links"><a href="diagrams/request-sequence.png">PNG</a><a href="diagrams/request-sequence.mmd">Mermaid source</a></div>
     </section>
-    <div class="note"><strong>הערת דיוק להצגה:</strong> קיימת אינטגרציית Gmail/Nodemailer, אבל לא קיימת אינטגרציה פעילה עם Google OAuth, Google Calendar או Google Meet. ה־FullCalendar הוא calendar פנימי בצד ה־admin.</div>
+    <div class="note"><strong>הערת דיוק להצגה:</strong> קיימות אינטגרציות פעילות עם Google Sign-In, Google Calendar/Meet ו־Gmail/Nodemailer. ה־FullCalendar הוא calendar פנימי בצד ה־admin.</div>
   </main>
   <footer>מקור: קבצי client/src, server/routes, server/services, server/prisma/schema.prisma ו־server/prisma/migrations.</footer>
 </body>

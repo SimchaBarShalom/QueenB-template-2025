@@ -75,7 +75,7 @@ Future version:
 - Environment-specific configs.
 - Stronger rate limiting.
 - Refresh tokens.
-- Password reset flow.
+- Password reset hardening beyond the current MVP (rate limiting, abuse monitoring and session invalidation).
 - Email verification.
 - Audit logs for admin actions.
 - More complete input sanitization and monitoring.

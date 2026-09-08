@@ -7,6 +7,5 @@ flowchart LR
   S --> P["Prisma ORM"]
   P --> DB[("PostgreSQL")]
   S --> N["Nodemailer"] --> G["Gmail SMTP<br/>email exists"]
-  S -. "לא מחובר בקוד" .-> O["Google OAuth"]
-  O -. "אין API / token" .-> C["Google Calendar / Meet"]
-
+  S --> O["Google OAuth / Sign-In"]
+  O --> C["Google Calendar / Meet"]

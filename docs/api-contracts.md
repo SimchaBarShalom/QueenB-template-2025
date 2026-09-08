@@ -194,6 +194,23 @@ Response `200`:
 
 Missing, invalid, or expired token response `401`.
 
+### Google authentication
+
+- `GET /api/auth/google` starts the server-side Google OAuth flow.
+- `GET /api/auth/google/callback` validates the one-time OAuth state and provider identity, then redirects to the frontend callback page with a short-lived, single-use handoff code.
+- `POST /api/auth/google/exchange` exchanges an existing-account handoff and returns the standard `{ user, token }` response. For a new account it returns `{ needsOnboarding: true, onboardingCode }`.
+- `POST /api/auth/google/complete` completes new-user onboarding with `role` (`mentee` or `mentor`) and mentor details when applicable, then returns `{ user, token }`.
+
+Google sign-in requests only `openid`, `email`, and `profile`. The server verifies the Google issuer, audience, subject, and verified email. Provider access tokens and secrets are never returned to the browser.
+
+### Password reset
+
+- `POST /api/auth/forgot-password` accepts `{ "email": "user@example.com" }` and always returns the same generic success response, whether the account exists or is Google-only.
+- `GET /api/auth/reset-password/validate?token=...` returns `{ "valid": true|false }` for a reset link.
+- `POST /api/auth/reset-password` accepts `{ "token", "password", "confirmPassword" }`. Passwords must include at least eight characters, uppercase and lowercase letters, a number, and a special character.
+
+Reset tokens are high-entropy, single-use, short-lived values. Only their SHA-256 hashes are stored in the database; the raw token is sent only in the email.
+
 ## Mentor Search
 
 ### `GET /api/mentors`

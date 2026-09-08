@@ -30,7 +30,7 @@ Queens Match היא אפליקציית MVP שמחברת בין mentee-יות ל�
 
 ### לא מומש; מופיע רק כתכנון או כמודל
 
-- אין בקוד Google OAuth, Google Calendar API או יצירת Google Meet.
+- קיימות בקוד אינטגרציות Google OAuth/Sign-In, Google Calendar API ויצירת Google Meet.
 - אין `meetingLink` ב־`schema.prisma`, למרות שהוא מופיע במסמך התכנון הישן `docs/mvp-plan/spec.md`.
 - WhatsApp מופיע כ־enum וכרעיון עתידי, אך אין ספק, queue או שליחה בפועל.
 - אין reminders מתוזמנים, job queue, refresh tokens, איפוס סיסמה, אימות email או audit log.
@@ -75,10 +75,10 @@ flowchart LR
   P --> PG[(PostgreSQL)]
   S --> SMTP[Nodemailer\nGmail SMTP]
   SMTP --> MAIL[Email]
-  S -. אין אינטגרציה בקוד .-> GC[Google Calendar / OAuth / Meet]
+  S --> GC[Google OAuth / Calendar / Meet]
 ```
 
-המשמעות: פעולה ב־React נשלחת כ־HTTP ל־Express. ה־route בודק קלט ומעביר את העבודה ל־service. ה־service מפעיל כללי עסקיים ו־Prisma קורא/כותב PostgreSQL. דוא״ל הוא חיבור חיצוני קיים; Google Calendar/OAuth/Meet מוצגים כאן כגבול מתוכנן בלבד, לא כחיבור פעיל.
+המשמעות: פעולה ב־React נשלחת כ־HTTP ל־Express. ה־route בודק קלט ומעביר את העבודה ל־service. ה־service מפעיל כללי עסקיים ו־Prisma קורא/כותב PostgreSQL. דוא״ל, Google Sign-In ו־Google Calendar/Meet הם חיבורים חיצוניים פעילים, עם credentials ו־callbacks נפרדים.
 
 ## 5. מפת תפקידים, עמודים והרשאות
 
@@ -108,7 +108,7 @@ flowchart LR
   E --> F["In-app notifications<br/>Email דרך Gmail"]
   F --> G[פגישה מתקיימת או מסומנת לא-התקיימה]
   G --> H[Feedback פשוט]
-  E -. לא קיים בקוד .-> GC[Google Calendar / Meet]
+  E -. best effort .-> GC[Google Calendar / Meet]
 ```
 
 המועד שנבחר הוא `OfferedSlot` שמקושר ל־`Meeting.selectedSlotId`. קיימת היסטוריה של rounds ו־attempts, ולכן reschedule אינו מוחק את ההיסטוריה אלא מסמן את הפגישה הקודמת כ־`RESCHEDULED` ופותח round חדש.
@@ -138,10 +138,10 @@ sequenceDiagram
   S-->>API: meeting
   API-->>R: HTTP 201
   R-->>M: הפגישה מופיעה כמתוזמנת
-  S-->>G: אין קריאה בקוד; Calendar/Meet לא מתעדכנים
+  S-->>G: best effort; Calendar/Meet מתעדכנים אם היומן מחובר
 ```
 
-זהו מקום טוב לומר בכנות: יש עדכון אמיתי של בסיס הנתונים ושל email/in-app notification, אך אין עדכון Google Calendar. השירות משתמש ב־transaction עם `Serializable`, בודק שה־slot הוא מהמועדים האחרונים, שהמועד עתידי ושאין חריגה ממכסה.
+זהו מקום טוב לומר בכנות: יש עדכון אמיתי של בסיס הנתונים, email/in-app notification ו־Google Calendar/Meet במצב best effort. השירות משתמש ב־transaction עם `Serializable`, בודק שה־slot הוא מהמועדים האחרונים, שהמועד עתידי ושאין חריגה ממכסה.
 
 ## 8. ER diagram מצומצם של Prisma
 
@@ -234,7 +234,7 @@ flowchart TB
 | Jest | בדיקות unit לשירותי auth, mentor, requests, meetings ו־admin | `server/tests/` |
 | i18n מקומי | תרגומי עברית, אנגלית וערבית, בלי ספריית תרגום חיצונית | `client/src/i18n/` |
 | Gmail SMTP | שירות email חיצוני בפועל; מוגדר עם `SMTP_USER` ו־`SMTP_PASSWORD` | `emailService.js` |
-| Google OAuth / Calendar / Meet | לא מחובר; מופיע רק בדרישות/תכנון הישן | אין import/package/API route מתאים |
+| Google OAuth / Calendar / Meet | מחובר; Sign-In נפרד מ־Calendar, עם scopes ו־callbacks נפרדים | `server/services/googleAuthService.js`, `googleCalendarService.js`, `server/routes/auth.js`, `server/routes/googleCalendar.js` |
 
 ## 11. איך בקשה עוברת במערכת — 3 דוגמאות
 
@@ -254,7 +254,7 @@ flowchart TB
 
 | קבוצת API | אחריות עיקרית |
 |---|---|
-| `/api/auth` | register, login, `/me`; מחזיר user בטוח ו־JWT |
+| `/api/auth` | register/login בסיסיים ו־Google, forgot/reset password, `/me`; מחזיר user בטוח ו־JWT |
 | `/api/users` | יצירת/עדכון פרופיל משתמשת ופרופיל mentor; `GET /api/users` קיים גם לרשימת משתמשות |
 | `/api/mentors` | רשימת mentor-יות פעילות עם סינון, pagination ונתוני capacity |
 | `/api/mentoring-requests` | יצירת בקשה, רשימות לפי mentee/mentor, reject, slots, select, reschedule slots, decline/cancel |
@@ -328,7 +328,7 @@ Notification נשמרת עם type/channel/status. ה־UI מציג in-app notific
 - יש שינויים לא מחויבים ב־working tree, כולל routes/services/schema/frontend; לכן היסטוריית Git אינה תמונה מלאה של מצב העבודה הנוכחי.
 - קיימים מסמכי תכנון ישנים עם endpoints/statuses/fields שלא תואמים בהכרח לקוד, למשל `meetingLink` ו־Google Calendar. אין להציג אותם כראיות למימוש.
 - `localStorage` עבור JWT חשוף לסיכון XSS; אין refresh token או rotation.
-- אין rate limiting, password reset, email verification או audit log.
+- אין rate limiting, email verification או audit log. Password reset קיים עם token חד־פעמי, hash, תוקף ושליחת email.
 - `GET /api/users` אינו עטוף ב־auth middleware; אם הוא חשוף בסביבה, יש לבדוק האם זה רצוי.
 - `AttendanceConfirmation` קיים אך אינו מאוכלס; תוצאת meeting נרשמת לפי confirmation ראשון, ואי־הסכמה מאוחרת אינה משנה את הסטטוס.
 - שליחת email מתבצעת כחלק מזרימת request/meeting ואינה queue אסינכרונית מלאה; כשל נבלע כדי לא להפיל את הפעולה העסקית.
@@ -358,7 +358,7 @@ Notification נשמרת עם type/channel/status. ה־UI מציג in-app notific
 5. לחזור ל־mentee, לפתוח את הבקשה וללחוץ “בחירת מועד”. להראות שהפגישה הופיעה.
 6. להראות ב־mentor וב־mentee את אותה פגישה, ואז להציג reschedule/cancel כפעולות אפשריות.
 7. להתחבר כ־admin ולהראות summary, meeting list, calendar ו־alert. אם יש נתוני seed מתאימים, להציג analytics.
-8. לסיים במסך השפות או responsive view, ואז לומר במפורש: email קיים; Google Calendar/Meet לא חלק מה־MVP.
+8. לסיים במסך השפות או responsive view, ואז לומר במפורש: Google Sign-In, Google Calendar/Meet ו־email קיימים; reminders ו־queues עדיין מחוץ ל־MVP.
 
 טיפ תפעולי: להכין מראש request שממתין לבחירת slot, mentor עם capacity פנויה ו־admin עם לפחות פגישה אחת. לא לבנות demo שתלוי בזמן אמת של Gmail או ב־Google Calendar.
 
@@ -378,7 +378,7 @@ Notification נשמרת עם type/channel/status. ה־UI מציג in-app notific
 
 ### Integrations
 
-“החיבור החיצוני שבאמת מומש הוא Nodemailer עם Gmail SMTP לשליחת email. JWT הוא מנגנון session חתום. FullCalendar הוא רכיב UI מקומי ל־admin. OAuth, Google Calendar, Google Meet ו־WhatsApp הם לא אינטגרציות פעילות בגרסה הזו.”
+“החיבורים החיצוניים שמומשו הם Google Sign-In, Google Calendar/Meet ו־Nodemailer עם Gmail SMTP. JWT הוא מנגנון session חתום. FullCalendar הוא רכיב UI מקומי ל־admin. WhatsApp עדיין לא מחובר.”
 
 ## 19. שאלות טכניות צפויות ותשובות קצרות
 
@@ -398,7 +398,7 @@ Notification נשמרת עם type/channel/status. ה־UI מציג in-app notific
 
 **למה יש גם Request status וגם Meeting status?**  request מתאר את התהליך מול mentor, בעוד meeting מתאר ניסיון פגישה ספציפי. בקשה אחת יכולה לכלול כמה ניסיונות עקב reschedule.
 
-**האם נוצר Google Meet אוטומטית?**  לא. אין Google SDK, OAuth flow, token storage או calendar route בקוד. יש רק email וחיבור calendar פנימי ל־admin.
+**האם נוצר Google Meet אוטומטית?**  כן, כאשר mentor-ית חיברה Google Calendar: השרת יוצר אירוע Calendar עם `conferenceData`, ו־Google מחזיר קישור Meet. ה־FullCalendar של admin נשאר לוח פנימי נפרד.
 
 **איך מטפלים בכשל email?**  פעולה עסקית נשמרת, וה־email נשלח best effort עם catch/log. לכן כשל Gmail לא מבטל יצירת meeting.
 
@@ -406,7 +406,7 @@ Notification נשמרת עם type/channel/status. ה־UI מציג in-app notific
 
 **מה בדקתם?**  בדיקות Jest בצד השרת מכסות validation, auth, permissions, capacity, slots, reschedule, outcome, feedback ו־admin. בבדיקה האחרונה 75/77 עברו; שני failures הם חוסר יישור בין tests לבין שינויים נוכחיים.
 
-**מה הייתן מוסיפות בהמשך?**  Google Calendar/Meet או קישור פגישה אמיתי, reminders ו־WhatsApp דרך queue, attendance דו־צדדי, feedback מלא, refresh tokens, password reset, audit log, rate limiting ו־frontend tests.
+**מה הייתן מוסיפות בהמשך?**  reminders ו־WhatsApp דרך queue, attendance דו־צדדי, feedback מלא, refresh tokens, email verification, audit log, rate limiting ו־frontend tests.
 
 ## 20. ראיות וקבצים מרכזיים
 

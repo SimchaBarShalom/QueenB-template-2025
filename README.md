@@ -9,6 +9,8 @@ The platform connects mentees with relevant mentors, from the first request thro
 ## ✨ What the MVP does
 
 - Register and log in as a mentee or mentor.
+- Register or log in with Google; new Google users choose mentee or mentor during onboarding.
+- Request a password reset by email and set a new password with a short-lived, single-use link.
 - Search active mentors by topic, job title or workplace.
 - Send mentoring requests and exchange proposed time slots.
 - Schedule, cancel or reschedule meetings, then submit feedback.
@@ -108,7 +110,7 @@ flowchart LR
 
 | API group | Responsibility |
 | --- | --- |
-| `/api/auth` | Register, login and restore the current session. |
+| `/api/auth` | Password and Google registration/login, password reset, and current-session restore. |
 | `/api/users` | Create and update user and mentor profiles. |
 | `/api/mentors` | List active mentors with filters and pagination. |
 | `/api/mentoring-requests` | Create requests, respond to requests, offer slots and select or cancel slots. |
@@ -170,6 +172,7 @@ GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY="replace-with-a-base64-encoded-32-byte-key"
 GOOGLE_AUTH_CLIENT_ID="..."
 GOOGLE_AUTH_CLIENT_SECRET="..."
 GOOGLE_AUTH_REDIRECT_URI="http://localhost:5000/api/auth/google/callback"
+GOOGLE_AUTH_CREDENTIALS_PATH="secrets/google_auth_credentials.json"
 CLIENT_BASE_URL="http://localhost:3000"
 PASSWORD_RESET_TTL_MINUTES="30"
 ```
@@ -183,6 +186,7 @@ Google Calendar setup:
 - Enable the Google Calendar API and configure the OAuth consent screen in Google Cloud.
 - Add this redirect URI: `http://localhost:5000/api/google-calendar/oauth2/callback`.
 - Copy the provided credentials file to `server/secrets/credentials.json`.
+- Keep Google Sign-In credentials separate in `server/secrets/google_auth_credentials.json`; the two OAuth clients use different callback URIs and scopes.
 - Keep PostgreSQL running on `localhost:5432`.
 
 Initialize the database:

@@ -706,7 +706,7 @@ Do not add during this week:
 - Background queues
 - Advanced analytics or graphs
 - Complex matching algorithms
-- Refresh tokens, password reset, or email verification
+- Refresh tokens, email verification, or additional password-reset hardening
 - Payments or subscriptions
 - Audit logs
 - Complex attendance disputes
