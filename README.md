@@ -1,24 +1,20 @@
 # Queen Match
 
-Queen Match is a full-stack mentoring platform for women in technology.
+QueenB is a community and educational initiative that supports women entering and growing in technology.
 
-It connects mentees with mentors and manages the journey from the first request to meeting feedback. Administrators get operational visibility into users, meetings and alerts.
+Queen Match is a mentoring platform for women in technology. It helps mentees find suitable mentors and manage the mentoring journey in one place.
+
+The platform connects mentees with relevant mentors, from the first request through scheduling, meetings and feedback.
 
 ## ✨ What the MVP does
 
-- Public homepage with About, FAQ and Contact sections.
-- Registration and login for mentees and mentors.
-- Searchable directory of active mentors.
-- Filters for topic, job title and workplace.
-- Mentor profiles with topics, experience, meeting duration and monthly capacity.
-- Mentoring requests with mentor responses and proposed time slots.
-- Meeting scheduling, cancellation and one reschedule flow.
-- Outcome confirmation and simple participant feedback.
-- In-app notifications and configurable Gmail SMTP email.
-- Mentor-connected Google Calendar OAuth with Google Calendar events and Google Meet links.
-- Admin dashboard, analytics, user management, meeting management, calendar view and alerts.
-- Hebrew-first RTL interface with English and Arabic translations.
-- Responsive layouts for desktop and mobile.
+- Register and log in as a mentee or mentor.
+- Search active mentors by topic, job title or workplace.
+- Send mentoring requests and exchange proposed time slots.
+- Schedule, cancel or reschedule meetings, then submit feedback.
+- Connect mentor calendars through Google OAuth and create Google Calendar events with Google Meet links.
+- Use in-app notifications, Gmail SMTP email and an admin workspace for users, meetings, analytics and alerts.
+- Work in Hebrew-first RTL, English or Arabic layouts across desktop and mobile.
 
 ## 👥 Roles and capabilities
 
@@ -89,18 +85,6 @@ flowchart LR
   O --> G[Google Calendar API<br/>Calendar event + Meet link]
 ```
 
-### Request path example
-
-When a mentee selects a slot:
-
-1. React sends `POST /api/mentoring-requests/:requestId/select-slot` with a Bearer token.
-2. Express authenticates the request and calls the mentoring service.
-3. The service validates ownership, slot availability, meeting conflicts and mentor capacity.
-4. A Prisma transaction creates the meeting, updates the request and creates a notification.
-5. The service creates a Google Calendar event with a Google Meet conference and stores the returned links when the mentor is connected.
-6. Email delivery is attempted through Nodemailer and Gmail SMTP.
-7. The API returns the scheduled meeting to React.
-
 ## 🛠️ Technology stack
 
 | Technology | Use in Queen Match |
@@ -134,57 +118,6 @@ When a mentee selects a slot:
 | `/api/admin` | Summary, analytics, users, meetings, calendar data and alerts. |
 | `/api/contact` | Validate and send contact messages by email. |
 | `/api/health` | Return server health information. |
-
-## 🔐 Authentication and permissions
-
-- Registration validates the input and hashes the password with bcrypt.
-- Login returns a signed JWT containing the user ID.
-- The client stores the token in `localStorage` and sends it as `Authorization: Bearer ...`.
-- The server validates the token before protected operations.
-- Google Calendar uses an OAuth authorization flow for mentors.
-- Google refresh tokens are encrypted with AES-256-GCM before they are stored in PostgreSQL.
-- Admin routes require both authentication and `isAdmin === true`.
-- Mentor capability is derived from the presence of a `MentorProfile`.
-- Services also verify ownership of requests and meetings.
-- Prisma unique constraints and transactions protect important state changes.
-
-## 📊 Data model
-
-The central Prisma models are:
-
-- `User` — identity, profile data and admin flag.
-- `MentorProfile` — mentor-specific topics, duration, capacity and visibility.
-- `GoogleCalendarConnection` — one encrypted Google refresh-token connection per user.
-- `MentoringRequest` — the lifecycle of a mentee’s request to a mentor.
-- `SchedulingRound` and `OfferedSlot` — proposed times and rescheduling history.
-- `Meeting` — each scheduled meeting attempt.
-- `MeetingOutcomeConfirmation` — participant outcome responses.
-- `Feedback` — one feedback record per participant per meeting.
-- `Notification` — in-app and email notification history.
-- `AdminAlertResolution` — admin resolution and queue metadata for derived alerts.
-
-Mentor capacity is calculated for the current calendar month from meetings with capacity-consuming statuses. Cancelled, rescheduled and not-completed meetings release capacity according to `server/lib/capacity.js`.
-
-## 🧪 Tests and quality
-
-- Server tests cover authentication, token handling, admin access, mentor profiles, mentor search, request lifecycle, slots, capacity, rescheduling, meeting outcomes, feedback and admin services.
-- Validation exists in authentication, profile, request, meeting and admin services.
-- Routes are separated from business services.
-- Shared frontend components cover layout, navigation, dialogs, status cards, loading states, errors and empty states.
-- The database schema uses relations, enums, unique constraints and indexes.
-
-Run the server tests with:
-
-```bash
-cd server
-npm test
-```
-
-Build the client with:
-
-```bash
-npm run build
-```
 
 ## ⚠️ Limitations & Next Steps
 
