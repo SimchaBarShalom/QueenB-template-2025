@@ -1,247 +1,126 @@
-# QueenB - Full Stack Task Management Application
-A template for building a full-stack web application using modern technologies - fork this repository to get started quickly.
+# Queen Match
 
-Built with Node.js, Express, React, Material UI, PostgreSQL, and Prisma.
+Queen Match is a full-stack mentoring platform for connecting women who want guidance with experienced women who can mentor them. It solves a practical community problem: matching is only the first step, so the platform also gives both sides a clear way to request a mentor, exchange proposed times, schedule a meeting, confirm what happened, and complete feedback.
 
-## 🚀 Features
+## About QueenB
 
-- **Modern UI**: Beautiful, responsive interface built with Material UI
-- **RESTful API**: Well-structured backend API with Express.js
-- **PostgreSQL data layer**: Prisma schema, migration, and seed data
-- **Basic authentication**: Registration and login with hashed passwords
-- **JWT sessions**: Login/register return a bearer token, and protected routes can restore the current user through `/api/auth/me`
-- **Admin MVP**: Admin-only dashboard, user management, meeting operations, calendar view, and operational alerts
-- **Responsive Design**: Works seamlessly on desktop and mobile devices
+QueenB is a community and educational initiative that supports women entering and growing in technology. Queen Match extends that community model into a structured mentoring experience: mentors share focused professional experience, while mentees can discover relevant support without managing the process through scattered messages and spreadsheets.
 
-## 🛠️ Tech Stack
+## What this solution adds
 
-### Backend
+- A searchable mentor directory with topics, workplace, experience and current monthly capacity.
+- A tracked request and meeting lifecycle instead of an informal one-off introduction.
+- Separate mentor, mentee and admin workspaces with role-aware actions.
+- In-app notifications, email hooks, feedback collection and operational visibility for administrators.
+- A responsive, multilingual interface designed for Hebrew-first RTL use, with English and Arabic translations.
 
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **CORS** - Cross-origin resource sharing
-- **Prisma** - PostgreSQL ORM and migration tooling
-- **bcryptjs** - Password hashing
-- **jsonwebtoken** - API session tokens
-- **Nodemon** - Development auto-restart
+## Capabilities
 
-### Frontend
+| Role | Main capabilities |
+| --- | --- |
+| Mentee | Create a profile, search and filter active mentors, send requests, choose from offered slots, manage upcoming/past meetings, confirm outcomes and submit feedback. |
+| Mentor | Create a mentor profile, define topics, duration and monthly capacity, review requests, offer slots, schedule/reschedule or cancel meetings, confirm outcomes and submit feedback. |
+| Admin | View KPIs and analytics, manage users and mentor visibility, inspect meetings, update eligible meeting statuses, use bulk operations, review alerts and open meeting details. |
 
-- **React 18** - UI library
-- **Material UI (MUI)** - Component library
-- **Axios** - HTTP client
-- **React Scripts** - Build tools
-- **FullCalendar** - Admin month calendar
+## Main user journey
 
-## 📦 Project Structure
+1. A mentee registers or signs in, completes her profile and searches active mentor cards using job title, workplace and topic filters.
+2. She sends a request. The mentor can accept the workflow and offer one or more available time slots; the mentee selects a slot.
+3. The request becomes a scheduled meeting. Capacity is checked against the mentor’s current calendar month, with server-side rules for active meetings and rescheduling.
+4. Both participants can see the meeting in their dashboard and meeting area. In-app notifications and configured SMTP email messages communicate requests, slot availability, matches, reminders and follow-up actions.
+5. After the scheduled time, both sides confirm whether the meeting occurred. Completed meetings can receive feedback from each participant; no-shows and cancellations follow separate lifecycle states.
 
+Google sign-in is shown in the interface as a future integration, and Google Calendar/Meet event creation is not implemented in this MVP. The current journey ends with the platform’s scheduled meeting record and notification workflow; a future OAuth integration can add calendar invites and Meet links without changing the core request model.
+
+## Technology stack
+
+| Technology | Use in Queen Match |
+| --- | --- |
+| React 18 | Component-based client application, dashboards, forms and responsive views. |
+| React Router | Public, authenticated mentor/mentee and admin navigation. |
+| Material UI | Accessible controls, cards, tables, dialogs, pagination and responsive layout. |
+| Node.js + Express | REST API, route composition, validation and centralized error handling. |
+| Prisma 6 + PostgreSQL | Typed data access, migrations, relations and lifecycle persistence. |
+| JWT + bcryptjs | Bearer-token sessions and one-way password hashing. |
+| Axios | Client-to-API requests through the development proxy. |
+| Nodemailer | Configurable Gmail SMTP delivery for request, meeting and contact emails. |
+| FullCalendar | Admin month calendar view for meetings. |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  UI[React client<br/>MUI + RTL] --> API[Express REST API]
+  API --> AUTH[Auth middleware]
+  API --> S[Domain services<br/>users · mentors · requests · meetings · admin]
+  S --> P[Prisma ORM]
+  P --> DB[(PostgreSQL)]
+  S --> N[Notifications + email service]
+  N --> SMTP[SMTP / Gmail]
+  S -. planned OAuth/calendar integration .-> G[Google OAuth<br/>Calendar / Meet]
 ```
-QueenB/
-├── server/                 # Backend application
-│   ├── routes/            # API route handlers
-│   ├── prisma/            # Prisma schema, migrations, and seed script
-│   ├── index.js           # Server entry point
-│   ├── package.json       # Server dependencies
-│   └── .env.example       # Environment variables template
-├── client/                # Frontend application
-│   ├── public/            # Static files
-│   ├── src/
-│   │   ├── components/    # React components
-│   │   ├── App.js         # Main application component
-│   │   └── index.js       # React entry point
-│   └── package.json       # Client dependencies
-├── package.json           # Root package.json with scripts
-└── README.md              # This file
-```
 
-## 🚀 Getting Started
+## Technical highlights
+
+- Role-based permissions are enforced in the API; a mentor profile identifies mentor capability, while `isAdmin` controls admin access.
+- Requests and meetings model pending slots, mentee selection, scheduled, attendance-confirmed, completed, no-show, rejected, cancelled and feedback-complete states.
+- Mentor capacity is calculated from active meetings in the current calendar month, and cancelled/rescheduled meetings release capacity.
+- Large lists use server-side, filter-aware page pagination with bounded page sizes, including mentor search, requests, notifications and admin users/meetings.
+- Admin summary and analytics queries remain separate from paginated management lists so dashboard totals are not reduced to the current page.
+- Notifications support in-app history and pagination; email delivery is configurable through SMTP environment variables.
+- Hebrew is the default language. Hebrew and Arabic set RTL document direction; English sets LTR. Layouts include desktop and mobile navigation patterns.
+
+## Local setup
 
 ### Prerequisites
 
-- Node.js (version 14 or higher)
-- npm or yarn package manager
-- PostgreSQL database
-
-### Installation
-
-1. **Fork the template repository to your own user**
-If you are working as a team, you can choose one member to fork the template repository to their own user, 
-and then share the repository with the rest of the team.
-
-
-2. **Clone or navigate to the project directory**
-
-   ```bash
-   git clone **copied git url**
-   ```
-
-   ```bash
-   cd QueenB
-   ```
-
-2. **Install root dependencies**
-
-   ```bash
-   npm install
-   ```
-
-3. **Install server and client dependencies**
-
-   ```bash
-   npm run install-all
-   ```
-
-   OR:
-
-   - open terminal and run:
-
-   ```bash
-   cd server
-   npm install
-   ```
-
-   - open another terminal
-
-   ```bash
-   cd client
-   npm install
-   ```
-
-4. **Set up environment variables**
-   ```bash
-   cd server
-   cp .env.example .env
-   # Edit DATABASE_URL in .env for your local PostgreSQL database
-   # Edit JWT_SECRET to a long random string
-   cd ..
-   ```
-
-5. **Set up the database**
-
-   ```bash
-   cd server
-   npm run prisma:generate
-   npm run prisma:migrate
-   npm run prisma:seed
-   cd ..
-   ```
-
-   Seed users:
-
-   All seeded demo users use `Password123!`.
-
-   - Admin: `admin@queenb.org`
-   - Mentor: `mentor@queenb.org`
-   - Mentee: `mentee@queenb.org`
-   - Inactive mentor demo: `inactive-mentor@queenb.org`
-   - Admin alert demo mentee: `mentee-alerts@queenb.org`
-
-   The expanded demo seed also creates accounts `demo-mentor-1@queenb.org` through
-   `demo-mentor-20@queenb.org` and `demo-mentee-1@queenb.org` through
-   `demo-mentee-40@queenb.org`. They all use the same development-only password
-   `Password123!`. The seed is additive and upsert-only; running it again does not
-   reset or delete existing records.
-
-### Running the Application
-
-#### Development Mode (Recommended)
-
-#### Running Separately
-
-**Start the backend server:**
+Install Node.js and npm, and have a PostgreSQL database available locally.
 
 ```bash
-npm run server
+git clone <repository-url>
+cd QueenB-template-2025
+npm install
+npm run install-all
 ```
 
-**Start the frontend client (in a new terminal):**
+Create `server/.env` from `server/.env.example` and set:
+
+```env
+PORT=5000
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/queens_match?schema=public"
+JWT_SECRET="use-a-long-local-development-secret"
+```
+
+For email delivery, also configure `SMTP_USER` and `SMTP_PASSWORD`. Keep `.env` out of version control and never use development credentials in production.
+
+Initialize the database from the server directory:
 
 ```bash
-npm run client
+cd server
+npm run prisma:generate
+npm run prisma:migrate
+npm run prisma:seed
+cd ..
 ```
 
-#### Running Concurrently
+The additive, upsert-only seed creates baseline and expanded Hebrew demo users, mentors, mentees, requests, meetings, feedback and notifications across multiple dates and lifecycle states. Running it again preserves existing records and does not reset or delete the database. Development-only test accounts and their shared seed password are defined in `server/prisma/seed.js`; do not reuse them outside a local demo.
 
-Run both client and server concurrently:
+Run the app in two terminals or together:
 
 ```bash
-npm run dev
+npm run server   # API: http://localhost:5000
+npm run client   # UI: http://localhost:3000
+# or: npm run dev
 ```
 
-This will start:
+Useful checks include `GET http://localhost:5000/api/health`, `npm run build`, and `cd server && npm test`.
 
-- Backend server on http://localhost:5000
-- Frontend client on http://localhost:3000 - you can access the application in your browser at this URL.
+## Tests, MVP limits and next steps
 
-### Building for Production
+The server has Jest coverage for authentication, mentor profiles, requests, meetings and admin services. The client uses the Create React App test setup. Before presenting a local demo, run the seed and then `cd server && npm test`; use `npm run build` to verify the client production build.
 
-1. **Build the React client:**
+Current MVP limits include no implemented Google OAuth, Google Calendar event creation or Google Meet link generation; email requires SMTP configuration; and the feedback questionnaire is stored as flexible JSON while the final product questionnaire is still evolving.
 
-   ```bash
-   npm run build
-   ```
+Future improvements include completing Google integration, adding richer matching recommendations, expanding automated client/API coverage, adding scheduled background delivery for reminders, and introducing production observability and deployment configuration.
 
-2. **Start the production server:**
-   ```bash
-   npm start
-   ```
-
-
-
-### Health Check
-
-- `GET /api/health` - Server health check
-
-### Auth Endpoints
-
-- `POST /api/auth/register` - Register a Mentee or Mentor user
-- `POST /api/auth/login` - Log in with email and password
-- `GET /api/auth/me` - Restore the current user from a bearer token
-- `GET /api/admin/*` - Admin-only management APIs
-
-
-## 🔧 Development
-
-### Available Scripts
-
-- `npm run dev` - Run both client and server in development mode
-- `npm run server` - Run only the backend server
-- `npm run client` - Run only the frontend client
-- `npm run install-all` - Install dependencies for both client and server
-- `npm run build` - Build the React client for production
-- `npm start` - Start the production server
-- `cd server && npm run prisma:generate` - Generate Prisma Client
-- `cd server && npm run prisma:migrate` - Run database migrations
-- `cd server && npm run prisma:seed` - Seed Admin, Mentor, and Mentee users
-
-### Key Features
-
-- **Responsive Design**: The application works on all device sizes
-- **Modern UI**: Material UI components provide a professional look
-- **Error Handling**: Comprehensive error handling on both frontend and backend
-- **Loading States**: User-friendly loading indicators
-- **Form Validation**: Client and server-side validation
-- **Success Feedback**: Clear success and error messages
-
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-1. **Port already in use**: If ports 3000 or 5000 are in use, you can change them in the package.json scripts or .env file
-
-2. **Installation issues**: Delete `node_modules` folders and run `npm run install-all` again
-
-3. **API connection issues**: Ensure the backend server is running on port 5000 and the proxy is configured correctly in the client package.json
-
-### Support
-
-If you encounter any issues, please check the console logs for detailed error messages or create an issue in the repository.
-
----
-
-Built with ❤️ using React, Material UI, and Node.js
+Queen Match was built in one week by a three-person team.
