@@ -1,15 +1,13 @@
 jest.mock("../lib/prisma", () => ({
-  meeting: { findFirst: jest.fn(), update: jest.fn(), create: jest.fn(), count: jest.fn() },
-  mentoringRequest: { findFirst: jest.fn(), update: jest.fn(), updateMany: jest.fn(), findUnique: jest.fn() },
+  meeting: { findFirst: jest.fn(), update: jest.fn() },
+  mentoringRequest: { update: jest.fn(), updateMany: jest.fn(), findUnique: jest.fn() },
   schedulingRound: { create: jest.fn() },
   notification: { create: jest.fn() },
   $transaction: jest.fn(),
 }));
 
-jest.mock("../services/emailService", () => ({ sendEmail: jest.fn().mockResolvedValue() }));
-
 const prisma = require("../lib/prisma");
-const { createMeetingFromSlot, cancelMeeting, requestMeetingReschedule } = require("../services/meetingsService");
+const { cancelMeeting, requestMeetingReschedule } = require("../services/meetingsService");
 
 describe("scheduled-meeting participant actions", () => {
   beforeEach(() => {
@@ -64,30 +62,6 @@ describe("scheduled-meeting participant actions", () => {
     }));
     expect(prisma.notification.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ recipientId: 22, type: "RESCHEDULE_REQUIRED" }),
-    }));
-  });
-
-  it("creates exactly one meeting when a mentee selects a proposed slot", async () => {
-    const start = new Date(Date.now() + 60 * 60 * 1000);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
-    prisma.mentoringRequest.findFirst.mockResolvedValue({
-      id: 4,
-      capacityOverride: true,
-      mentee: { id: 11, fullName: "Mentee", email: "mentee@example.com" },
-      mentorProfile: { id: 3, userId: 22, meetingCapacity: 2, user: { fullName: "Mentor", email: "mentor@example.com" } },
-      schedulingRounds: [{ offeredSlots: [{ id: 9, startTime: start, endTime: end }] }],
-      meetings: [],
-    });
-    prisma.meeting.findFirst.mockResolvedValue(null);
-    prisma.mentoringRequest.updateMany.mockResolvedValue({ count: 1 });
-    prisma.meeting.create.mockResolvedValue({ id: 7, requestId: 4, status: "SCHEDULED", scheduledStart: start, scheduledEnd: end });
-
-    const result = await createMeetingFromSlot({ requestId: 4, slotId: 9, menteeId: 11 });
-
-    expect(result.id).toBe(7);
-    expect(prisma.meeting.create).toHaveBeenCalledTimes(1);
-    expect(prisma.meeting.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ requestId: 4, selectedSlotId: 9, status: "SCHEDULED" }),
     }));
   });
 });

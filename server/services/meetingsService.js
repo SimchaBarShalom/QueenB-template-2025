@@ -137,6 +137,7 @@ async function createMeetingFromSlot({ requestId, slotId, menteeId }) {
           },
         },
       },
+      capacityOverride: true,
       schedulingRounds: {
         include: { offeredSlots: true },
         orderBy: { roundNumber: "desc" },
