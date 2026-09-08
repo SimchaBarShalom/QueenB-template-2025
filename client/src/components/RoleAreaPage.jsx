@@ -3,7 +3,7 @@ import { Alert, Paper, Stack, Typography } from "@mui/material";
 
 const roleContent = {
   MENTEE: {
-    title: "אזור חניכה",
+    title: "אזור מנטיות",
     text: "עמוד בסיסי להמשך פיתוח תהליכי בקשות וחיבור למנטוריות.",
   },
   MENTOR: {

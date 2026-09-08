@@ -1,15 +1,12 @@
-// Mentor capability has precedence in the MVP: mentors use the mentor-only
-// experience and cannot switch into mentee routes.
-
 export function isMentorUser(user) {
   return Boolean(user?.mentorProfile);
 }
 
-// Priority after login/registration: admin-only -> admin, mentor -> mentor
-// (even if also admin), everyone else -> mentee.
+// Administration is a distinct capability, so it remains the default landing
+// area even when an administrator also has a mentor profile.
 export function getDefaultAreaPath(user) {
   if (!user) return "/";
-  if (user.isAdmin && !isMentorUser(user)) return "/admin";
+  if (user.isAdmin) return "/admin";
   if (isMentorUser(user)) return "/mentor";
   return "/mentee";
 }
@@ -17,11 +14,11 @@ export function getDefaultAreaPath(user) {
 export const AREA_DEFINITIONS = [
   {
     path: "/mentee",
-    label: "עברי לאזור חניכה",
-    available: (user) => !isMentorUser(user),
+    label: "מעבר לאזור מנטיות",
+    available: (user) => Boolean(user) && !user.isAdmin,
   },
-  { path: "/mentor", label: "עברי לאזור מנטורית", available: (user) => isMentorUser(user) },
-  { path: "/admin", label: "עברי לאזור ניהול", available: (user) => Boolean(user?.isAdmin) },
+  { path: "/mentor", label: "מעבר לאזור מנטוריות", available: (user) => isMentorUser(user) && !user.isAdmin },
+  { path: "/admin", label: "מעבר למסך הבית", available: (user) => Boolean(user?.isAdmin) },
 ];
 
 // Areas the user can switch to from wherever they currently are, excluding
