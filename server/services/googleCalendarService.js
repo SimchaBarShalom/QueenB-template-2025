@@ -1,8 +1,13 @@
 const crypto = require("crypto");
 const fs = require("fs/promises");
 const path = require("path");
-const { google } = require("googleapis");
 const prisma = require("../lib/prisma");
+
+// Load googleapis only when a Google operation is requested. This keeps the
+// API available during local startup even when the WSL module resolver is slow.
+function getGoogle() {
+  return require("googleapis").google;
+}
 
 const SCOPES = ["https://www.googleapis.com/auth/calendar.events"];
 const CREDENTIALS_PATH = path.resolve(process.env.GOOGLE_CALENDAR_CREDENTIALS_PATH || path.join(__dirname, "..", "secrets", "credentials.json"));
@@ -35,7 +40,7 @@ async function createOAuthClient() {
   const credentials = JSON.parse(contents); const client = credentials.installed || credentials.web;
   if (!client?.client_id || !client?.client_secret) throw serviceError("credentials.json is not a valid OAuth client file.", 503);
   const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI || `http://localhost:${process.env.PORT || 5000}/api/google-calendar/oauth2/callback`;
-  return new google.auth.OAuth2(client.client_id, client.client_secret, redirectUri);
+  return new (getGoogle().auth.OAuth2)(client.client_id, client.client_secret, redirectUri);
 }
 async function saveConnection(userId, tokens) {
   const existing = await prisma.googleCalendarConnection.findUnique({ where: { userId } });
@@ -69,12 +74,12 @@ async function waitForConference(calendar, event) {
   return latestEvent;
 }
 async function createCalendarEvent({ organizerUserId, title, description, start, end, attendees = [] }) {
-  const calendar = google.calendar({ version: "v3", auth: await getAuthorizedClient(organizerUserId) });
+  const calendar = getGoogle().calendar({ version: "v3", auth: await getAuthorizedClient(organizerUserId) });
   const response = await calendar.events.insert({ calendarId: CALENDAR_ID, conferenceDataVersion: 1, sendUpdates: attendees.length ? "all" : "none", requestBody: { summary: title, description, start: { dateTime: new Date(start).toISOString() }, end: { dateTime: new Date(end).toISOString() }, attendees: attendees.map((email) => ({ email })), conferenceData: { createRequest: { requestId: crypto.randomUUID() } } } });
   return toEventResponse(await waitForConference(calendar, response.data));
 }
 async function getUpcomingEvents(userId) {
-  const calendar = google.calendar({ version: "v3", auth: await getAuthorizedClient(userId) });
+  const calendar = getGoogle().calendar({ version: "v3", auth: await getAuthorizedClient(userId) });
   const response = await calendar.events.list({ calendarId: CALENDAR_ID, timeMin: new Date().toISOString(), maxResults: 10, singleEvents: true, orderBy: "startTime" });
   return (response.data.items || []).map(toEventResponse);
 }

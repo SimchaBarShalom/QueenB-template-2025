@@ -21,7 +21,7 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import GoogleIcon from "@mui/icons-material/Google";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 import { getDefaultAreaPath } from "../utils/areaRouting";
-import ComingSoonSnackbar from "./ComingSoonSnackbar";
+import ForgotPasswordDialog from "./ForgotPasswordDialog";
 import QueensMatchLogo from "./QueensMatchLogo";
 import { queenbColors } from "../theme";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -39,7 +39,7 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [infoMessage, setInfoMessage] = useState("");
+  const [forgotOpen, setForgotOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleClose = () => {
@@ -70,18 +70,13 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
     }
   };
 
-  // Google sign-in is not wired to a real provider yet: there is no
-  // REACT_APP_GOOGLE_CLIENT_ID / OAuth consent screen configured anywhere in
-  // this project. This handler is the integration point a teammate should
-  // replace (e.g. with @react-oauth/google's useGoogleLogin, posting the
-  // returned credential to a new /api/auth/google backend route) - it must
-  // not simulate a successful login in the meantime.
   const handleGoogleLogin = () => {
-    setInfoMessage(t("auth.googleComingSoon"));
+    const apiOrigin = process.env.REACT_APP_API_URL || (window.location.port === "3000" ? "http://localhost:5000" : "");
+    window.location.assign(`${apiOrigin}/api/auth/google`);
   };
 
   const handleForgotPassword = () => {
-    setInfoMessage(t("auth.forgotComingSoon"));
+    setForgotOpen(true);
   };
 
   return (
@@ -191,7 +186,7 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
         </Stack>
       </Box>
 
-      <ComingSoonSnackbar message={infoMessage} onClose={() => setInfoMessage("")} />
+      <ForgotPasswordDialog open={forgotOpen} onClose={() => setForgotOpen(false)} />
     </Dialog>
   );
 }

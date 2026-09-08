@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,6 +9,7 @@ import {
   Checkbox,
   CircularProgress,
   Dialog,
+  Divider,
   FormControl,
   FormControlLabel,
   FormHelperText,
@@ -29,6 +30,7 @@ import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import CancelIcon from "@mui/icons-material/Cancel";
+import GoogleIcon from "@mui/icons-material/Google";
 import PasswordRequirements from "./PasswordRequirements";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 import { getDefaultAreaPath } from "../utils/areaRouting";
@@ -98,6 +100,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const navigate = useNavigate();
 
@@ -205,6 +208,12 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
     }
   };
 
+  const handleGoogleRegister = () => {
+    setGoogleLoading(true);
+    const apiOrigin = process.env.REACT_APP_API_URL || (window.location.port === "3000" ? "http://localhost:5000" : "");
+    window.location.assign(`${apiOrigin}/api/auth/google`);
+  };
+
   return (
     <Dialog
       open={open}
@@ -228,6 +237,27 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
             {t("auth.registerHeadline")}
           </Typography>
         </Stack>
+
+        <Stack alignItems="center" spacing={1.5} sx={{ mb: 2.5 }}>
+          <Button
+            type="button"
+            variant="outlined"
+            onClick={handleGoogleRegister}
+            disabled={loading || googleLoading}
+            startIcon={googleLoading ? <CircularProgress size={18} /> : <GoogleIcon />}
+            aria-label={t("auth.registerWithGoogle")}
+            fullWidth
+            sx={{ borderRadius: 999, py: 1.1, textTransform: "none" }}
+          >
+            {t("auth.registerWithGoogle")}
+          </Button>
+        </Stack>
+
+        <Divider sx={{ mb: 2.5 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t("common.or")}
+          </Typography>
+        </Divider>
 
         {submitError && (
           <Alert severity="error" sx={{ mb: 2.5 }}>

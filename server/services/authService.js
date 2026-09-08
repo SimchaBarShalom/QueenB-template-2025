@@ -170,7 +170,7 @@ async function loginUser(input) {
     return null;
   }
 
-  const passwordMatches = await bcrypt.compare(input.password, user.passwordHash);
+  const passwordMatches = user.passwordHash ? await bcrypt.compare(input.password, user.passwordHash) : false;
 
   if (!passwordMatches) {
     return null;

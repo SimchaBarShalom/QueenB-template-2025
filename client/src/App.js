@@ -14,6 +14,8 @@ import AppLayout from "./components/AppLayout";
 import HomePage from "./components/HomePage";
 import LoginDialog from "./components/LoginDialog";
 import RegisterDialog from "./components/RegisterDialog";
+import ResetPasswordPage from "./components/ResetPasswordPage";
+import GoogleCallbackPage from "./components/GoogleCallbackPage";
 import ProfilePage from "./components/ProfilePage";
 import MenteeDashboard from "./components/MenteeDashboard";
 import MentorDashboard from "./components/MentorDashboard";
@@ -143,6 +145,8 @@ function ThemedApp() {
             onOpenRegister={() => setAuthDialog("register")}
           >
             <Routes>
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/auth/google/callback" element={<GoogleCallbackPage onComplete={handleAuthSuccess} />} />
               <Route
                 path="/"
                 element={

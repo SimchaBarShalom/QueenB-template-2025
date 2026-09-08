@@ -123,7 +123,8 @@ flowchart LR
 
 ### Current MVP limitations
 
-- Email delivery requires valid `SMTP_USER` and `SMTP_PASSWORD` configuration.
+- Email delivery requires valid `SMTP_USER` and `SMTP_PASSWORD` configuration. Password-reset emails use `CLIENT_BASE_URL` and tokens expire after `PASSWORD_RESET_TTL_MINUTES` (30 by default).
+- Google sign-in uses `GOOGLE_AUTH_CLIENT_ID`, `GOOGLE_AUTH_CLIENT_SECRET`, and `GOOGLE_AUTH_REDIRECT_URI`. Add the local callback `http://localhost:5000/api/auth/google/callback` and the equivalent deployed URI in Google Cloud; Calendar credentials remain separate.
 - Google Calendar requires OAuth credentials, an encryption key and a mentor connection before a mentee can schedule a meeting.
 - If Google event creation fails after the local meeting is created, the error is logged and the meeting may remain without external calendar or Meet links.
 - `AttendanceConfirmation` exists in the Prisma schema, but the current meeting service records outcome confirmations instead of a full two-sided attendance workflow.
@@ -166,9 +167,16 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/queens_match?schema=
 JWT_SECRET="use-a-long-local-development-secret"
 GOOGLE_CALENDAR_REDIRECT_URI="http://localhost:5000/api/google-calendar/oauth2/callback"
 GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY="replace-with-a-base64-encoded-32-byte-key"
+GOOGLE_AUTH_CLIENT_ID="..."
+GOOGLE_AUTH_CLIENT_SECRET="..."
+GOOGLE_AUTH_REDIRECT_URI="http://localhost:5000/api/auth/google/callback"
+CLIENT_BASE_URL="http://localhost:3000"
+PASSWORD_RESET_TTL_MINUTES="30"
 ```
 
-For email delivery, also set `SMTP_USER` and `SMTP_PASSWORD`. Keep `.env` out of version control.
+`GOOGLE_AUTH_CLIENT_ID` and `GOOGLE_AUTH_CLIENT_SECRET` must come from the same Google Cloud OAuth Web application. If the existing `GOOGLE_CLIENT_SECRET` returns `invalid_client`, create a new client secret in Google Cloud and set the dedicated `GOOGLE_AUTH_*` variables; do not reuse a Calendar-only or revoked secret.
+
+For email delivery, also set `SMTP_USER` and `SMTP_PASSWORD`. Keep `.env` out of version control. After changing the auth schema, run `npx prisma migrate deploy` from `server/`.
 
 Google Calendar setup:
 

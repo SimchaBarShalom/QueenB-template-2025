@@ -38,6 +38,8 @@ app.get("/", (req, res) => {
 app.use((err, req, res, next) => {
   console.error(err);
 
+  if (err.statusCode) return res.status(err.statusCode).json({ error: err.message });
+
   if (err instanceof Prisma.PrismaClientInitializationError) {
     return res.status(503).json({
       error:
