@@ -1,31 +1,17 @@
 import React from "react";
 import { Alert, Paper, Stack, Typography } from "@mui/material";
-
-const roleContent = {
-  MENTEE: {
-    title: "אזור מנטיות",
-    text: "עמוד בסיסי להמשך פיתוח תהליכי בקשות וחיבור למנטוריות.",
-  },
-  MENTOR: {
-    title: "אזור מנטורית",
-    text: "עמוד בסיסי להמשך פיתוח פרופיל מנטורית, זמינות ובקשות נכנסות.",
-  },
-  ADMIN: {
-    title: "אזור ניהול",
-    text: "עמוד בסיסי להמשך פיתוח יכולות ניהול ומעקב.",
-  },
-};
+import { useLanguage } from "../i18n/LanguageContext";
 
 function RoleAreaPage({ role }) {
-  const content = roleContent[role];
+  const { t } = useLanguage();
 
   return (
     <Paper variant="outlined" sx={{ p: { xs: 2.5, sm: 4 } }}>
       <Stack spacing={2}>
         <Typography variant="h4" component="h1">
-          {content.title}
+          {t(`roleArea.${role}_title`)}
         </Typography>
-        <Alert severity="info">{content.text}</Alert>
+        <Alert severity="info">{t(`roleArea.${role}_text`)}</Alert>
       </Stack>
     </Paper>
   );

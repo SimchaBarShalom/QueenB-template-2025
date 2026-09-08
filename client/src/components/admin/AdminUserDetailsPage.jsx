@@ -4,7 +4,8 @@ import { Alert, Button, Chip, Divider, Grid, Paper, Stack, TextField, Typography
 import apiClient from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import { AdminEmpty, AdminError, AdminLoading } from "./AdminState";
-import { formatDateTime, REQUEST_STATUS_LABELS } from "./adminFormatters";
+import { formatDateTime, requestStatusLabel } from "./adminFormatters";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 function listToText(items) {
   return (items || []).join(", ");
@@ -41,6 +42,7 @@ function buildMentorForm(profile) {
 
 function AdminUserDetailsPage() {
   const { id } = useParams();
+  const { t, language } = useLanguage();
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingUser, setSavingUser] = useState(false);
@@ -61,14 +63,14 @@ function AdminUserDetailsPage() {
         setMentorForm(buildMentorForm(response.data.user.mentorProfile));
       } catch (requestError) {
         console.error(requestError);
-        setError("לא הצלחנו לטעון את פרטי המשתמשת.");
+        setError(t("errors.loadUser"));
       } finally {
         setLoading(false);
       }
     }
 
     loadUser();
-  }, [id]);
+  }, [id, t]);
 
   const setUserField = (field, value) => setUserForm((current) => ({ ...current, [field]: value }));
   const setMentorField = (field, value) => setMentorForm((current) => ({ ...current, [field]: value }));
@@ -86,10 +88,10 @@ function AdminUserDetailsPage() {
       });
       setDetail((current) => ({ ...current, user: response.data }));
       setUserForm(buildUserForm(response.data));
-      setSuccess("פרטי המשתמשת עודכנו.");
+      setSuccess(t("admin.users.userUpdated"));
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "שמירת פרטי המשתמשת נכשלה.");
+      setError(requestError.response?.data?.error || t("errors.saveUser"));
     } finally {
       setSavingUser(false);
     }
@@ -114,10 +116,10 @@ function AdminUserDetailsPage() {
         user: { ...current.user, mentorProfile: response.data, capabilities: { ...current.user.capabilities, mentor: true } },
       }));
       setMentorForm(buildMentorForm(response.data));
-      setSuccess("פרטי המנטורית עודכנו.");
+      setSuccess(t("admin.users.mentorUpdated"));
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "שמירת פרטי המנטורית נכשלה.");
+      setError(requestError.response?.data?.error || t("errors.saveMentor"));
     } finally {
       setSavingMentor(false);
     }
@@ -126,15 +128,16 @@ function AdminUserDetailsPage() {
   if (loading) return <AdminLoading />;
 
   const user = detail?.user;
+  const notSpecified = t("common.notSpecified");
 
   return (
     <AdminLayout>
       <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2} sx={{ mb: 3 }}>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-          פרטי משתמשת
+          {t("admin.users.detailsTitle")}
         </Typography>
         <Button component={RouterLink} to="/admin/users">
-          חזרה למשתמשות
+          {t("admin.users.backToUsers")}
         </Button>
       </Stack>
       <AdminError message={error} />
@@ -154,16 +157,16 @@ function AdminUserDetailsPage() {
                 </Typography>
                 <Typography color="text.secondary">{user.email}</Typography>
                 <Stack direction="row" spacing={0.5} flexWrap="wrap" rowGap={0.5}>
-                  <Chip label="מנטית" size="small" />
-                  {user.capabilities.mentor && <Chip label="מנטורית" color="secondary" size="small" />}
-                  {user.capabilities.admin && <Chip label="מנהלת" color="primary" size="small" />}
+                  <Chip label={t("roles.mentee")} size="small" />
+                  {user.capabilities.mentor && <Chip label={t("roles.mentor")} color="secondary" size="small" />}
+                  {user.capabilities.admin && <Chip label={t("roles.admin")} color="primary" size="small" />}
                 </Stack>
                 <Divider />
-                <Typography>תפקיד: {user.jobTitle || "לא צוין"}</Typography>
-                <Typography>מקום עבודה: {user.workplace || "לא צוין"}</Typography>
-                <Typography>ניסיון: {user.yearsOfExperience ?? "לא צוין"}</Typography>
-                <Typography>בקשות כמנטית: {detail.counts.requests}</Typography>
-                <Typography>פגישות קשורות: {detail.counts.meetings}</Typography>
+                <Typography>{t("admin.users.job", { value: user.jobTitle || notSpecified })}</Typography>
+                <Typography>{t("admin.users.workplace", { value: user.workplace || notSpecified })}</Typography>
+                <Typography>{t("admin.users.experience", { value: user.yearsOfExperience ?? notSpecified })}</Typography>
+                <Typography>{t("admin.users.menteeRequests", { count: detail.counts.requests })}</Typography>
+                <Typography>{t("admin.users.relatedMeetings", { count: detail.counts.meetings })}</Typography>
               </Stack>
             </Paper>
           </Grid>
@@ -172,22 +175,22 @@ function AdminUserDetailsPage() {
             <Stack spacing={2}>
               <Paper component="form" onSubmit={saveUserProfile} sx={{ p: 3, borderRadius: 2 }}>
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-                  עריכת פרטים
+                  {t("admin.users.editDetails")}
                 </Typography>
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <TextField label="שם מלא" value={userForm.fullName} onChange={(event) => setUserField("fullName", event.target.value)} fullWidth required />
+                    <TextField label={t("admin.users.fullName")} value={userForm.fullName} onChange={(event) => setUserField("fullName", event.target.value)} fullWidth required />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField label="תפקיד" value={userForm.jobTitle} onChange={(event) => setUserField("jobTitle", event.target.value)} fullWidth />
+                    <TextField label={t("admin.users.jobTitle")} value={userForm.jobTitle} onChange={(event) => setUserField("jobTitle", event.target.value)} fullWidth />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField label="מקום עבודה" value={userForm.workplace} onChange={(event) => setUserField("workplace", event.target.value)} fullWidth />
+                    <TextField label={t("admin.users.workplaceLabel")} value={userForm.workplace} onChange={(event) => setUserField("workplace", event.target.value)} fullWidth />
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField
                       type="number"
-                      label="שנות ניסיון"
+                      label={t("admin.users.years")}
                       value={userForm.yearsOfExperience}
                       onChange={(event) => setUserField("yearsOfExperience", event.target.value)}
                       fullWidth
@@ -195,29 +198,29 @@ function AdminUserDetailsPage() {
                     />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField label="GitHub" value={userForm.githubUrl} onChange={(event) => setUserField("githubUrl", event.target.value)} fullWidth />
+                    <TextField label={t("admin.users.github")} value={userForm.githubUrl} onChange={(event) => setUserField("githubUrl", event.target.value)} fullWidth />
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <TextField label="LinkedIn" value={userForm.linkedinUrl} onChange={(event) => setUserField("linkedinUrl", event.target.value)} fullWidth />
+                    <TextField label={t("admin.users.linkedin")} value={userForm.linkedinUrl} onChange={(event) => setUserField("linkedinUrl", event.target.value)} fullWidth />
                   </Grid>
                   <Grid item xs={12}>
-                    <TextField label="טכנולוגיות" value={userForm.technologies} onChange={(event) => setUserField("technologies", event.target.value)} fullWidth />
+                    <TextField label={t("admin.users.technologies")} value={userForm.technologies} onChange={(event) => setUserField("technologies", event.target.value)} fullWidth />
                   </Grid>
                 </Grid>
                 <Button type="submit" variant="contained" sx={{ mt: 2 }} disabled={savingUser}>
-                  שמירת פרטי משתמשת
+                  {t("admin.users.saveUser")}
                 </Button>
               </Paper>
 
               {user.mentorProfile && (
                 <Paper component="form" onSubmit={saveMentorProfile} sx={{ p: 3, borderRadius: 2 }}>
                   <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-                    עריכת פרטי מנטורית
+                    {t("admin.users.editMentor")}
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12}>
                       <TextField
-                        label="רקע"
+                        label={t("admin.users.background")}
                         value={mentorForm.background}
                         onChange={(event) => setMentorField("background", event.target.value)}
                         fullWidth
@@ -229,7 +232,7 @@ function AdminUserDetailsPage() {
                     <Grid item xs={12} sm={6}>
                       <TextField
                         type="number"
-                        label="כמות פגישות"
+                        label={t("admin.users.meetingCapacity")}
                         value={mentorForm.meetingCapacity}
                         onChange={(event) => setMentorField("meetingCapacity", event.target.value)}
                         fullWidth
@@ -240,7 +243,7 @@ function AdminUserDetailsPage() {
                     <Grid item xs={12} sm={6}>
                       <TextField
                         type="number"
-                        label="משך פגישה בדקות"
+                        label={t("admin.users.durationMinutes")}
                         value={mentorForm.meetingDurationMinutes}
                         onChange={(event) => setMentorField("meetingDurationMinutes", event.target.value)}
                         fullWidth
@@ -250,7 +253,7 @@ function AdminUserDetailsPage() {
                     </Grid>
                     <Grid item xs={12}>
                       <TextField
-                        label="תחומי מנטורינג"
+                        label={t("admin.users.topics")}
                         value={mentorForm.mentoringTopics}
                         onChange={(event) => setMentorField("mentoringTopics", event.target.value)}
                         fullWidth
@@ -259,23 +262,23 @@ function AdminUserDetailsPage() {
                     </Grid>
                   </Grid>
                   <Button type="submit" variant="contained" sx={{ mt: 2 }} disabled={savingMentor}>
-                    שמירת פרטי מנטורית
+                    {t("admin.users.saveMentor")}
                   </Button>
                 </Paper>
               )}
 
               <Paper sx={{ p: 3, borderRadius: 2 }}>
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-                  בקשות אחרונות
+                  {t("admin.users.recentRequests")}
                 </Typography>
                 {detail.recentRequests.length === 0 ? (
-                  <AdminEmpty title="אין בקשות אחרונות" />
+                  <AdminEmpty title={t("admin.users.noRecentRequests")} />
                 ) : (
                   <Stack spacing={1.5}>
                     {detail.recentRequests.map((request) => (
                       <Stack key={request.id} direction={{ xs: "column", sm: "row" }} justifyContent="space-between" spacing={1}>
                         <Typography>{request.mentorName}</Typography>
-                        <Typography color="text.secondary">{REQUEST_STATUS_LABELS[request.status] || request.status}</Typography>
+                        <Typography color="text.secondary">{requestStatusLabel(request.status, t)}</Typography>
                       </Stack>
                     ))}
                   </Stack>
@@ -284,10 +287,10 @@ function AdminUserDetailsPage() {
 
               <Paper sx={{ p: 3, borderRadius: 2 }}>
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 700 }}>
-                  פגישות אחרונות
+                  {t("admin.users.recentMeetings")}
                 </Typography>
                 {detail.recentMeetings.length === 0 ? (
-                  <AdminEmpty title="אין פגישות אחרונות" />
+                  <AdminEmpty title={t("admin.users.noRecentMeetings")} />
                 ) : (
                   <Stack spacing={1.5}>
                     {detail.recentMeetings.map((meeting) => (
@@ -295,9 +298,9 @@ function AdminUserDetailsPage() {
                         <Typography>
                           {meeting.mentor.fullName} / {meeting.mentee.fullName}
                         </Typography>
-                        <Typography color="text.secondary">{formatDateTime(meeting.scheduledStart)}</Typography>
+                        <Typography color="text.secondary">{formatDateTime(meeting.scheduledStart, language)}</Typography>
                         <Button component={RouterLink} to={`/admin/meetings/${meeting.id}`} size="small">
-                          פרטים
+                          {t("common.details")}
                         </Button>
                       </Stack>
                     ))}
@@ -308,7 +311,7 @@ function AdminUserDetailsPage() {
           </Grid>
         </Grid>
       ) : (
-        <AdminEmpty title="משתמשת לא נמצאה" />
+        <AdminEmpty title={t("admin.users.notFound")} />
       )}
     </AdminLayout>
   );

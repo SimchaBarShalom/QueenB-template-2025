@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import {
@@ -36,6 +36,7 @@ import { isValidFullName, splitFullName } from "../utils/nameUtils";
 import { isPasswordValid } from "../utils/passwordValidation";
 import QueensMatchLogo from "./QueensMatchLogo";
 import { queenbColors } from "../theme";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const backdropSx = {
   backgroundColor: `${queenbColors.pink}26`,
@@ -69,12 +70,7 @@ const TECHNOLOGY_SUGGESTIONS = [
 const SALARY_CONFESSION_FORM_URL =
   "https://docs.google.com/forms/d/e/1FAIpQLScAEI48E4ofiz9Nwflcl0ipevesef1rjGs7DCyhVTuABhKLbQ/viewform?fbclid=IwY2xjawQro0hleHRuA2FlbQIxMABicmlkETFFSThRdlByem45Sk1YdmNWc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHr9NgWXGqJUOdIML47cx4eZoom92wOLs9yQSsIxsAGFRaqQmlVozD3oLOkk7_aem_ecgYsXjM4wikXICOtF5amQ";
 
-const MEETING_DURATION_OPTIONS = [
-  { value: 30, label: "30 דקות" },
-  { value: 45, label: "45 דקות" },
-  { value: 60, label: "60 דקות" },
-  { value: 90, label: "90 דקות" },
-];
+const MEETING_DURATION_OPTIONS = [30, 45, 60, 90];
 
 const initialValues = {
   fullName: "",
@@ -95,6 +91,7 @@ const initialValues = {
 };
 
 function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
+  const { t } = useLanguage();
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -124,33 +121,33 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
     const nextErrors = {};
 
     if (!isValidFullName(values.fullName)) {
-      nextErrors.fullName = "יש להזין שם פרטי ושם משפחה, לפחות 2 תווים בכל אחד";
+      nextErrors.fullName = t("validation.fullName");
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
-      nextErrors.email = "יש להזין אימייל תקין";
+      nextErrors.email = t("validation.invalidEmail");
     }
 
     if (!isPasswordValid(values.password)) {
-      nextErrors.password = "הסיסמה אינה עומדת בדרישות";
+      nextErrors.password = t("validation.passwordRequirements");
     }
 
     if (!confirmPasswordMatches) {
-      nextErrors.confirmPassword = "הסיסמאות אינן תואמות";
+      nextErrors.confirmPassword = t("validation.passwordsMustMatch");
     }
 
     if (values.wantsToBeMentor) {
 
       if (values.mentoringTopics.length === 0) {
-        nextErrors.mentoringTopics = "יש לבחור לפחות תחום מנטורינג אחד";
+        nextErrors.mentoringTopics = t("validation.atLeastOneTopic");
       }
 
       if (!values.meetingCapacity || Number(values.meetingCapacity) <= 0) {
-        nextErrors.meetingCapacity = "יש להזין מספר מפגשים";
+        nextErrors.meetingCapacity = t("validation.meetingCapacity");
       }
 
       if (values.filledSalaryConfession !== "yes" && values.filledSalaryConfession !== "no") {
-        nextErrors.filledSalaryConfession = "יש לציין האם מילאת את טופס וידויי השכר";
+        nextErrors.filledSalaryConfession = t("validation.salaryConfession");
       }
     }
 
@@ -196,7 +193,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
       handleClose();
       navigate(getDefaultAreaPath(response.data.user));
     } catch (requestError) {
-      setSubmitError(getRequestErrorMessage(requestError, "ההרשמה נכשלה. בדקי את הפרטים ונסי שוב."));
+      setSubmitError(getRequestErrorMessage(requestError, t("auth.registerFailed"), t));
     } finally {
       setLoading(false);
     }
@@ -222,7 +219,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
         <Stack alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
           <QueensMatchLogo height={72} />
           <Typography variant="h6" component="h1" textAlign="center">
-            הירשמי והצטרפי לקהילת Queens Match
+            {t("auth.registerHeadline")}
           </Typography>
         </Stack>
 
@@ -244,21 +241,21 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                   checkedIcon={<CheckCircleIcon color="primary" />}
                 />
               }
-              label="אני רוצה להיות מנטורית"
+              label={t("auth.wantsToBeMentor")}
             />
 
             <TextField
-              label="שם מלא (שם פרטי ושם משפחה)"
+              label={t("auth.fullNameLabel")}
               value={values.fullName}
               onChange={(event) => setField("fullName", event.target.value)}
               error={Boolean(errors.fullName)}
-              helperText={errors.fullName || "לדוגמה: נועה כהן — לפחות 2 תווים בכל חלק"}
+              helperText={errors.fullName || t("validation.fullNameHint")}
               required
               fullWidth
             />
 
             <TextField
-              label="אימייל"
+              label={t("auth.email")}
               type="email"
               value={values.email}
               onChange={(event) => setField("email", event.target.value)}
@@ -270,7 +267,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
 
             <Box>
               <TextField
-                label="סיסמה"
+                label={t("auth.password")}
                 type={showPassword ? "text" : "password"}
                 value={values.password}
                 onChange={(event) => setField("password", event.target.value)}
@@ -283,7 +280,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                         onClick={() => setShowPassword((current) => !current)}
                         edge="end"
                         size="small"
-                        aria-label={showPassword ? "הסתרת סיסמה" : "הצגת סיסמה"}
+                        aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                       >
                         {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                       </IconButton>
@@ -298,7 +295,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
 
             <Box>
               <TextField
-                label="אימות סיסמה"
+                label={t("auth.confirmPassword")}
                 type={showConfirmPassword ? "text" : "password"}
                 value={values.confirmPassword}
                 onChange={(event) => setField("confirmPassword", event.target.value)}
@@ -311,7 +308,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                         onClick={() => setShowConfirmPassword((current) => !current)}
                         edge="end"
                         size="small"
-                        aria-label={showConfirmPassword ? "הסתרת סיסמה" : "הצגת סיסמה"}
+                        aria-label={showConfirmPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                       >
                         {showConfirmPassword ? (
                           <VisibilityOff fontSize="small" />
@@ -327,7 +324,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                 <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5 }}>
                   <CheckCircleIcon sx={{ fontSize: 16, color: "success.main" }} />
                   <Typography variant="caption" sx={{ color: "success.main", fontWeight: 700 }}>
-                    אומת בהצלחה
+                    {t("auth.confirmed")}
                   </Typography>
                 </Stack>
               )}
@@ -335,7 +332,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                 <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.5 }}>
                   <CancelIcon sx={{ fontSize: 16, color: "error.main" }} />
                   <Typography variant="caption" color="error.main">
-                    הסיסמאות אינן תואמות
+                    {t("validation.passwordsMustMatch")}
                   </Typography>
                 </Stack>
               )}
@@ -343,16 +340,16 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
 
             <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>
-                קצת מידע עליי
+                {t("auth.aboutMe")}
               </Typography>
 
               <Stack spacing={2.5}>
                 <TextField
                   label={
                     <>
-                      שנות ניסיון{" "}
+                      {t("auth.yearsOptional")}{" "}
                       <Typography component="span" variant="caption" color="text.disabled">
-                        (אופציונלי)
+                        {t("common.optional")}
                       </Typography>
                     </>
                   }
@@ -368,7 +365,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                     <>
                       GitHub URL{" "}
                       <Typography component="span" variant="caption" color="text.disabled">
-                        (אופציונלי)
+                        {t("common.optional")}
                       </Typography>
                     </>
                   }
@@ -382,7 +379,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                     <>
                       LinkedIn URL{" "}
                       <Typography component="span" variant="caption" color="text.disabled">
-                        (אופציונלי)
+                        {t("common.optional")}
                       </Typography>
                     </>
                   }
@@ -402,9 +399,9 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                       {...params}
                       label={
                         <>
-                          טכנולוגיות / שפות תכנות{" "}
+                          {t("auth.technologiesOptional")}{" "}
                           <Typography component="span" variant="caption" color="text.disabled">
-                            (אופציונלי)
+                            {t("common.optional")}
                           </Typography>
                         </>
                       }
@@ -418,7 +415,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
               <Stack spacing={2.5}>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2.5}>
                   <TextField
-                    label="תפקיד נוכחי (אופציונלי)"
+                    label={t("auth.currentJobOptional")}
                     value={values.jobTitle}
                     onChange={(event) => setField("jobTitle", event.target.value)}
                     error={Boolean(errors.jobTitle)}
@@ -427,7 +424,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                     fullWidth
                   />
                   <TextField
-                    label="חברה (אופציונלי)"
+                    label={t("auth.companyOptional")}
                     value={values.workplace}
                     onChange={(event) => setField("workplace", event.target.value)}
                     error={Boolean(errors.workplace)}
@@ -445,7 +442,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="תחומי מנטורינג"
+                      label={t("auth.mentoringTopics")}
                       required={values.mentoringTopics.length === 0}
                       error={Boolean(errors.mentoringTopics)}
                       helperText={errors.mentoringTopics}
@@ -455,7 +452,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
 
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2.5}>
                   <TextField
-                    label="מספר מפגשים שאני יכולה לקיים"
+                    label={t("auth.meetingCount")}
                     type="number"
                     value={values.meetingCapacity}
                     onChange={(event) => setField("meetingCapacity", event.target.value)}
@@ -467,15 +464,15 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                   />
                   <TextField
                     select
-                    label="אורך פגישה"
+                    label={t("auth.meetingLength")}
                     value={values.meetingDurationMinutes}
                     onChange={(event) => setField("meetingDurationMinutes", event.target.value)}
                     required
                     fullWidth
                   >
-                    {MEETING_DURATION_OPTIONS.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
+                    {MEETING_DURATION_OPTIONS.map((minutes) => (
+                      <MenuItem key={minutes} value={minutes}>
+                        {t("common.minutesCount", { minutes })}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -486,17 +483,17 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                   required
                 >
                   <FormLabel sx={{ fontWeight: 700, color: "text.primary" }}>
-                    האם מילאת את טופס וידויי שכר של Queen B?
+                    {t("auth.salaryQuestion")}
                   </FormLabel>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 1 }}>
-                    הטופס אנונימי ועוזר לפענח את מצב השכר בשוק.{" "}
+                    {t("auth.salaryHelp")}{" "}
                     <Link
                       href={SALARY_CONFESSION_FORM_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                       sx={{ fontWeight: 700 }}
                     >
-                      למילוי הטופס
+                      {t("auth.salaryFormLink")}
                     </Link>
                   </Typography>
                   <RadioGroup
@@ -504,8 +501,8 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
                     value={values.filledSalaryConfession}
                     onChange={(event) => setField("filledSalaryConfession", event.target.value)}
                   >
-                    <FormControlLabel value="yes" control={<Radio />} label="כן" />
-                    <FormControlLabel value="no" control={<Radio />} label="לא" />
+                    <FormControlLabel value="yes" control={<Radio />} label={t("common.yes")} />
+                    <FormControlLabel value="no" control={<Radio />} label={t("common.no")} />
                   </RadioGroup>
                   {errors.filledSalaryConfession && (
                     <FormHelperText>{errors.filledSalaryConfession}</FormHelperText>
@@ -521,13 +518,13 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
               disabled={loading}
               sx={{ borderRadius: 999, py: 1.2 }}
             >
-              {loading ? <CircularProgress color="inherit" size={22} /> : "הרשמה"}
+              {loading ? <CircularProgress color="inherit" size={22} /> : t("auth.submitRegister")}
             </Button>
           </Stack>
         </Box>
 
         <Typography textAlign="center" sx={{ mt: 2.5 }}>
-          כבר יש לך חשבון?{" "}
+          {t("auth.alreadyHaveAccount")}{" "}
           <Box
             component="button"
             type="button"
@@ -542,7 +539,7 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
               font: "inherit",
             }}
           >
-            כניסה
+            {t("auth.submitLogin")}
           </Box>
         </Typography>
       </Box>
@@ -551,3 +548,4 @@ function RegisterDialog({ open, onClose, onRegister, onSwitchToLogin }) {
 }
 
 export default RegisterDialog;
+

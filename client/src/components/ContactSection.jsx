@@ -1,18 +1,10 @@
 import React, { useState } from "react";
 import { Alert, Box, Button, Stack, TextField, Typography } from "@mui/material";
 import { queenbColors } from "../theme";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const initialValues = { name: "", email: "", subject: "", message: "" };
 
-const PLACEHOLDERS = {
-  name: "לדוגמה: מיכל כהן",
-  email: "you@example.com",
-  subject: "במה נוכל לעזור?",
-  message: "כתבי כאן את השאלה או ההודעה שלך...",
-};
-
-// QueenB-pink field borders + light gray placeholders, applied uniformly to
-// every field in this form.
 const fieldSx = {
   "& .MuiOutlinedInput-root": {
     "& fieldset": { borderColor: `${queenbColors.pink}4d` },
@@ -25,12 +17,8 @@ const fieldSx = {
   },
 };
 
-// There is no /api/contact endpoint on the backend yet. Per the "don't fake
-// backend actions" rule, submitting does NOT claim the message was sent -
-// it just runs client-side validation and shows an honest note that sending
-// isn't wired up yet. Replace handleSubmit's body once a real endpoint
-// exists.
 function ContactSection() {
+  const { t } = useLanguage();
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
   const [notice, setNotice] = useState(false);
@@ -45,12 +33,12 @@ function ContactSection() {
     const nextErrors = {};
     Object.entries(values).forEach(([key, value]) => {
       if (!value.trim()) {
-        nextErrors[key] = "שדה חובה";
+        nextErrors[key] = t("validation.required");
       }
     });
 
     if (values.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
-      nextErrors.email = "יש להזין אימייל תקין";
+      nextErrors.email = t("validation.invalidEmail");
     }
 
     setErrors(nextErrors);
@@ -90,24 +78,24 @@ function ContactSection() {
         }}
       >
         <Typography variant="h4" component="h2" textAlign="center" sx={{ mb: 1 }}>
-          צור קשר
+          {t("contact.title")}
         </Typography>
         <Typography color="text.secondary" textAlign="center" sx={{ mb: 4 }}>
-          יש לך שאלה על Queens Match? השאירי פרטים ונשמח לחזור אלייך.
+          {t("contact.intro")}
         </Typography>
 
         {notice && (
           <Alert severity="info" sx={{ mb: 3 }} onClose={() => setNotice(false)}>
-            טופס יצירת הקשר עדיין אינו מחובר לשרת - הפרטים לא נשלחו בפועל.
+            {t("contact.notice")}
           </Alert>
         )}
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2.5}>
             <TextField
-              label="שם"
+              label={t("contact.name")}
               name="name"
-              placeholder={PLACEHOLDERS.name}
+              placeholder={t("contact.namePlaceholder")}
               value={values.name}
               onChange={handleChange}
               error={Boolean(errors.name)}
@@ -117,10 +105,10 @@ function ContactSection() {
               sx={fieldSx}
             />
             <TextField
-              label="אימייל"
+              label={t("contact.email")}
               name="email"
               type="email"
-              placeholder={PLACEHOLDERS.email}
+              placeholder={t("contact.emailPlaceholder")}
               value={values.email}
               onChange={handleChange}
               error={Boolean(errors.email)}
@@ -130,9 +118,9 @@ function ContactSection() {
               sx={fieldSx}
             />
             <TextField
-              label="נושא"
+              label={t("contact.subject")}
               name="subject"
-              placeholder={PLACEHOLDERS.subject}
+              placeholder={t("contact.subjectPlaceholder")}
               value={values.subject}
               onChange={handleChange}
               error={Boolean(errors.subject)}
@@ -142,9 +130,9 @@ function ContactSection() {
               sx={fieldSx}
             />
             <TextField
-              label="הודעה"
+              label={t("contact.message")}
               name="message"
-              placeholder={PLACEHOLDERS.message}
+              placeholder={t("contact.messagePlaceholder")}
               value={values.message}
               onChange={handleChange}
               error={Boolean(errors.message)}
@@ -156,7 +144,7 @@ function ContactSection() {
               sx={fieldSx}
             />
             <Button type="submit" variant="contained" size="large" sx={{ borderRadius: 999, py: 1.2 }}>
-              שליחה
+              {t("contact.submit")}
             </Button>
           </Stack>
         </Box>

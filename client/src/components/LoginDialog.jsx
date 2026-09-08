@@ -24,6 +24,7 @@ import { getDefaultAreaPath } from "../utils/areaRouting";
 import ComingSoonSnackbar from "./ComingSoonSnackbar";
 import QueensMatchLogo from "./QueensMatchLogo";
 import { queenbColors } from "../theme";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const backdropSx = {
   backgroundColor: `${queenbColors.pink}26`,
@@ -33,6 +34,7 @@ const backdropSx = {
 const initialValues = { email: "", password: "" };
 
 function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
+  const { t } = useLanguage();
   const [values, setValues] = useState(initialValues);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -62,7 +64,7 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
       handleClose();
       navigate(getDefaultAreaPath(response.data.user));
     } catch (requestError) {
-      setError(getRequestErrorMessage(requestError, "הכניסה נכשלה. בדקי את הפרטים ונסי שוב."));
+      setError(getRequestErrorMessage(requestError, t("auth.loginFailed"), t));
     } finally {
       setLoading(false);
     }
@@ -75,11 +77,11 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
   // returned credential to a new /api/auth/google backend route) - it must
   // not simulate a successful login in the meantime.
   const handleGoogleLogin = () => {
-    setInfoMessage("התחברות עם Google תתאפשר לאחר הגדרת OAuth בפרויקט.");
+    setInfoMessage(t("auth.googleComingSoon"));
   };
 
   const handleForgotPassword = () => {
-    setInfoMessage("איפוס סיסמה יתאפשר בקרוב.");
+    setInfoMessage(t("auth.forgotComingSoon"));
   };
 
   return (
@@ -112,7 +114,7 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
         <Stack alignItems="center" sx={{ mb: 2.5 }}>
           <IconButton
             onClick={handleGoogleLogin}
-            aria-label="המשך עם Google"
+            aria-label={t("auth.continueWithGoogle")}
             sx={{
               width: 48,
               height: 48,
@@ -127,14 +129,14 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
 
         <Divider sx={{ mb: 2.5 }}>
           <Typography variant="body2" color="text.secondary">
-            או
+            {t("common.or")}
           </Typography>
         </Divider>
 
         <Box component="form" onSubmit={handleSubmit}>
           <Stack spacing={2.5}>
             <TextField
-              label="דואר אלקטרוני"
+              label={t("auth.emailAddress")}
               name="email"
               type="email"
               value={values.email}
@@ -144,7 +146,7 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
             />
 
             <TextField
-              label="סיסמה"
+              label={t("auth.password")}
               name="password"
               type={showPassword ? "text" : "password"}
               value={values.password}
@@ -158,7 +160,7 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
                       onClick={() => setShowPassword((current) => !current)}
                       edge="end"
                       size="small"
-                      aria-label={showPassword ? "הסתרת סיסמה" : "הצגת סיסמה"}
+                      aria-label={showPassword ? t("auth.hidePassword") : t("auth.showPassword")}
                     >
                       {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                     </IconButton>
@@ -174,17 +176,17 @@ function LoginDialog({ open, onClose, onLogin, onSwitchToRegister }) {
               disabled={loading}
               sx={{ borderRadius: 999, py: 1.2 }}
             >
-              {loading ? <CircularProgress color="inherit" size={22} /> : "כניסה"}
+              {loading ? <CircularProgress color="inherit" size={22} /> : t("auth.submitLogin")}
             </Button>
           </Stack>
         </Box>
 
         <Stack direction="row" justifyContent="space-between" sx={{ mt: 2.5 }}>
           <Link component="button" type="button" onClick={onSwitchToRegister} underline="hover" sx={{ fontWeight: 700 }}>
-            צור חשבון
+            {t("auth.createAccount")}
           </Link>
           <Link component="button" type="button" onClick={handleForgotPassword} underline="hover">
-            שכחת את הסיסמה?
+            {t("auth.forgotPassword")}
           </Link>
         </Stack>
       </Box>

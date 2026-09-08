@@ -8,9 +8,11 @@ import {
   getMentorMeetingTabFromSearch,
   getMentorMeetingsPath,
 } from "../utils/meetingNav";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function AuthenticatedNavbar({ currentUser, onLogout }) {
   const location = useLocation();
+  const { t } = useLanguage();
   const mentor = isMentorUser(currentUser);
   const showingMentorArea = mentor && !location.pathname.startsWith("/mentee");
   const homePath = showingMentorArea ? "/mentor" : "/mentee";
@@ -19,16 +21,16 @@ function AuthenticatedNavbar({ currentUser, onLogout }) {
       ? getMentorMeetingTabFromSearch(location.search)
       : null;
   const items = [
-    { path: homePath, label: "מסך הבית", exact: true },
+    { path: homePath, label: t("nav.home"), exact: true },
     ...(showingMentorArea
       ? MENTOR_MEETING_TABS.map((tab) => ({
           path: getMentorMeetingsPath(tab.id),
-          label: tab.label,
+          label: t(tab.labelKey),
           isActive: (currentLocation) => currentLocation.pathname === MENTOR_MEETINGS_PATH && activeMentorTab === tab.id,
         }))
       : [
-          { path: "/mentee/mentors", label: "חיפוש מנטוריות" },
-          { path: "/mentee/meetings", label: "הפגישות שלי" },
+          { path: "/mentee/mentors", label: t("nav.searchMentors") },
+          { path: "/mentee/meetings", label: t("nav.myMeetings") },
         ]),
   ];
 

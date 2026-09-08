@@ -18,6 +18,7 @@ import getRequestErrorMessage from "../utils/getRequestErrorMessage";
 import { isValidFullName } from "../utils/nameUtils";
 import { createMentorProfile, updateMentorProfile, updateUserProfile } from "../services/profileService";
 import { AppPage, AppPageHeader, AppSurface } from "./AppPrimitives";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const MENTORING_TOPIC_OPTIONS = [
   "קריירה",
@@ -73,6 +74,7 @@ function isValidOptionalUrl(value) {
 }
 
 function ProfilePage({ user, onUserUpdated }) {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [values, setValues] = useState(() => (user ? formValuesFromUser(user) : {}));
   const [errors, setErrors] = useState({});
@@ -90,11 +92,11 @@ function ProfilePage({ user, onUserUpdated }) {
           severity="info"
           action={
             <Button component={RouterLink} to="/" color="inherit" size="small">
-              לדף הבית
+              {t("common.backHome")}
             </Button>
           }
         >
-          יש להתחבר כדי לראות את הפרופיל.
+          {t("profile.loginRequired")}
         </Alert>
       </AppPage>
     );
@@ -121,14 +123,14 @@ function ProfilePage({ user, onUserUpdated }) {
     const nextErrors = {};
 
     if (!isValidFullName(values.fullName)) {
-      nextErrors.fullName = "יש להזין שם פרטי ושם משפחה, לפחות 2 תווים בכל אחד";
+      nextErrors.fullName = t("validation.fullName");
     }
     const needsMentorDetails = Boolean(user.mentorProfile) || !user.isAdmin;
     if (needsMentorDetails && values.background.trim().length < 2) {
-      nextErrors.background = "יש להזין תיאור של לפחות 2 תווים";
+      nextErrors.background = t("validation.backgroundMin");
     }
     if (needsMentorDetails && values.mentoringTopics.length === 0) {
-      nextErrors.mentoringTopics = "יש לבחור לפחות תחום מנטורינג אחד";
+      nextErrors.mentoringTopics = t("validation.atLeastOneTopic");
     }
     if (
       needsMentorDetails &&
@@ -136,7 +138,7 @@ function ProfilePage({ user, onUserUpdated }) {
         Number(values.meetingCapacity) < 1 ||
         Number(values.meetingCapacity) > 100)
     ) {
-      nextErrors.meetingCapacity = "יש להזין מספר שלם בין 1 ל-100";
+      nextErrors.meetingCapacity = t("validation.meetingCapacityRange");
     }
     if (
       values.yearsOfExperience !== "" &&
@@ -144,13 +146,13 @@ function ProfilePage({ user, onUserUpdated }) {
         Number(values.yearsOfExperience) < 0 ||
         Number(values.yearsOfExperience) > 80)
     ) {
-      nextErrors.yearsOfExperience = "יש להזין מספר שלם בין 0 ל-80";
+      nextErrors.yearsOfExperience = t("validation.yearsRange");
     }
     if (!isValidOptionalUrl(values.githubUrl)) {
-      nextErrors.githubUrl = "יש להזין כתובת http או https תקינה";
+      nextErrors.githubUrl = t("validation.invalidUrl");
     }
     if (!isValidOptionalUrl(values.linkedinUrl)) {
-      nextErrors.linkedinUrl = "יש להזין כתובת http או https תקינה";
+      nextErrors.linkedinUrl = t("validation.invalidUrl");
     }
 
     setErrors(nextErrors);
@@ -193,13 +195,13 @@ function ProfilePage({ user, onUserUpdated }) {
       setNotification({
         open: true,
         severity: "success",
-        message: user.mentorProfile || user.isAdmin ? "הפרופיל עודכן בהצלחה" : "פרופיל המנטורית נוצר בהצלחה",
+        message: user.mentorProfile || user.isAdmin ? t("profile.updated") : t("profile.mentorCreated"),
       });
     } catch (requestError) {
       setNotification({
         open: true,
         severity: "error",
-        message: getRequestErrorMessage(requestError, "עדכון הפרופיל נכשל. נסי שוב."),
+        message: getRequestErrorMessage(requestError, t("errors.updateProfile"), t),
       });
     } finally {
       setLoading(false);
@@ -207,18 +209,18 @@ function ProfilePage({ user, onUserUpdated }) {
   };
 
   const capabilities = [
-    "מנטית",
-    user.mentorProfile && "מנטורית",
-    user.isAdmin && "מנהלת",
+    t("roles.mentee"),
+    user.mentorProfile && t("roles.mentor"),
+    user.isAdmin && t("roles.admin"),
   ].filter(Boolean);
 
   return (
     <AppPage maxWidth="md">
       <AppSurface sx={{ p: { xs: 2, sm: 3 } }}>
         <Stack spacing={2}>
-          <AppPageHeader title="פרופיל" actions={!editing && (
+          <AppPageHeader title={t("profile.title")} actions={!editing && (
               <Button variant="outlined" startIcon={<EditIcon />} onClick={startEditing}>
-                {user.mentorProfile || user.isAdmin ? "עריכת פרופיל" : "הצטרפי כמנטורית"}
+                {user.mentorProfile || user.isAdmin ? t("profile.edit") : t("profile.joinAsMentor")}
               </Button>
             )} />
 
@@ -226,27 +228,27 @@ function ProfilePage({ user, onUserUpdated }) {
             <Box component="form" onSubmit={handleSubmit} noValidate>
               <Stack spacing={2.5}>
                 {!user.isAdmin && !user.mentorProfile && (
-                  <Alert severity="info">השלימי את פרטי המנטורית כדי להצטרף כמנטורית.</Alert>
+                  <Alert severity="info">{t("profile.completeMentor")}</Alert>
                 )}
 
                 <TextField
-                  label="שם מלא (שם פרטי ושם משפחה)"
+                  label={t("auth.fullNameLabel")}
                   value={values.fullName}
                   onChange={(event) => setField("fullName", event.target.value)}
                   error={Boolean(errors.fullName)}
-                  helperText={errors.fullName || "לדוגמה: נועה כהן — לפחות 2 תווים בכל חלק"}
+                  helperText={errors.fullName || t("validation.fullNameHint")}
                   required
                 />
 
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <TextField
-                    label="תפקיד נוכחי"
+                    label={t("profile.currentJob")}
                     value={values.jobTitle}
                     onChange={(event) => setField("jobTitle", event.target.value)}
                     fullWidth
                   />
                   <TextField
-                    label="חברה"
+                    label={t("profile.company")}
                     value={values.workplace}
                     onChange={(event) => setField("workplace", event.target.value)}
                     fullWidth
@@ -254,7 +256,7 @@ function ProfilePage({ user, onUserUpdated }) {
                 </Stack>
 
                 <TextField
-                  label="שנות ניסיון"
+                  label={t("auth.yearsOfExperience")}
                   type="number"
                   value={values.yearsOfExperience}
                   onChange={(event) => setField("yearsOfExperience", event.target.value)}
@@ -265,7 +267,7 @@ function ProfilePage({ user, onUserUpdated }) {
 
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <TextField
-                    label="GitHub URL"
+                    label={t("profile.github")}
                     value={values.githubUrl}
                     onChange={(event) => setField("githubUrl", event.target.value)}
                     error={Boolean(errors.githubUrl)}
@@ -273,7 +275,7 @@ function ProfilePage({ user, onUserUpdated }) {
                     fullWidth
                   />
                   <TextField
-                    label="LinkedIn URL"
+                    label={t("profile.linkedin")}
                     value={values.linkedinUrl}
                     onChange={(event) => setField("linkedinUrl", event.target.value)}
                     error={Boolean(errors.linkedinUrl)}
@@ -288,12 +290,12 @@ function ProfilePage({ user, onUserUpdated }) {
                   options={TECHNOLOGY_SUGGESTIONS}
                   value={values.technologies}
                   onChange={(event, newValue) => setField("technologies", newValue)}
-                  renderInput={(params) => <TextField {...params} label="טכנולוגיות" />}
+                  renderInput={(params) => <TextField {...params} label={t("profile.technologies")} />}
                 />
 
                 {(!user.isAdmin || user.mentorProfile) && <>
                 <TextField
-                  label="אודות / רקע מקצועי"
+                  label={t("profile.background")}
                   value={values.background}
                   onChange={(event) => setField("background", event.target.value)}
                   error={Boolean(errors.background)}
@@ -312,7 +314,7 @@ function ProfilePage({ user, onUserUpdated }) {
                   renderInput={(params) => (
                     <TextField
                       {...params}
-                      label="תחומי מנטורינג"
+                      label={t("auth.mentoringTopics")}
                       error={Boolean(errors.mentoringTopics)}
                       helperText={errors.mentoringTopics}
                       required
@@ -322,7 +324,7 @@ function ProfilePage({ user, onUserUpdated }) {
 
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <TextField
-                    label="מספר מפגשים"
+                    label={t("profile.meetingCount")}
                     type="number"
                     value={values.meetingCapacity}
                     onChange={(event) => setField("meetingCapacity", event.target.value)}
@@ -334,7 +336,7 @@ function ProfilePage({ user, onUserUpdated }) {
                   />
                   <TextField
                     select
-                    label="אורך פגישה"
+                    label={t("profile.meetingLength")}
                     value={values.meetingDurationMinutes}
                     onChange={(event) => setField("meetingDurationMinutes", event.target.value)}
                     required
@@ -342,7 +344,7 @@ function ProfilePage({ user, onUserUpdated }) {
                   >
                     {MEETING_DURATION_OPTIONS.map((minutes) => (
                       <MenuItem key={minutes} value={minutes}>
-                        {minutes} דקות
+                        {t("common.minutesCount", { minutes })}
                       </MenuItem>
                     ))}
                   </TextField>
@@ -351,10 +353,10 @@ function ProfilePage({ user, onUserUpdated }) {
 
                 <Stack direction="row" spacing={1.5} justifyContent="flex-end">
                   <Button type="button" onClick={cancelEditing} disabled={loading}>
-                    ביטול
+                    {t("common.cancel")}
                   </Button>
                   <Button type="submit" variant="contained" disabled={loading}>
-                    {loading ? <CircularProgress color="inherit" size={22} /> : "שמירת שינויים"}
+                    {loading ? <CircularProgress color="inherit" size={22} /> : t("profile.saveChanges")}
                   </Button>
                 </Stack>
               </Stack>
@@ -368,18 +370,18 @@ function ProfilePage({ user, onUserUpdated }) {
               </Stack>
 
               <Box>
-                <Typography color="text.secondary">שם מלא</Typography>
+                <Typography color="text.secondary">{t("auth.fullName")}</Typography>
                 <Typography>{user.fullName}</Typography>
               </Box>
 
               <Box>
-                <Typography color="text.secondary">אימייל</Typography>
+                <Typography color="text.secondary">{t("auth.email")}</Typography>
                 <Typography>{user.email}</Typography>
               </Box>
 
               {user.jobTitle && (
                 <Box>
-                  <Typography color="text.secondary">תפקיד נוכחי</Typography>
+                  <Typography color="text.secondary">{t("profile.currentJob")}</Typography>
                   <Typography>
                     {user.jobTitle}
                     {user.workplace ? ` · ${user.workplace}` : ""}
@@ -389,7 +391,7 @@ function ProfilePage({ user, onUserUpdated }) {
 
               {user.mentorProfile?.background && (
                 <Box>
-                  <Typography color="text.secondary">אודות</Typography>
+                  <Typography color="text.secondary">{t("profile.about")}</Typography>
                   <Typography sx={{ whiteSpace: "pre-wrap" }}>
                     {user.mentorProfile.background}
                   </Typography>
@@ -398,7 +400,7 @@ function ProfilePage({ user, onUserUpdated }) {
 
               {user.technologies.length > 0 && (
                 <Box>
-                  <Typography color="text.secondary">טכנולוגיות</Typography>
+                  <Typography color="text.secondary">{t("profile.technologies")}</Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1} sx={{ mt: 0.5 }}>
                     {user.technologies.map((technology) => (
                       <Chip key={technology} label={technology} size="small" />
@@ -409,15 +411,17 @@ function ProfilePage({ user, onUserUpdated }) {
 
               {user.mentorProfile && (
                 <Box>
-                  <Typography color="text.secondary">תחומי מנטורינג</Typography>
+                  <Typography color="text.secondary">{t("auth.mentoringTopics")}</Typography>
                   <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1} sx={{ mt: 0.5 }}>
                     {user.mentorProfile.mentoringTopics.map((topic) => (
                       <Chip key={topic} label={topic} size="small" />
                     ))}
                   </Stack>
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    {user.mentorProfile.meetingCapacity} מפגשים ·{" "}
-                    {user.mentorProfile.meetingDurationMinutes} דקות למפגש
+                    {t("profile.capacitySummary", {
+                      capacity: user.mentorProfile.meetingCapacity,
+                      minutes: user.mentorProfile.meetingDurationMinutes,
+                    })}
                   </Typography>
                 </Box>
               )}

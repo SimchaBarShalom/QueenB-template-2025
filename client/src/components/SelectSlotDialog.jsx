@@ -9,11 +9,14 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function SelectSlotDialog({ open, request, selectedSlotId, loading, onSelect, onClose, onSubmit }) {
+  const { t } = useLanguage();
+
   return (
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>בחירת מועד</DialogTitle>
+      <DialogTitle>{t("meetings.selectTitle")}</DialogTitle>
       <DialogContent>
         <Stack spacing={1.5} sx={{ pt: 1 }}>
           {(request?.offeredSlots || []).map((slot) => (
@@ -28,18 +31,18 @@ function SelectSlotDialog({ open, request, selectedSlotId, loading, onSelect, on
             </Button>
           ))}
           {(request?.offeredSlots || []).length === 0 && (
-            <Typography color="text.secondary">לא נמצאו זמנים זמינים.</Typography>
+            <Typography color="text.secondary">{t("meetings.noSlots")}</Typography>
           )}
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={loading}>ביטול</Button>
+        <Button onClick={onClose} disabled={loading}>{t("common.cancel")}</Button>
         <Button
           variant="contained"
           onClick={onSubmit}
           disabled={loading || !selectedSlotId}
         >
-          {loading ? "קובעת..." : "קביעת הפגישה"}
+          {loading ? t("meetings.scheduling") : t("meetings.confirmMeeting")}
         </Button>
       </DialogActions>
     </Dialog>

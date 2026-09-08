@@ -5,33 +5,18 @@ import SchoolIcon from "@mui/icons-material/School";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import GroupsIcon from "@mui/icons-material/Groups";
 import { queenbColors } from "../theme";
+import { useLanguage } from "../i18n/LanguageContext";
 
-// Edit here to change the "about the program" cards - kept in one array so
-// content stays easy to update without touching layout code.
 const ABOUT_CARDS = [
-  {
-    icon: FavoriteIcon,
-    title: "חיבור אישי",
-    text: "התאמה בין חברות הקהילה למנטוריות מנוסות.",
-  },
-  {
-    icon: SchoolIcon,
-    title: "למידה מניסיון",
-    text: "מקום לשאלות, הכוונה מקצועית וכלים מעשיים.",
-  },
-  {
-    icon: TrendingUpIcon,
-    title: "התפתחות מקצועית",
-    text: "תמיכה בצעד הבא בלימודים ובקריירה.",
-  },
-  {
-    icon: GroupsIcon,
-    title: "קהילת QueenB",
-    text: "חיבור לנשים נוספות מהקהילה והרחבת הרשת המקצועית.",
-  },
+  { icon: FavoriteIcon, titleKey: "about.personalTitle", textKey: "about.personalText" },
+  { icon: SchoolIcon, titleKey: "about.learningTitle", textKey: "about.learningText" },
+  { icon: TrendingUpIcon, titleKey: "about.growthTitle", textKey: "about.growthText" },
+  { icon: GroupsIcon, titleKey: "about.communityTitle", textKey: "about.communityText" },
 ];
 
 function AboutSection() {
+  const { t } = useLanguage();
+
   return (
     <Box
       id="about-section"
@@ -47,15 +32,14 @@ function AboutSection() {
     >
       <Box sx={{ maxWidth: 1200, mx: "auto", px: { xs: 2, md: 4 } }}>
         <Typography variant="h4" component="h2" textAlign="center" sx={{ mb: 2 }}>
-          על התוכנית
+          {t("about.title")}
         </Typography>
         <Typography
           color="text.secondary"
           textAlign="center"
           sx={{ maxWidth: 640, mx: "auto", mb: { xs: 4, md: 6 }, fontSize: 18 }}
         >
-          Queens Match מלווה את חברות קהילת QueenB בתהליך מנטורינג אישי, שמחבר אותן למנטוריות מנוסות
-          מהתעשייה לצורך הכוונה, למידה והתפתחות מקצועית.
+          {t("about.intro")}
         </Typography>
 
         <Box
@@ -65,9 +49,9 @@ function AboutSection() {
             gap: 3,
           }}
         >
-          {ABOUT_CARDS.map(({ icon: Icon, title, text }) => (
+          {ABOUT_CARDS.map(({ icon: Icon, titleKey, textKey }) => (
             <Card
-              key={title}
+              key={titleKey}
               variant="outlined"
               sx={{
                 p: 3,
@@ -92,9 +76,9 @@ function AboutSection() {
                   <Icon sx={{ color: queenbColors.pink, fontSize: 28 }} />
                 </Box>
                 <Typography variant="h6" component="h3">
-                  {title}
+                  {t(titleKey)}
                 </Typography>
-                <Typography color="text.secondary">{text}</Typography>
+                <Typography color="text.secondary">{t(textKey)}</Typography>
               </Stack>
             </Card>
           ))}

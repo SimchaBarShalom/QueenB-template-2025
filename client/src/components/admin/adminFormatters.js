@@ -1,43 +1,26 @@
-export const MEETING_STATUS_LABELS = {
-  SCHEDULED: "נקבעה",
-  ATTENDANCE_CONFIRMED: "נוכחות אושרה",
-  COMPLETED: "הושלמה",
-  NOT_COMPLETED: "לא התקיימה",
-  RESCHEDULED: "נקבעה מחדש",
-  CANCELLED: "בוטלה",
-};
+import { formatDate as formatDateLocale, formatDateTime as formatDateTimeLocale } from "../../i18n/locales";
 
-export const REQUEST_STATUS_LABELS = {
-  WAITING_FOR_MENTOR_SLOTS: "ממתינה לזמנים מהמנטורית",
-  WAITING_FOR_MENTEE_SELECTION: "ממתינה לבחירת מועד",
-  REJECTED: "נדחתה",
-  MATCHED: "שודכה",
-  ATTENDANCE_CONFIRMED: "נוכחות אושרה",
-  COMPLETED: "הושלמה",
-  NOT_COMPLETED: "לא הושלמה",
-  FEEDBACK_COMPLETED: "פידבק הושלם",
-  CANCELLED: "בוטלה",
-};
-
-export const ALERT_TYPE_LABELS = {
-  NO_SHOW: "אי הגעה",
-  MISSING_FEEDBACK: "חסר פידבק",
-  STALE_REQUEST: "בקשה תקועה",
-  PAST_PENDING_MEETING: "פגישה לא נסגרה",
-  MENTOR_LOAD: "עומס מנטורית",
-};
-
-export function formatDateTime(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleString("he-IL", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
+export function meetingStatusLabel(status, t) {
+  const value = t(`admin.status.meeting.${status}`);
+  return value === `admin.status.meeting.${status}` ? status : value;
 }
 
-export function formatDate(value) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("he-IL");
+export function requestStatusLabel(status, t) {
+  const value = t(`admin.status.request.${status}`);
+  return value === `admin.status.request.${status}` ? status : value;
+}
+
+export function alertTypeLabel(type, t) {
+  const value = t(`admin.status.alert.${type}`);
+  return value === `admin.status.alert.${type}` ? type : value;
+}
+
+export function formatDateTime(value, language = "he") {
+  return formatDateTimeLocale(value, language);
+}
+
+export function formatDate(value, language = "he") {
+  return formatDateLocale(value, language);
 }
 
 export function getMeetingStatusColor(status) {

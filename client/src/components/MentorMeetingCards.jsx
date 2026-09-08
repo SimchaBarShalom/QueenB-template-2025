@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Button, Chip, Stack, Typography } from "@mui/material";
 import { queenbColors } from "../theme";
 import { AppSurface, AppStatusBadge } from "./AppPrimitives";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function CardShell({ children }) {
   return (
@@ -20,6 +21,8 @@ function InfoRow({ children }) {
 }
 
 export function MentorPastMeetingCard({ meeting, loading, onConfirm, onFeedback }) {
+  const { t } = useLanguage();
+
   return (
     <CardShell>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -27,7 +30,7 @@ export function MentorPastMeetingCard({ meeting, loading, onConfirm, onFeedback 
         <Chip
           size="small"
           color={meeting.needsConfirmation ? "default" : "success"}
-          label={meeting.needsConfirmation ? "ממתינה לאישור" : "התקיימה"}
+          label={meeting.needsConfirmation ? t("meetings.waitingConfirmation") : t("meetings.occurred")}
         />
       </Stack>
       <InfoRow>
@@ -42,7 +45,7 @@ export function MentorPastMeetingCard({ meeting, loading, onConfirm, onFeedback 
             disabled={loading}
             onClick={() => onConfirm(meeting, true)}
           >
-            התקיימה
+            {t("meetings.occurred")}
           </Button>
           <Button
             variant="outlined"
@@ -51,12 +54,12 @@ export function MentorPastMeetingCard({ meeting, loading, onConfirm, onFeedback 
             disabled={loading}
             onClick={() => onConfirm(meeting, false)}
           >
-            לא התקיימה
+            {t("meetings.didNotOccur")}
           </Button>
         </Stack>
       ) : meeting.feedbackSubmitted ? (
         <Typography variant="body2" color="success.main" sx={{ fontWeight: 700 }}>
-          המשוב הוגש
+          {t("meetings.feedbackSubmitted")}
         </Typography>
       ) : (
         <Button
@@ -65,7 +68,7 @@ export function MentorPastMeetingCard({ meeting, loading, onConfirm, onFeedback 
           onClick={() => onFeedback(meeting)}
           sx={{ alignSelf: "flex-start" }}
         >
-          הוספת משוב
+          {t("meetings.addFeedback")}
         </Button>
       )}
     </CardShell>
@@ -73,11 +76,13 @@ export function MentorPastMeetingCard({ meeting, loading, onConfirm, onFeedback 
 }
 
 export function MentorUpcomingMeetingCard({ meeting, onReschedule }) {
+  const { t } = useLanguage();
+
   return (
     <CardShell>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h6">{meeting.menteeName}</Typography>
-        <Chip size="small" color="primary" variant="outlined" label="פגישה קרובה" />
+        <Chip size="small" color="primary" variant="outlined" label={t("meetings.upcomingChip")} />
       </Stack>
       <InfoRow>
         {meeting.date} | {meeting.startTime}–{meeting.endTime}
@@ -90,7 +95,7 @@ export function MentorUpcomingMeetingCard({ meeting, onReschedule }) {
           onClick={() => onReschedule(meeting)}
           sx={{ alignSelf: "flex-start" }}
         >
-          שינוי מועד
+          {t("meetings.reschedule")}
         </Button>
       )}
     </CardShell>
@@ -109,27 +114,29 @@ export function MentorPendingRequestCard({
   onReject,
   onOfferSlots,
 }) {
+  const { t } = useLanguage();
+
   return (
     <CardShell>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h6">{request.menteeName}</Typography>
         <StatusChip
-          label={request.needsNewSlots ? "נדרשים זמנים חדשים" : "ממתינה לתגובה שלך"}
+          label={request.needsNewSlots ? t("meetings.needsNewSlots") : t("meetings.waitingYourReply")}
         />
       </Stack>
 
-      <InfoRow>התקבלה בתאריך {request.requestDate}</InfoRow>
+      <InfoRow>{t("meetings.receivedOn", { date: request.requestDate })}</InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{request.topic}</Typography>
 
       {request.needsNewSlots && (
         <>
           <Typography variant="body2" sx={{ color: queenbColors.pink, fontWeight: 700 }}>
-            המנטית דחתה את הזמנים שהצעת. יש להציע זמנים חדשים.
+            {t("meetings.menteeRejectedSlots")}
           </Typography>
           {request.offeredSlots.length > 0 && (
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                הזמנים שלא התאימו:
+                {t("meetings.slotsThatDidNotFit")}
               </Typography>
               <Stack spacing={0.25}>
                 {request.offeredSlots.map((slot) => (
@@ -150,7 +157,7 @@ export function MentorPendingRequestCard({
           onClick={() => onOfferSlots(request)}
           disabled={actionLoading}
         >
-          {request.needsNewSlots ? "הצעת זמנים חדשים" : "קבלה והצעת זמנים"}
+          {request.needsNewSlots ? t("meetings.offerNewSlots") : t("meetings.acceptAndOffer")}
         </Button>
         <Button
           color="error"
@@ -158,7 +165,7 @@ export function MentorPendingRequestCard({
           onClick={() => onReject(request)}
           disabled={actionLoading}
         >
-          דחיית הבקשה
+          {t("meetings.rejectRequest")}
         </Button>
       </Stack>
     </CardShell>
@@ -166,20 +173,22 @@ export function MentorPendingRequestCard({
 }
 
 export function MentorMonthlyBlockCard({ notice }) {
+  const { t } = useLanguage();
+
   return (
     <CardShell>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h6">{notice.menteeName}</Typography>
-        <StatusChip label="חסום עד סוף החודש" />
+        <StatusChip label={t("meetings.blockedUntilMonthEnd")} />
       </Stack>
       <Typography sx={{ fontWeight: 600 }}>{notice.topic}</Typography>
       <Typography variant="body2" sx={{ color: queenbColors.pink, fontWeight: 700 }}>
-        המנטית דחתה גם את סבב הזמנים השני. לא ניתן לקבוע פגישה נוספת איתה עד סוף החודש.
+        {t("meetings.secondDeclineNotice")}
       </Typography>
       {notice.offeredSlots.length > 0 && (
         <Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-            הזמנים שנדחו:
+            {t("meetings.declinedSlots")}
           </Typography>
           <Stack spacing={0.25}>
             {notice.offeredSlots.map((slot) => (
@@ -195,20 +204,22 @@ export function MentorMonthlyBlockCard({ notice }) {
 }
 
 export function MentorOfferedSlotsCard({ request }) {
+  const { t } = useLanguage();
+
   return (
     <CardShell>
       <Stack direction="row" justifyContent="space-between" alignItems="center">
         <Typography variant="h6">{request.menteeName}</Typography>
-        <StatusChip label="ממתינה לבחירת המנטית" />
+        <StatusChip label={t("meetings.waitingMenteeChoice")} />
       </Stack>
 
-      <InfoRow>התקבלה בתאריך {request.requestDate}</InfoRow>
+      <InfoRow>{t("meetings.receivedOn", { date: request.requestDate })}</InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{request.topic}</Typography>
 
       {request.offeredSlots.length > 0 && (
         <Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-            הזמנים שהצעת:
+            {t("meetings.slotsYouOffered")}
           </Typography>
           <Stack spacing={0.25}>
             {request.offeredSlots.map((slot) => (

@@ -8,16 +8,18 @@ import apiClient from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import { AdminPageHeader, AdminSectionTitle, AdminSurface, AdminStatusBadge } from "./AdminPrimitives";
 import { AdminError, AdminLoading } from "./AdminState";
-import { ALERT_TYPE_LABELS, formatDateTime, MEETING_STATUS_LABELS } from "./adminFormatters";
+import { alertTypeLabel, formatDateTime, meetingStatusLabel } from "./adminFormatters";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 const CARDS = [
-  { key: "usersCount", label: "משתמשות", action: "ניהול משתמשות", path: "/admin/users", icon: <GroupsIcon /> },
-  { key: "activeMentorsCount", label: "מנטוריות פעילות", action: "ניהול מנטוריות", path: "/admin/users?capability=mentor", icon: <GroupsIcon /> },
-  { key: "scheduledMeetingsCount", label: "פגישות פעילות", action: "ניהול פגישות", path: "/admin/meetings", icon: <EventAvailableIcon /> },
-  { key: "unresolvedAlertsCount", label: "התראות פתוחות", action: "טיפול בהתראות", path: "/admin/alerts", icon: <WarningAmberIcon /> },
+  { key: "usersCount", labelKey: "admin.dashboard.users", actionKey: "admin.dashboard.manageUsers", path: "/admin/users", icon: <GroupsIcon /> },
+  { key: "activeMentorsCount", labelKey: "admin.dashboard.activeMentors", actionKey: "admin.dashboard.manageMentors", path: "/admin/users?capability=mentor", icon: <GroupsIcon /> },
+  { key: "scheduledMeetingsCount", labelKey: "admin.dashboard.activeMeetings", actionKey: "admin.dashboard.manageMeetings", path: "/admin/meetings", icon: <EventAvailableIcon /> },
+  { key: "unresolvedAlertsCount", labelKey: "admin.dashboard.openAlerts", actionKey: "admin.dashboard.handleAlerts", path: "/admin/alerts", icon: <WarningAmberIcon /> },
 ];
 
 function AdminDashboardPage() {
+  const { t } = useLanguage();
   const [summary, setSummary] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [alerts, setAlerts] = useState([]);
@@ -43,7 +45,7 @@ function AdminDashboardPage() {
         setMeetings(meetingsResponse.data);
       } catch (requestError) {
         console.error(requestError);
-        setError("לא הצלחנו לטעון את אזור הניהול.");
+        setError(t("errors.loadAdmin"));
       } finally {
         setLoading(false);
       }
@@ -56,7 +58,7 @@ function AdminDashboardPage() {
 
   return (
     <AdminLayout>
-      <AdminPageHeader title="מסך הבית" subtitle="תמונת מצב יומית לפגישות, בקשות והתראות שמצריכות טיפול." />
+      <AdminPageHeader title={t("admin.dashboard.home")} subtitle={t("admin.dashboard.subtitle")} />
       <AdminError message={error} />
       <Grid container spacing={2} sx={{ width: "100%", m: 0 }}>
         {CARDS.map((card) => (
@@ -79,8 +81,8 @@ function AdminDashboardPage() {
                   <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1, fontVariantNumeric: "tabular-nums" }}>
                     {summary?.[card.key] ?? 0}
                   </Typography>
-                  <Typography color="text.secondary" sx={{ fontWeight: 700, mt: 0.5 }}>{card.label}</Typography>
-                  <Typography variant="body2" color="primary.main" sx={{ fontWeight: 800, mt: 0.75 }}>{card.action}</Typography>
+                  <Typography color="text.secondary" sx={{ fontWeight: 700, mt: 0.5 }}>{t(card.labelKey)}</Typography>
+                  <Typography variant="body2" color="primary.main" sx={{ fontWeight: 800, mt: 0.75 }}>{t(card.actionKey)}</Typography>
                 </Box>
               </Stack>
             </AdminSurface>
@@ -94,6 +96,7 @@ function AdminDashboardPage() {
 }
 
 function OperationsSection({ alerts, meetings }) {
+  const { t, language } = useLanguage();
   const now = new Date();
   const activeMeetings = meetings.filter((meeting) => ["SCHEDULED", "ATTENDANCE_CONFIRMED"].includes(meeting.status));
   const overdue = activeMeetings.filter((meeting) => new Date(meeting.scheduledEnd) < now).slice(0, 5);
@@ -103,39 +106,39 @@ function OperationsSection({ alerts, meetings }) {
     <Grid container spacing={2} sx={{ width: "100%", m: 0, mt: 0.5 }}>
       <Grid item xs={12} lg={4}>
         <AdminSurface sx={{ p: 2, height: "100%" }}>
-          <AdminSectionTitle title="התראות פתוחות" subtitle="הפריטים הראשונים בתור הטיפול." />
+          <AdminSectionTitle title={t("admin.dashboard.openAlertsTitle")} subtitle={t("admin.dashboard.openAlertsSubtitle")} />
           <Stack divider={<Box sx={{ borderTop: "1px solid #f3d9e3" }} />}>
             {alerts.slice(0, 5).map((alert) => (
               <Stack key={alert.key} direction="row" justifyContent="space-between" spacing={1.25} sx={{ py: 1 }}>
                 <Box sx={{ minWidth: 0 }}>
                   <Typography sx={{ fontWeight: 700 }} noWrap>{alert.title}</Typography>
                   <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" rowGap={0.5} sx={{ mt: 0.5 }}>
-                    <AdminStatusBadge label={ALERT_TYPE_LABELS[alert.type] || alert.type} tone={alert.priority || "normal"} />
-                    <Typography variant="body2" color="text.secondary">{formatDateTime(alert.materializedAt)}</Typography>
+                    <AdminStatusBadge label={alertTypeLabel(alert.type, t)} tone={alert.priority || "normal"} />
+                    <Typography variant="body2" color="text.secondary">{formatDateTime(alert.materializedAt, language)}</Typography>
                   </Stack>
                 </Box>
-                <Button size="small" component={RouterLink} to="/admin/alerts" sx={{ flexShrink: 0 }}>טיפול</Button>
+                <Button size="small" component={RouterLink} to="/admin/alerts" sx={{ flexShrink: 0 }}>{t("admin.dashboard.handle")}</Button>
               </Stack>
             ))}
-            {!alerts.length && <Typography color="text.secondary" sx={{ py: 1 }}>אין התראות פתוחות.</Typography>}
+            {!alerts.length && <Typography color="text.secondary" sx={{ py: 1 }}>{t("admin.dashboard.noOpenAlerts")}</Typography>}
           </Stack>
         </AdminSurface>
       </Grid>
       <Grid item xs={12} lg={4}>
         <AdminSurface sx={{ p: 2, height: "100%" }}>
-          <AdminSectionTitle title="פגישות שעברו" subtitle="פגישות פעילות שצריך לסגור." />
+          <AdminSectionTitle title={t("admin.dashboard.overdueTitle")} subtitle={t("admin.dashboard.overdueSubtitle")} />
           <Stack divider={<Box sx={{ borderTop: "1px solid #f3d9e3" }} />}>
             {overdue.map((meeting) => <MeetingLine key={meeting.id} meeting={meeting} />)}
-            {!overdue.length && <Typography color="text.secondary" sx={{ py: 1 }}>אין פגישות באיחור.</Typography>}
+            {!overdue.length && <Typography color="text.secondary" sx={{ py: 1 }}>{t("admin.dashboard.noOverdue")}</Typography>}
           </Stack>
         </AdminSurface>
       </Grid>
       <Grid item xs={12} lg={4}>
         <AdminSurface sx={{ p: 2, height: "100%" }}>
-          <AdminSectionTitle title="פגישות קרובות" subtitle="לוודא שהיומן נראה תקין." />
+          <AdminSectionTitle title={t("admin.dashboard.upcomingTitle")} subtitle={t("admin.dashboard.upcomingSubtitle")} />
           <Stack divider={<Box sx={{ borderTop: "1px solid #f3d9e3" }} />}>
             {upcoming.map((meeting) => <MeetingLine key={meeting.id} meeting={meeting} />)}
-            {!upcoming.length && <Typography color="text.secondary" sx={{ py: 1 }}>אין פגישות קרובות.</Typography>}
+            {!upcoming.length && <Typography color="text.secondary" sx={{ py: 1 }}>{t("admin.dashboard.noUpcoming")}</Typography>}
           </Stack>
         </AdminSurface>
       </Grid>
@@ -144,21 +147,23 @@ function OperationsSection({ alerts, meetings }) {
 }
 
 function MeetingLine({ meeting }) {
+  const { t, language } = useLanguage();
   return (
     <Stack direction="row" justifyContent="space-between" spacing={1.25} sx={{ py: 1 }}>
       <Box sx={{ minWidth: 0 }}>
         <Typography sx={{ fontWeight: 700 }} noWrap>{meeting.mentor.fullName} / {meeting.mentee.fullName}</Typography>
         <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" rowGap={0.5} sx={{ mt: 0.5 }}>
-          <Chip label={MEETING_STATUS_LABELS[meeting.status] || meeting.status} color="default" size="small" sx={{ height: 22, fontWeight: 700 }} />
-          <Typography variant="body2" color="text.secondary">{formatDateTime(meeting.scheduledStart)}</Typography>
+          <Chip label={meetingStatusLabel(meeting.status, t)} color="default" size="small" sx={{ height: 22, fontWeight: 700 }} />
+          <Typography variant="body2" color="text.secondary">{formatDateTime(meeting.scheduledStart, language)}</Typography>
         </Stack>
       </Box>
-      <Button size="small" component={RouterLink} to={`/admin/meetings/${meeting.id}`} sx={{ flexShrink: 0 }}>פרטים</Button>
+      <Button size="small" component={RouterLink} to={`/admin/meetings/${meeting.id}`} sx={{ flexShrink: 0 }}>{t("common.details")}</Button>
     </Stack>
   );
 }
 
 function AnalyticsSection({ analytics, onMonthsChange }) {
+  const { t } = useLanguage();
   const maxMonthlyValue = Math.max(...analytics.monthly.map((item) => Math.max(item.meetings, item.requests, item.users)), 1);
   const maxMentorValue = Math.max(...analytics.mentorLoad.map((item) => item.completed), 1);
   const statusTotal = analytics.statusBreakdown.reduce((sum, item) => sum + item.count, 0) || 1;
@@ -167,46 +172,46 @@ function AnalyticsSection({ analytics, onMonthsChange }) {
     <Stack spacing={2} sx={{ mt: 3 }}>
       <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} spacing={1}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 800 }}>אנליטיקה</Typography>
-          <Typography color="text.secondary">פעילות, ביצועי פגישות ועומס מנטוריות</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800 }}>{t("admin.dashboard.analytics")}</Typography>
+          <Typography color="text.secondary">{t("admin.dashboard.analyticsSubtitle")}</Typography>
         </Box>
-        <Select size="small" value={analytics.period.months} onChange={(event) => onMonthsChange(event.target.value)} aria-label="תקופה" sx={{ minWidth: 130 }}>
-          <MenuItem value={3}>3 חודשים</MenuItem>
-          <MenuItem value={6}>6 חודשים</MenuItem>
-          <MenuItem value={12}>12 חודשים</MenuItem>
+        <Select size="small" value={analytics.period.months} onChange={(event) => onMonthsChange(event.target.value)} aria-label={t("admin.dashboard.periodAria")} sx={{ minWidth: 130 }}>
+          <MenuItem value={3}>{t("admin.dashboard.months3")}</MenuItem>
+          <MenuItem value={6}>{t("admin.dashboard.months6")}</MenuItem>
+          <MenuItem value={12}>{t("admin.dashboard.months12")}</MenuItem>
         </Select>
       </Stack>
       <Grid container spacing={2} sx={{ width: "100%", m: 0 }}>
         <Grid item xs={12} lg={8}>
           <AdminSurface sx={{ p: 2.5, height: "100%" }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>מגמת פעילות חודשית</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>{t("admin.dashboard.monthlyTrend")}</Typography>
             <Box sx={{ display: "flex", alignItems: "stretch", gap: { xs: 1, sm: 2 }, height: 230, borderBottom: "1px solid", borderColor: "divider", pt: 1 }}>
               {analytics.monthly.map((item) => (
                 <Stack key={item.key} spacing={0.75} justifyContent="flex-end" alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
                   <Stack direction="row" alignItems="flex-end" spacing={0.35} sx={{ height: 185, width: "100%", justifyContent: "center" }}>
-                    <Box title={`משתמשות: ${item.users}`} sx={{ width: "25%", maxWidth: 16, height: `${Math.max((item.users / maxMonthlyValue) * 100, item.users ? 5 : 0)}%`, bgcolor: "#E6317A", borderRadius: "4px 4px 0 0" }} />
-                    <Box title={`בקשות: ${item.requests}`} sx={{ width: "25%", maxWidth: 16, height: `${Math.max((item.requests / maxMonthlyValue) * 100, item.requests ? 5 : 0)}%`, bgcolor: "#7B61FF", borderRadius: "4px 4px 0 0" }} />
-                    <Box title={`פגישות: ${item.meetings}`} sx={{ width: "25%", maxWidth: 16, height: `${Math.max((item.meetings / maxMonthlyValue) * 100, item.meetings ? 5 : 0)}%`, bgcolor: "#0288D1", borderRadius: "4px 4px 0 0" }} />
+                    <Box title={t("admin.dashboard.chartUsers", { count: item.users })} sx={{ width: "25%", maxWidth: 16, height: `${Math.max((item.users / maxMonthlyValue) * 100, item.users ? 5 : 0)}%`, bgcolor: "#E6317A", borderRadius: "4px 4px 0 0" }} />
+                    <Box title={t("admin.dashboard.chartRequests", { count: item.requests })} sx={{ width: "25%", maxWidth: 16, height: `${Math.max((item.requests / maxMonthlyValue) * 100, item.requests ? 5 : 0)}%`, bgcolor: "#7B61FF", borderRadius: "4px 4px 0 0" }} />
+                    <Box title={t("admin.dashboard.chartMeetings", { count: item.meetings })} sx={{ width: "25%", maxWidth: 16, height: `${Math.max((item.meetings / maxMonthlyValue) * 100, item.meetings ? 5 : 0)}%`, bgcolor: "#0288D1", borderRadius: "4px 4px 0 0" }} />
                   </Stack>
                   <Typography variant="caption" color="text.secondary" noWrap>{item.label}</Typography>
                 </Stack>
               ))}
             </Box>
             <Stack direction="row" spacing={2} sx={{ mt: 1.5 }}>
-              <Legend color="#E6317A" label="משתמשות" />
-              <Legend color="#7B61FF" label="בקשות" />
-              <Legend color="#0288D1" label="פגישות" />
+              <Legend color="#E6317A" label={t("admin.dashboard.legendUsers")} />
+              <Legend color="#7B61FF" label={t("admin.dashboard.legendRequests")} />
+              <Legend color="#0288D1" label={t("admin.dashboard.legendMeetings")} />
             </Stack>
           </AdminSurface>
         </Grid>
         <Grid item xs={12} lg={4}>
           <AdminSurface sx={{ p: 2.5, height: "100%" }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>סטטוס פגישות</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>{t("admin.dashboard.meetingStatus")}</Typography>
             <Stack spacing={1.5}>
               {analytics.statusBreakdown.map((item) => (
                 <Box key={item.status}>
                   <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-                    <Typography variant="body2">{MEETING_STATUS_LABELS[item.status] || item.status}</Typography>
+                    <Typography variant="body2">{meetingStatusLabel(item.status, t)}</Typography>
                     <Typography variant="body2" sx={{ fontWeight: 700 }}>{item.count}</Typography>
                   </Stack>
                   <Box sx={{ height: 8, bgcolor: "action.hover", borderRadius: 4, overflow: "hidden" }}>
@@ -214,14 +219,14 @@ function AnalyticsSection({ analytics, onMonthsChange }) {
                   </Box>
                 </Box>
               ))}
-              {!analytics.statusBreakdown.length && <Typography color="text.secondary">אין נתונים לתקופה.</Typography>}
+              {!analytics.statusBreakdown.length && <Typography color="text.secondary">{t("admin.dashboard.noPeriodData")}</Typography>}
             </Stack>
-            <Typography sx={{ mt: 3, fontWeight: 700 }}>השלמת פידבק: {analytics.totals.feedbackCompletionRate}%</Typography>
+            <Typography sx={{ mt: 3, fontWeight: 700 }}>{t("admin.dashboard.feedbackCompletion", { rate: analytics.totals.feedbackCompletionRate })}</Typography>
           </AdminSurface>
         </Grid>
         <Grid item xs={12}>
           <AdminSurface sx={{ p: 2.5 }}>
-            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>פגישות שהושלמו לפי מנטורית</Typography>
+            <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>{t("admin.dashboard.completedByMentor")}</Typography>
             <Stack spacing={1.25}>
               {analytics.mentorLoad.map((item) => (
                 <Stack key={item.mentorProfileId} direction="row" spacing={1.5} alignItems="center">
@@ -232,7 +237,7 @@ function AnalyticsSection({ analytics, onMonthsChange }) {
                   <Typography sx={{ width: 28, textAlign: "end", fontWeight: 700 }}>{item.completed}</Typography>
                 </Stack>
               ))}
-              {!analytics.mentorLoad.length && <Typography color="text.secondary">אין מנטוריות פעילות עם נתונים.</Typography>}
+              {!analytics.mentorLoad.length && <Typography color="text.secondary">{t("admin.dashboard.noMentorData")}</Typography>}
             </Stack>
           </AdminSurface>
         </Grid>

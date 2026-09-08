@@ -17,6 +17,8 @@ import { AppPage, AppPageHeader, AppSectionTitle, AppSurface } from "./AppPrimit
 import { getMentorMeetingRequests } from "../services/mentorMeetingsService";
 import { getMentorMeetingsPath } from "../utils/meetingNav";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
+import { formatDate as formatDateLocale, formatTime as formatTimeLocale } from "../i18n/locales";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const CAPACITY_STATUSES = [
   "MATCHED",
@@ -28,20 +30,17 @@ const CAPACITY_STATUSES = [
 const UPCOMING_MEETING_STATUSES = ["SCHEDULED", "ATTENDANCE_CONFIRMED"];
 const PREVIEW_LIMIT = 3;
 
-function formatDate(dateValue) {
-  return new Date(dateValue).toLocaleDateString("he-IL");
+function formatDate(dateValue, language) {
+  return formatDateLocale(dateValue, language);
 }
 
-function formatTime(dateValue) {
-  return new Date(dateValue).toLocaleTimeString("he-IL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatTime(dateValue, language) {
+  return formatTimeLocale(dateValue, language);
 }
 
-function getTopic(request) {
+function getTopic(request, mentoringFallback) {
   const topics = request.mentorProfile?.mentoringTopics || [];
-  return topics.length > 0 ? topics.map((topic) => topic.name).join(", ") : "מנטורינג";
+  return topics.length > 0 ? topics.map((topic) => topic.name).join(", ") : mentoringFallback;
 }
 
 function PreviewCard({ to, title, subtitle, detail }) {
@@ -72,6 +71,7 @@ function PreviewCard({ to, title, subtitle, detail }) {
 }
 
 function MentorDashboard({ currentUser }) {
+  const { t, language } = useLanguage();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -85,7 +85,7 @@ function MentorDashboard({ currentUser }) {
       } catch (requestError) {
         console.error(requestError);
         setError(
-          getRequestErrorMessage(requestError, "לא הצלחנו לטעון את דף הבית.")
+          getRequestErrorMessage(requestError, t("errors.loadHome"), t)
         );
       } finally {
         setLoading(false);
@@ -118,8 +118,8 @@ function MentorDashboard({ currentUser }) {
         )
         .map((meeting) => ({
           ...meeting,
-          menteeName: request.mentee?.fullName || "מנטית",
-          topic: getTopic(request),
+          menteeName: request.mentee?.fullName || t("roles.mentee"),
+          topic: getTopic(request, t("roles.mentoring")),
         }))
     );
 
@@ -138,18 +138,19 @@ function MentorDashboard({ currentUser }) {
     const items = pendingRequests.map((request) => ({
       id: `request-${request.id}`,
       to: getMentorMeetingsPath("pending"),
-      title: request.mentee?.fullName || "מנטית",
-      subtitle: "בקשה ממתינה להצעת זמנים",
-      detail: getTopic(request),
+      title: request.mentee?.fullName || t("roles.mentee"),
+      subtitle: t("mentorDashboard.waitingForSlots"),
+      detail: getTopic(request, t("roles.mentoring")),
       sortTime: new Date(request.createdAt).getTime(),
     }));
 
     requests.forEach((request) => {
       (request.meetings || []).forEach((meeting) => {
-        const menteeName = request.mentee?.fullName || "מנטית";
+        const menteeName = request.mentee?.fullName || t("roles.mentee");
         const endTimestamp = new Date(meeting.scheduledEnd).getTime();
-        const startLabel = `${formatDate(meeting.scheduledStart)} · ${formatTime(
-          meeting.scheduledStart
+        const startLabel = `${formatDate(meeting.scheduledStart, language)} · ${formatTime(
+          meeting.scheduledStart,
+          language
         )}`;
         const outcomeSubmitted = (meeting.outcomeConfirmations || []).some(
           (confirmation) => confirmation.userId === currentUser.id
@@ -167,7 +168,7 @@ function MentorDashboard({ currentUser }) {
             id: `outcome-${meeting.id}`,
             to: getMentorMeetingsPath("past"),
             title: menteeName,
-            subtitle: "ממתינה לאישור תוצאה",
+            subtitle: t("mentorDashboard.waitingForOutcome"),
             detail: startLabel,
             sortTime: endTimestamp,
           });
@@ -179,7 +180,7 @@ function MentorDashboard({ currentUser }) {
             id: `feedback-${meeting.id}`,
             to: getMentorMeetingsPath("past"),
             title: menteeName,
-            subtitle: "ממתינה למשוב",
+            subtitle: t("mentorDashboard.waitingForFeedback"),
             detail: startLabel,
             sortTime: new Date(meeting.scheduledStart).getTime(),
           });
@@ -206,7 +207,7 @@ function MentorDashboard({ currentUser }) {
 
   return (
     <AppPage>
-        <AppPageHeader title="מסך הבית" subtitle={`שלום, ${currentUser.fullName}`} />
+        <AppPageHeader title={t("mentorDashboard.home")} subtitle={t("common.greeting", { name: currentUser.fullName })} />
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -228,18 +229,19 @@ function MentorDashboard({ currentUser }) {
         >
           <DashboardSummaryCard
             icon={HourglassTopIcon}
-            title="בקשות שממתינות לך"
+            title={t("mentorDashboard.pendingRequests")}
             value={pendingRequests.length}
           />
 
           <DashboardSummaryCard
             icon={EventNoteIcon}
-            title="פגישה קרובה"
-            value={nextMeeting ? nextMeeting.menteeName : "אין פגישות קרובות"}
+            title={t("mentorDashboard.upcomingMeeting")}
+            value={nextMeeting ? nextMeeting.menteeName : t("mentorDashboard.noUpcoming")}
             subtitle={
               nextMeeting
-                ? `${formatDate(nextMeeting.scheduledStart)} · ${formatTime(
-                    nextMeeting.scheduledStart
+                ? `${formatDate(nextMeeting.scheduledStart, language)} · ${formatTime(
+                    nextMeeting.scheduledStart,
+                    language
                   )}`
                 : undefined
             }
@@ -247,7 +249,7 @@ function MentorDashboard({ currentUser }) {
 
           <DashboardSummaryCard
             icon={GroupsIcon}
-            title="מכסת פגישות"
+            title={t("mentorDashboard.meetingQuota")}
             value={`${usedCapacity} / ${meetingCapacity}`}
           />
         </Box>
@@ -263,7 +265,7 @@ function MentorDashboard({ currentUser }) {
             variant="contained"
             sx={{ px: 3 }}
           >
-            בקשות שממתינות לך
+            {t("mentorDashboard.pendingRequests")}
           </Button>
 
           <Button
@@ -272,7 +274,7 @@ function MentorDashboard({ currentUser }) {
             variant="outlined"
             sx={{ px: 3 }}
           >
-            פגישות קרובות
+            {t("mentorDashboard.upcomingMeetings")}
           </Button>
 
           <Button
@@ -281,11 +283,11 @@ function MentorDashboard({ currentUser }) {
             variant="outlined"
             sx={{ px: 3 }}
           >
-            עריכת פרופיל
+            {t("mentorDashboard.editProfile")}
           </Button>
         </Stack>
 
-        <AppSectionTitle title="דורש את תשומת ליבך" action={
+        <AppSectionTitle title={t("mentorDashboard.needsAttention")} action={
           <Button
             component={RouterLink}
             to={getMentorMeetingsPath(
@@ -293,13 +295,13 @@ function MentorDashboard({ currentUser }) {
             )}
             sx={{ fontWeight: 600 }}
           >
-            לבקשות הממתינות
+            {t("mentorDashboard.toPending")}
           </Button>
         } />
 
         {attentionItems.length === 0 ? (
           <Typography color="text.secondary" sx={{ mb: 5 }}>
-            אין כרגע פריטים שדורשים טיפול.
+            {t("mentorDashboard.noAttention")}
           </Typography>
         ) : (
           <Box
@@ -326,18 +328,18 @@ function MentorDashboard({ currentUser }) {
           </Box>
         )}
 
-        <AppSectionTitle title="פגישות קרובות" action={
+        <AppSectionTitle title={t("mentorDashboard.upcomingMeetings")} action={
           <Button
             component={RouterLink}
             to={getMentorMeetingsPath("upcoming")}
             sx={{ fontWeight: 600 }}
           >
-            לכל הפגישות
+            {t("mentorDashboard.allMeetings")}
           </Button>
         } />
 
         {upcomingMeetings.length === 0 ? (
-          <Typography color="text.secondary">אין פגישות מתוכננות כרגע.</Typography>
+          <Typography color="text.secondary">{t("mentorDashboard.noScheduled")}</Typography>
         ) : (
           <Box
             sx={{
@@ -355,9 +357,10 @@ function MentorDashboard({ currentUser }) {
                 key={meeting.id}
                 to={getMentorMeetingsPath("upcoming")}
                 title={meeting.menteeName}
-                subtitle={`${formatDate(meeting.scheduledStart)} · ${formatTime(
-                  meeting.scheduledStart
-                )}`}
+                subtitle={`${formatDate(meeting.scheduledStart, language)} · ${formatTime(
+                    meeting.scheduledStart,
+                    language
+                  )}`}
                 detail={meeting.topic}
               />
             ))}

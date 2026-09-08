@@ -1,15 +1,18 @@
 import React from "react";
 import RoleNavbar from "../RoleNavbar";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 const NAV_ITEMS = [
-  { path: "/admin", label: "מסך הבית", exact: true },
-  { path: "/admin/users", label: "משתמשות" },
-  { path: "/admin/meetings", label: "פגישות" },
-  { path: "/admin/calendar", label: "לוח שנה" },
+  { path: "/admin", labelKey: "admin.nav.home", exact: true },
+  { path: "/admin/users", labelKey: "admin.nav.users" },
+  { path: "/admin/meetings", labelKey: "admin.nav.meetings" },
+  { path: "/admin/calendar", labelKey: "admin.nav.calendar" },
 ];
 
 function AdminNavbar({ currentUser, onLogout }) {
-  return <RoleNavbar currentUser={currentUser} onLogout={onLogout} homePath="/admin" items={NAV_ITEMS} ariaLabel="ניווט ניהול" />;
+  const { t } = useLanguage();
+  const items = NAV_ITEMS.map((item) => ({ ...item, label: t(item.labelKey) }));
+  return <RoleNavbar currentUser={currentUser} onLogout={onLogout} homePath="/admin" items={items} ariaLabel={t("admin.nav.aria")} />;
 }
 
 export default AdminNavbar;

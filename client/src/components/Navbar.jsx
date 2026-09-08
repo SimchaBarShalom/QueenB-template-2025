@@ -13,17 +13,19 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import QueensMatchLogo from "./QueensMatchLogo";
-
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const CENTER_LINKS = [
-  {  label: "צור קשר", href: "/#contact-section" },
-  { label: "שאלות נפוצות", href: "/#faq-section" },
-    {label: "על התוכנית", href: "/#about-section" },
-
+  { labelKey: "nav.contact", href: "/#contact-section" },
+  { labelKey: "nav.faq", href: "/#faq-section" },
+  { labelKey: "nav.about", href: "/#about-section" },
 ];
 
 function Navbar({ onOpenLogin, onOpenRegister }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { t, direction } = useLanguage();
+  const drawerAnchor = direction === "rtl" ? "right" : "left";
 
   return (
     <AppBar position="fixed" color="inherit" elevation={0} sx={{ bgcolor: "#fff", borderBottom: "1px solid #f6d3e0" }}>
@@ -51,10 +53,10 @@ function Navbar({ onOpenLogin, onOpenRegister }) {
 
           <Box sx={{ justifySelf: "center", display: { xs: "none", md: "flex" }, alignItems: "center", gap: 1.5 }}>
             <Button onClick={onOpenRegister} variant="contained" sx={{ color: "#fff", px: 2.25 }}>
-              הרשמה
+              {t("nav.register")}
             </Button>
             <Button onClick={onOpenLogin} sx={{ color: "primary.main", fontWeight: 400 }}>
-              התחברות
+              {t("nav.login")}
             </Button>
             {CENTER_LINKS.map((link) => (
               <Button
@@ -63,31 +65,34 @@ function Navbar({ onOpenLogin, onOpenRegister }) {
                 href={link.href}
                 sx={{ color: "text.primary", fontWeight: 400 }}
               >
-                {link.label}
+                {t(link.labelKey)}
               </Button>
             ))}
           </Box>
 
-          <Box sx={{ justifySelf: "start", display: { xs: "none", md: "block" } }} />
+          <Box sx={{ justifySelf: "start", display: { xs: "none", md: "flex" }, alignItems: "center" }}>
+            <LanguageSwitcher />
+          </Box>
 
           <IconButton
             onClick={() => setMobileOpen(true)}
             sx={{ display: { xs: "flex", md: "none" }, justifySelf: "start" }}
-            aria-label="פתיחת תפריט"
+            aria-label={t("nav.openMenu")}
           >
             <MenuIcon />
           </IconButton>
         </Box>
       </Toolbar>
 
-      <Drawer anchor="right" open={mobileOpen} onClose={() => setMobileOpen(false)}>
-        <Box sx={{ width: 260, pt: 2 }} dir="rtl">
+      <Drawer anchor={drawerAnchor} open={mobileOpen} onClose={() => setMobileOpen(false)}>
+        <Box sx={{ width: 260, pt: 2 }} dir={direction}>
           <Box sx={{ px: 2, pb: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+            <LanguageSwitcher />
             <Button fullWidth variant="contained" onClick={() => { setMobileOpen(false); onOpenRegister(); }} sx={{ color: "#fff" }}>
-              הרשמה
+              {t("nav.register")}
             </Button>
             <Button fullWidth variant="outlined" onClick={() => { setMobileOpen(false); onOpenLogin(); }}>
-              התחברות
+              {t("nav.login")}
             </Button>
           </Box>
           <List>
@@ -98,7 +103,7 @@ function Navbar({ onOpenLogin, onOpenRegister }) {
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
               >
-                <ListItemText primary={link.label} />
+                <ListItemText primary={t(link.labelKey)} />
               </ListItemButton>
             ))}
           </List>

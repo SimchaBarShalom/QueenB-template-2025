@@ -17,6 +17,7 @@ import {
 import MentorCard from "./MentorCard";
 import { AppPage, AppPageHeader, AppSurface } from "./AppPrimitives";
 import getRequestErrorMessage from "../utils/getRequestErrorMessage";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const initialFilters = {
   jobTitle: "",
@@ -25,6 +26,7 @@ const initialFilters = {
 };
 
 function MentorSearchPage() {
+  const { t } = useLanguage();
   const [filters, setFilters] = useState(initialFilters);
 
   const [mentors, setMentors] = useState([]);
@@ -42,7 +44,7 @@ function MentorSearchPage() {
   useEffect(() => {
     async function loadData() {
       if (!menteeId) {
-        setError("לא נמצאה משתמשת מחוברת.");
+        setError(t("errors.noUser"));
         setLoading(false);
         return;
       }
@@ -63,7 +65,7 @@ function MentorSearchPage() {
         setRequests(requestsResponse.data);
       } catch (requestError) {
         console.error(requestError);
-        setError("לא הצלחנו לטעון את המנטוריות.");
+        setError(t("errors.loadMentors"));
       } finally {
         setLoading(false);
       }
@@ -212,7 +214,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
     } catch (requestError) {
       console.error(requestError);
       setError(
-        getRequestErrorMessage(requestError, "שליחת בקשת הפגישה נכשלה.")
+        getRequestErrorMessage(requestError, t("errors.sendRequest"), t)
       );
     }
   };
@@ -233,7 +235,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
 
   return (
     <AppPage>
-        <AppPageHeader title="חיפוש מנטוריות" subtitle="מצאי מנטורית לפי תפקיד, חברה או תחום מקצועי." />
+        <AppPageHeader title={t("mentors.title")} subtitle={t("mentors.subtitle")} />
 
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
@@ -255,7 +257,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
         >
           <TextField
             select
-            label="תפקיד"
+            label={t("mentors.jobTitle")}
             value={filters.jobTitle}
             onChange={(event) =>
               setFilters((current) => ({
@@ -265,7 +267,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
             }
             fullWidth
           >
-            <MenuItem value="">הכל</MenuItem>
+            <MenuItem value="">{t("common.all")}</MenuItem>
 
             {jobTitles.map((title) => (
               <MenuItem
@@ -279,7 +281,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
 
           <TextField
             select
-            label="חברה"
+            label={t("mentors.company")}
             value={filters.workplace}
             onChange={(event) =>
               setFilters((current) => ({
@@ -289,7 +291,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
             }
             fullWidth
           >
-            <MenuItem value="">הכל</MenuItem>
+            <MenuItem value="">{t("common.all")}</MenuItem>
 
             {workplaces.map((workplace) => (
               <MenuItem
@@ -303,7 +305,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
 
           <TextField
             select
-            label="תחום מנטורינג"
+            label={t("mentors.topic")}
             value={filters.topic}
             onChange={(event) =>
               setFilters((current) => ({
@@ -313,7 +315,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
             }
             fullWidth
           >
-            <MenuItem value="">הכל</MenuItem>
+            <MenuItem value="">{t("common.all")}</MenuItem>
 
             {mentoringTopics.map((topic) => (
               <MenuItem
@@ -328,7 +330,7 @@ const getRequestStatus = useCallback((mentorProfileId) => {
 
         {filteredMentors.length === 0 ? (
           <Typography color="text.secondary">
-            לא נמצאו מנטוריות מתאימות.
+            {t("mentors.noMentorsFound")}
           </Typography>
         ) : (
           <Box

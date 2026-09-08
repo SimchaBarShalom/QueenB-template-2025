@@ -13,14 +13,15 @@ import LinkedInIcon from "@mui/icons-material/LinkedIn";
 
 import { queenbColors } from "../theme";
 import { AppSurface } from "./AppPrimitives";
+import { useLanguage } from "../i18n/LanguageContext";
 
 // מיפוי בין סטטוס הבקשה לבין הטקסט שיופיע בכפתור.
 // pending = נשלחה בקשה ועדיין מחכים למנטורית.
 // scheduled = כבר נקבעה פגישה.
-const STATUS_LABELS = {
-  pending: "ממתין למענה",
-  scheduled: "הפגישה נקבעה",
-  blocked: "לא ניתן לקבוע החודש",
+const STATUS_KEYS = {
+  pending: "mentors.pending",
+  scheduled: "mentors.scheduled",
+  blocked: "mentors.blocked",
 };
 
 // קומפוננטה שמציגה כרטיס של מנטורית.
@@ -28,6 +29,7 @@ const STATUS_LABELS = {
 // mentor = אובייקט עם כל פרטי המנטורית.
 // onRequestClick = פונקציה שמופעלת כאשר המנטית לוחצת על "בקשת פגישה".
 function MentorCard({ mentor, onRequestClick }) {
+  const { t } = useLanguage();
   // פירוק הפרטים שאנחנו צריכות מתוך אובייקט המנטורית.
   const {
     fullName,
@@ -199,7 +201,7 @@ function MentorCard({ mentor, onRequestClick }) {
               },
             }}
           >
-            בקשת פגישה
+            {t("mentors.requestButton")}
           </Box>
         ) : (
           // אם כבר קיימת בקשה או פגישה,
@@ -244,7 +246,7 @@ function MentorCard({ mentor, onRequestClick }) {
             }}
           >
             {/* הטקסט נקבע לפי הסטטוס */}
-            {STATUS_LABELS[requestStatus]}
+            {t(STATUS_KEYS[requestStatus])}
           </Box>
         )}
       </Box>

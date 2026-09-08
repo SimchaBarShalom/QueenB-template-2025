@@ -13,6 +13,7 @@ import {
   Typography,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function localDateTimeMinimum() {
   const now = new Date();
@@ -25,13 +26,16 @@ function OfferSlotsDialog({
   request,
   durationMinutes,
   loading,
-  title = "קבלה והצעת זמנים",
-  submitLabel = "שליחת זמנים",
+  title,
+  submitLabel,
   onClose,
   onSubmit,
 }) {
+  const { t } = useLanguage();
   const [startTimes, setStartTimes] = useState([""]);
   const [error, setError] = useState("");
+  const dialogTitle = title || t("meetings.offerTitle");
+  const dialogSubmit = submitLabel || t("meetings.offerSubmit");
 
   useEffect(() => {
     if (open) {
@@ -59,12 +63,12 @@ function OfferSlotsDialog({
       startTimes.some((value) => !value) ||
       parsedStarts.some((date) => Number.isNaN(date.getTime()) || date.getTime() <= Date.now())
     ) {
-      setError("יש לבחור זמנים עתידיים תקינים.");
+      setError(t("validation.futureTimes"));
       return;
     }
 
     if (new Set(parsedStarts.map((date) => date.getTime())).size !== parsedStarts.length) {
-      setError("לא ניתן להציע את אותו זמן פעמיים.");
+      setError(t("validation.duplicateTimes"));
       return;
     }
 
@@ -80,12 +84,11 @@ function OfferSlotsDialog({
   return (
     <Dialog open={open} onClose={loading ? undefined : onClose} maxWidth="sm" fullWidth>
       <Box component="form" onSubmit={handleSubmit}>
-        <DialogTitle>{title}</DialogTitle>
+        <DialogTitle>{dialogTitle}</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ pt: 1 }}>
             <Typography color="text.secondary">
-              הציעי למנטית {request?.menteeName || ""} זמן אחד או יותר. כל פגישה אורכת{" "}
-              {durationMinutes} דקות.
+              {t("meetings.offerHelp", { name: request?.menteeName || "", minutes: durationMinutes })}
             </Typography>
 
             {error && <Alert severity="error">{error}</Alert>}
@@ -94,7 +97,7 @@ function OfferSlotsDialog({
               <Stack key={index} direction="row" spacing={1} alignItems="center">
                 <TextField
                   type="datetime-local"
-                  label={`מועד ${index + 1}`}
+                  label={t("meetings.slotLabel", { index: index + 1 })}
                   value={startTime}
                   onChange={(event) => setStartTime(index, event.target.value)}
                   inputProps={{ min: localDateTimeMinimum() }}
@@ -104,7 +107,7 @@ function OfferSlotsDialog({
                 />
                 {startTimes.length > 1 && (
                   <IconButton
-                    aria-label="הסרת מועד"
+                    aria-label={t("meetings.removeSlot")}
                     onClick={() => removeStartTime(index)}
                     disabled={loading}
                   >
@@ -122,17 +125,17 @@ function OfferSlotsDialog({
                 disabled={loading}
                 sx={{ alignSelf: "flex-start" }}
               >
-                הוספת מועד נוסף
+                {t("meetings.addSlot")}
               </Button>
             )}
           </Stack>
         </DialogContent>
         <DialogActions>
           <Button type="button" onClick={onClose} disabled={loading}>
-            ביטול
+            {t("common.cancel")}
           </Button>
           <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? "שומרת..." : submitLabel}
+            {loading ? t("common.saving") : dialogSubmit}
           </Button>
         </DialogActions>
       </Box>

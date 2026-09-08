@@ -2,15 +2,17 @@ import React from "react";
 import { Box, Breadcrumbs, Link, Stack, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { AppSurface, AppSectionTitle, AppStatusBadge } from "../AppPrimitives";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 export function AdminPageHeader({ title, subtitle, breadcrumbs = [], actions }) {
+  const { t } = useLanguage();
   return (
     <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" alignItems={{ md: "flex-start" }} spacing={2} sx={{ mb: 3 }}>
       <Box>
         {breadcrumbs.length > 0 && (
           <Breadcrumbs sx={{ mb: 1, color: "text.secondary", fontSize: "0.875rem" }}>
             <Link component={RouterLink} to="/admin" color="inherit">
-              ניהול
+              {t("admin.breadcrumb")}
             </Link>
             {breadcrumbs.map((item) =>
               item.to ? (

@@ -36,32 +36,31 @@ import {
   submitMeetingFeedback,
 } from "../services/meetingsService";
 import { AppPage, AppPageHeader, AppSectionTitle } from "./AppPrimitives";
+import { formatDate as formatDateLocale, formatTime as formatTimeLocale } from "../i18n/locales";
+import { useLanguage } from "../i18n/LanguageContext";
 
-function formatDate(value) {
-  return new Date(value).toLocaleDateString("he-IL");
+function formatDate(value, language) {
+  return formatDateLocale(value, language);
 }
 
-function formatTime(value) {
-  return new Date(value).toLocaleTimeString("he-IL", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatTime(value, language) {
+  return formatTimeLocale(value, language);
 }
 
-function getTopic(request) {
+function getTopic(request, mentoringFallback) {
   const topics = request.mentorProfile?.mentoringTopics || [];
-  return topics.length > 0 ? topics.map((topic) => topic.name).join(", ") : "מנטורינג";
+  return topics.length > 0 ? topics.map((topic) => topic.name).join(", ") : mentoringFallback;
 }
 
-function toMeetingView(request, meeting, currentUserId) {
+function toMeetingView(request, meeting, currentUserId, t, language) {
   return {
     id: meeting.id,
     requestId: request.id,
-    menteeName: request.mentee?.fullName || "מנטית",
-    topic: getTopic(request),
-    date: formatDate(meeting.scheduledStart),
-    startTime: formatTime(meeting.scheduledStart),
-    endTime: formatTime(meeting.scheduledEnd),
+    menteeName: request.mentee?.fullName || t("roles.mentee"),
+    topic: getTopic(request, t("roles.mentoring")),
+    date: formatDate(meeting.scheduledStart, language),
+    startTime: formatTime(meeting.scheduledStart, language),
+    endTime: formatTime(meeting.scheduledEnd, language),
     status: meeting.status,
     timestamp: new Date(meeting.scheduledStart).getTime(),
     endTimestamp: new Date(meeting.scheduledEnd).getTime(),
@@ -77,7 +76,7 @@ function toMeetingView(request, meeting, currentUserId) {
   };
 }
 
-function toRequestView(request) {
+function toRequestView(request, t, language) {
   const latestRound = request.schedulingRounds?.[0];
   const needsNewSlots =
     request.status === "WAITING_FOR_MENTOR_SLOTS" &&
@@ -86,15 +85,15 @@ function toRequestView(request) {
   return {
     id: request.id,
     status: request.status,
-    menteeName: request.mentee?.fullName || "מנטית",
-    topic: getTopic(request),
-    requestDate: formatDate(request.createdAt),
+    menteeName: request.mentee?.fullName || t("roles.mentee"),
+    topic: getTopic(request, t("roles.mentoring")),
+    requestDate: formatDate(request.createdAt, language),
     needsNewSlots,
     offeredSlots: (latestRound?.offeredSlots || []).map((slot) => ({
       id: slot.id,
-      date: formatDate(slot.startTime),
-      startTime: formatTime(slot.startTime),
-      endTime: formatTime(slot.endTime),
+      date: formatDate(slot.startTime, language),
+      startTime: formatTime(slot.startTime, language),
+      endTime: formatTime(slot.endTime, language),
     })),
   };
 }
@@ -123,6 +122,7 @@ function EmptyState({ children }) {
 }
 
 function MentorMeetingsPage({ currentUser }) {
+  const { t, language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const [requests, setRequests] = useState([]);
   const activeTab = getMentorMeetingTabFromSearch(searchParams);
@@ -145,7 +145,7 @@ function MentorMeetingsPage({ currentUser }) {
       setRequests(await getMentorMeetingRequests());
     } catch (requestError) {
       setError(
-        getRequestErrorMessage(requestError, "לא הצלחנו לטעון את הפגישות והבקשות.")
+        getRequestErrorMessage(requestError, t("errors.loadMeetingsAndRequests"), t)
       );
     } finally {
       if (withSpinner) setLoading(false);
@@ -178,7 +178,7 @@ function MentorMeetingsPage({ currentUser }) {
 
     requests.forEach((request) => {
       (request.meetings || []).forEach((meeting) => {
-        const view = toMeetingView(request, meeting, currentUser.id);
+        const view = toMeetingView(request, meeting, currentUser.id, t, language);
         const endedUnconfirmed =
           ["SCHEDULED", "ATTENDANCE_CONFIRMED"].includes(meeting.status) &&
           view.endTimestamp < now &&
@@ -200,10 +200,10 @@ function MentorMeetingsPage({ currentUser }) {
       upcomingMeetings: upcoming.sort((first, second) => first.timestamp - second.timestamp),
       pendingRequests: requests
         .filter((request) => request.status === "WAITING_FOR_MENTOR_SLOTS")
-        .map(toRequestView),
+        .map((request) => toRequestView(request, t, language)),
       offeredRequests: requests
         .filter((request) => request.status === "WAITING_FOR_MENTEE_SELECTION")
-        .map(toRequestView),
+        .map((request) => toRequestView(request, t, language)),
       monthlyBlocks: requests
         .filter(
           (request) =>
@@ -214,9 +214,9 @@ function MentorMeetingsPage({ currentUser }) {
             ) &&
             isCancelledThisMonth(request)
         )
-        .map(toRequestView),
+        .map((request) => toRequestView(request, t, language)),
     };
-  }, [currentUser.id, requests]);
+  }, [currentUser.id, requests, t, language]);
 
   const replaceRequest = (updatedRequest) => {
     setRequests((current) =>
@@ -229,16 +229,16 @@ function MentorMeetingsPage({ currentUser }) {
   };
 
   const handleReject = async (request) => {
-    if (!window.confirm(`לדחות את הבקשה של ${request.menteeName}?`)) return;
+    if (!window.confirm(t("meetings.confirmReject", { name: request.menteeName }))) return;
 
     try {
       setAction({ requestId: request.id, type: "reject" });
       replaceRequest(await rejectMentorRequest(request.id));
-      showNotification("success", "הבקשה נדחתה.");
+      showNotification("success", t("meetings.rejected"));
     } catch (requestError) {
       showNotification(
         "error",
-        getRequestErrorMessage(requestError, "דחיית הבקשה נכשלה.")
+        getRequestErrorMessage(requestError, t("errors.rejectRequest"), t)
       );
       if (isStaleRequestError(requestError)) await loadRequests();
     } finally {
@@ -252,12 +252,12 @@ function MentorMeetingsPage({ currentUser }) {
     try {
       setAction({ requestId: slotRequest.id, type: "slots" });
       replaceRequest(await offerMentorSlots(slotRequest.id, slots));
-      showNotification("success", "הזמנים נשלחו למנטית.");
+      showNotification("success", t("meetings.slotsSent"));
       return true;
     } catch (requestError) {
       showNotification(
         "error",
-        getRequestErrorMessage(requestError, "שליחת הזמנים נכשלה.")
+        getRequestErrorMessage(requestError, t("errors.sendSlots"), t)
       );
 
       if (isStaleRequestError(requestError)) {
@@ -278,12 +278,12 @@ function MentorMeetingsPage({ currentUser }) {
       setAction({ requestId: rescheduleMeeting.requestId, type: "reschedule" });
       await offerRescheduleSlots(rescheduleMeeting.requestId, slots);
       await loadRequests();
-      showNotification("success", "הזמנים החדשים נשלחו למנטית.");
+      showNotification("success", t("meetings.newSlotsSent"));
       return true;
     } catch (requestError) {
       showNotification(
         "error",
-        getRequestErrorMessage(requestError, "שינוי מועד הפגישה נכשל.")
+        getRequestErrorMessage(requestError, t("errors.reschedule"), t)
       );
       return false;
     } finally {
@@ -299,12 +299,12 @@ function MentorMeetingsPage({ currentUser }) {
       if (occurred) {
         setFeedbackMeeting(meeting);
       } else {
-        showNotification("success", "הפגישה סומנה כלא התקיימה.");
+        showNotification("success", t("meetings.markedNotOccurred"));
       }
     } catch (requestError) {
       showNotification(
         "error",
-        getRequestErrorMessage(requestError, "עדכון תוצאת הפגישה נכשל.")
+        getRequestErrorMessage(requestError, t("errors.updateOutcome"), t)
       );
     } finally {
       setAction(null);
@@ -318,12 +318,12 @@ function MentorMeetingsPage({ currentUser }) {
       setAction({ meetingId: feedbackMeeting.id, type: "feedback" });
       await submitMeetingFeedback(feedbackMeeting.id, feedback);
       await loadRequests();
-      showNotification("success", "המשוב נשמר.");
+      showNotification("success", t("meetings.feedbackSaved"));
       return true;
     } catch (requestError) {
       showNotification(
         "error",
-        getRequestErrorMessage(requestError, "שמירת המשוב נכשלה.")
+        getRequestErrorMessage(requestError, t("errors.saveFeedback"), t)
       );
       return false;
     } finally {
@@ -341,9 +341,9 @@ function MentorMeetingsPage({ currentUser }) {
 
   return (
     <AppPage maxWidth="md">
-        <AppPageHeader title="הפגישות שלי" subtitle="בקשות נכנסות, מועדים ומשוב במקום אחד." actions={
+        <AppPageHeader title={t("meetings.mentorTitle")} subtitle={t("meetings.mentorSubtitle")} actions={
           <Button component={RouterLink} to="/mentee" variant="outlined">
-            מעבר לאזור המנטיות
+            {t("meetings.switchToMentee")}
           </Button>
         } />
 
@@ -355,10 +355,10 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "past" && (
         <Box component="section" id="past-section">
-          <AppSectionTitle title="פגישות שהתקיימו" />
+          <AppSectionTitle title={t("meetings.tabPast")} />
           <Stack spacing={2}>
             {pastMeetings.length === 0 ? (
-              <EmptyState>אין עדיין היסטוריית פגישות.</EmptyState>
+              <EmptyState>{t("meetings.emptyPast")}</EmptyState>
             ) : (
               pastMeetings.map((meeting) => (
                 <MentorPastMeetingCard
@@ -376,10 +376,10 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "upcoming" && (
         <Box component="section" id="upcoming-section">
-          <AppSectionTitle title="פגישות קרובות" />
+          <AppSectionTitle title={t("meetings.tabUpcoming")} />
           <Stack spacing={2}>
             {upcomingMeetings.length === 0 ? (
-              <EmptyState>אין פגישות מתוכננות כרגע.</EmptyState>
+              <EmptyState>{t("meetings.emptyUpcoming")}</EmptyState>
             ) : (
               upcomingMeetings.map((meeting) => (
                 <MentorUpcomingMeetingCard
@@ -395,10 +395,10 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "pending" && (
         <Box component="section" id="pending-section">
-          <AppSectionTitle title="בקשות שממתינות לך" />
+          <AppSectionTitle title={t("meetings.tabPending")} />
           <Stack spacing={2}>
             {pendingRequests.length === 0 ? (
-              <EmptyState>אין בקשות שממתינות לטיפול.</EmptyState>
+              <EmptyState>{t("meetings.emptyPending")}</EmptyState>
             ) : (
               pendingRequests.map((request) => (
                 <MentorPendingRequestCard
@@ -416,10 +416,10 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "offered" && (
         <Box component="section" id="offered-section">
-          <AppSectionTitle title="זמנים שהצעת" />
+          <AppSectionTitle title={t("meetings.tabOffered")} />
           <Stack spacing={2}>
             {offeredRequests.length === 0 ? (
-              <EmptyState>אין הצעות זמנים שממתינות לבחירת מנטית.</EmptyState>
+              <EmptyState>{t("meetings.emptyOffered")}</EmptyState>
             ) : (
               offeredRequests.map((request) => (
                 <MentorOfferedSlotsCard key={request.id} request={request} />
@@ -431,10 +431,10 @@ function MentorMeetingsPage({ currentUser }) {
 
         {activeTab === "closed" && (
           <Box component="section" id="closed-section">
-            <AppSectionTitle title="בקשות שנסגרו החודש" />
+            <AppSectionTitle title={t("meetings.tabClosedMonth")} />
             <Stack spacing={2}>
               {monthlyBlocks.length === 0 ? (
-                <EmptyState>אין בקשות שנסגרו החודש.</EmptyState>
+                <EmptyState>{t("meetings.emptyClosed")}</EmptyState>
               ) : (
                 monthlyBlocks.map((notice) => (
                   <MentorMonthlyBlockCard key={notice.id} notice={notice} />
@@ -459,8 +459,8 @@ function MentorMeetingsPage({ currentUser }) {
         request={{ menteeName: rescheduleMeeting?.menteeName }}
         durationMinutes={currentUser.mentorProfile.meetingDurationMinutes}
         loading={action?.type === "reschedule"}
-        title="שינוי מועד והצעת זמנים"
-        submitLabel="שליחת זמנים חדשים"
+        title={t("meetings.rescheduleTitle")}
+        submitLabel={t("meetings.rescheduleSubmit")}
         onClose={() => setRescheduleMeeting(null)}
         onSubmit={handleReschedule}
       />

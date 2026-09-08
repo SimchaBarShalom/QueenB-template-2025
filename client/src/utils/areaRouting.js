@@ -14,11 +14,11 @@ export function getDefaultAreaPath(user) {
 export const AREA_DEFINITIONS = [
   {
     path: "/mentee",
-    label: "מעבר לאזור מנטיות",
+    labelKey: "nav.switchToMentee",
     available: (user) => Boolean(user) && !user.isAdmin,
   },
-  { path: "/mentor", label: "מעבר לאזור מנטוריות", available: (user) => isMentorUser(user) && !user.isAdmin },
-  { path: "/admin", label: "מעבר למסך הבית", available: (user) => Boolean(user?.isAdmin) },
+  { path: "/mentor", labelKey: "nav.switchToMentor", available: (user) => isMentorUser(user) && !user.isAdmin },
+  { path: "/admin", labelKey: "nav.switchToAdmin", available: (user) => Boolean(user?.isAdmin) },
 ];
 
 // Areas the user can switch to from wherever they currently are, excluding

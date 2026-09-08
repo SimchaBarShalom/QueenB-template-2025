@@ -5,7 +5,8 @@ import apiClient from "../../api/client";
 import AdminConfirmDialog from "./AdminConfirmDialog";
 import AdminLayout from "./AdminLayout";
 import { AdminError, AdminLoading } from "./AdminState";
-import { formatDateTime, getMeetingStatusColor, MEETING_STATUS_LABELS, REQUEST_STATUS_LABELS } from "./adminFormatters";
+import { formatDateTime, getMeetingStatusColor, meetingStatusLabel, requestStatusLabel } from "./adminFormatters";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 function toDateTimeLocalValue(value) {
   if (!value) return "";
@@ -16,6 +17,7 @@ function toDateTimeLocalValue(value) {
 
 function AdminMeetingDetailsPage() {
   const { id } = useParams();
+  const { t, language } = useLanguage();
   const [meeting, setMeeting] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingSchedule, setSavingSchedule] = useState(false);
@@ -36,7 +38,7 @@ function AdminMeetingDetailsPage() {
       });
     } catch (requestError) {
       console.error(requestError);
-      setError("לא הצלחנו לטעון את פרטי הפגישה.");
+      setError(t("errors.loadMeeting"));
     } finally {
       setLoading(false);
     }
@@ -53,10 +55,10 @@ function AdminMeetingDetailsPage() {
       setSuccess("");
       const response = await apiClient.patch(`/api/admin/meetings/${id}/status`, { status });
       setMeeting(response.data);
-      setSuccess("סטטוס הפגישה עודכן.");
+      setSuccess(t("admin.meetings.statusUpdated"));
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "עדכון סטטוס הפגישה נכשל.");
+      setError(requestError.response?.data?.error || t("errors.updateMeetingStatus"));
     }
   };
 
@@ -75,10 +77,10 @@ function AdminMeetingDetailsPage() {
         scheduledStart: toDateTimeLocalValue(response.data.scheduledStart),
         scheduledEnd: toDateTimeLocalValue(response.data.scheduledEnd),
       });
-      setSuccess("מועד הפגישה עודכן.");
+      setSuccess(t("admin.meetings.scheduleUpdated"));
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "עדכון מועד הפגישה נכשל.");
+      setError(requestError.response?.data?.error || t("errors.updateSchedule"));
     } finally {
       setSavingSchedule(false);
     }
@@ -90,26 +92,26 @@ function AdminMeetingDetailsPage() {
       setSuccess("");
       await apiClient.patch(`/api/admin/requests/${meeting.requestId}/cancel`);
       await loadMeeting();
-      setSuccess("הבקשה והפגישות הפעילות שלה בוטלו.");
+      setSuccess(t("admin.meetings.requestCancelled"));
     } catch (requestError) {
       console.error(requestError);
-      setError(requestError.response?.data?.error || "ביטול הבקשה נכשל.");
+      setError(requestError.response?.data?.error || t("errors.cancelRequest"));
     }
   };
 
   const requestStatusUpdate = (status) => {
     const confirmations = {
       NOT_COMPLETED: {
-        title: "לסמן שהפגישה לא התקיימה?",
-        description: "הפגישה תיסגר כלא הושלמה וגם סטטוס הבקשה יעודכן.",
-        confirmLabel: "סימון כלא הושלמה",
+        title: t("admin.meetings.confirmNotCompletedTitle"),
+        description: t("admin.meetings.confirmNotCompletedDetailsBody"),
+        confirmLabel: t("admin.meetings.confirmNotCompletedAction"),
         confirmColor: "warning",
         run: () => updateStatus("NOT_COMPLETED"),
       },
       CANCELLED: {
-        title: "לבטל את הפגישה?",
-        description: "הפגישה תבוטל. אם אין פגישות פעילות נוספות לבקשה, גם הבקשה תבוטל.",
-        confirmLabel: "ביטול פגישה",
+        title: t("admin.meetings.confirmCancelTitle"),
+        description: t("admin.meetings.confirmCancelDetailsBody"),
+        confirmLabel: t("admin.meetings.confirmCancelAction"),
         confirmColor: "error",
         run: () => updateStatus("CANCELLED"),
       },
@@ -125,9 +127,9 @@ function AdminMeetingDetailsPage() {
 
   const requestCancelRequest = () => {
     setPendingAction({
-      title: "לבטל את הבקשה?",
-      description: "הבקשה וכל הפגישות הפעילות שלה יבוטלו. פגישות היסטוריות יישארו ללא שינוי.",
-      confirmLabel: "ביטול בקשה",
+      title: t("admin.meetings.confirmCancelRequestTitle"),
+      description: t("admin.meetings.confirmCancelRequestBody"),
+      confirmLabel: t("admin.meetings.confirmCancelRequestAction"),
       confirmColor: "error",
       run: cancelRequest,
     });
@@ -152,10 +154,10 @@ function AdminMeetingDetailsPage() {
     <AdminLayout>
       <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2} sx={{ mb: 3 }}>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-          פרטי פגישה
+          {t("admin.meetings.detailsTitle")}
         </Typography>
         <Button component={RouterLink} to="/admin/meetings">
-          חזרה לפגישות
+          {t("admin.meetings.backToMeetings")}
         </Button>
       </Stack>
       <AdminError message={error} />
@@ -170,20 +172,20 @@ function AdminMeetingDetailsPage() {
           <Grid item xs={12} md={8}>
             <Paper sx={{ p: 3, borderRadius: 2 }}>
               <Stack spacing={2}>
-                <Chip sx={{ alignSelf: "flex-start" }} label={MEETING_STATUS_LABELS[meeting.status] || meeting.status} color={getMeetingStatusColor(meeting.status)} />
+                <Chip sx={{ alignSelf: "flex-start" }} label={meetingStatusLabel(meeting.status, t)} color={getMeetingStatusColor(meeting.status)} />
                 <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                  {formatDateTime(meeting.scheduledStart)} - {formatDateTime(meeting.scheduledEnd)}
+                  {formatDateTime(meeting.scheduledStart, language)} - {formatDateTime(meeting.scheduledEnd, language)}
                 </Typography>
-                <Typography>מנטורית: {meeting.mentor.fullName} ({meeting.mentor.email})</Typography>
-                <Typography>מנטית: {meeting.mentee.fullName} ({meeting.mentee.email})</Typography>
-                <Typography>סטטוס בקשה: {REQUEST_STATUS_LABELS[meeting.requestStatus] || meeting.requestStatus}</Typography>
+                <Typography>{t("admin.meetings.mentorLine", { name: meeting.mentor.fullName, email: meeting.mentor.email })}</Typography>
+                <Typography>{t("admin.meetings.menteeLine", { name: meeting.mentee.fullName, email: meeting.mentee.email })}</Typography>
+                <Typography>{t("admin.meetings.requestStatus", { status: requestStatusLabel(meeting.requestStatus, t) })}</Typography>
                 <Divider />
                 <Paper component="form" onSubmit={updateSchedule} variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                  <Typography sx={{ mb: 2, fontWeight: 700 }}>עריכת מועד</Typography>
+                  <Typography sx={{ mb: 2, fontWeight: 700 }}>{t("admin.meetings.editSchedule")}</Typography>
                   <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                     <TextField
                       type="datetime-local"
-                      label="התחלה"
+                      label={t("admin.meetings.start")}
                       value={scheduleForm.scheduledStart}
                       onChange={(event) => setScheduleForm((current) => ({ ...current, scheduledStart: event.target.value }))}
                       InputLabelProps={{ shrink: true }}
@@ -192,7 +194,7 @@ function AdminMeetingDetailsPage() {
                     />
                     <TextField
                       type="datetime-local"
-                      label="סיום"
+                      label={t("admin.meetings.end")}
                       value={scheduleForm.scheduledEnd}
                       onChange={(event) => setScheduleForm((current) => ({ ...current, scheduledEnd: event.target.value }))}
                       InputLabelProps={{ shrink: true }}
@@ -200,33 +202,33 @@ function AdminMeetingDetailsPage() {
                       fullWidth
                     />
                     <Button type="submit" variant="contained" disabled={!canEditSchedule || savingSchedule}>
-                      שמירה
+                      {t("common.save")}
                     </Button>
                   </Stack>
                   {!canEditSchedule && (
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      אפשר לערוך מועד רק לפגישה פעילה ועתידית.
+                      {t("admin.meetings.scheduleLocked")}
                     </Typography>
                   )}
                 </Paper>
                 <Divider />
-                <Typography sx={{ fontWeight: 700 }}>פידבק</Typography>
+                <Typography sx={{ fontWeight: 700 }}>{t("admin.meetings.feedbackTitle")}</Typography>
                 <Typography color="text.secondary">
-                  {meeting.feedbackStatus.count}/2 הוגשו. תוכן הפידבק לא מוצג ולא ניתן לעריכה באזור הניהול.
+                  {t("admin.meetings.feedbackHidden", { count: meeting.feedbackStatus.count })}
                 </Typography>
                 <Divider />
                 <Stack direction="row" spacing={1} flexWrap="wrap" rowGap={1}>
                   <Button variant="contained" disabled={meeting.status === "COMPLETED"} onClick={() => requestStatusUpdate("COMPLETED")}>
-                    סימון כהושלמה
+                    {t("admin.meetings.markCompletedOne")}
                   </Button>
                   <Button variant="outlined" disabled={meeting.status === "NOT_COMPLETED"} onClick={() => requestStatusUpdate("NOT_COMPLETED")}>
-                    סימון כלא הושלמה
+                    {t("admin.meetings.markNotCompletedOne")}
                   </Button>
                   <Button variant="outlined" color="error" disabled={meeting.status === "CANCELLED"} onClick={() => requestStatusUpdate("CANCELLED")}>
-                    ביטול פגישה
+                    {t("admin.meetings.cancelMeeting")}
                   </Button>
                   <Button variant="outlined" color="error" disabled={meeting.requestStatus === "CANCELLED"} onClick={requestCancelRequest}>
-                    ביטול בקשה
+                    {t("admin.meetings.cancelRequest")}
                   </Button>
                 </Stack>
               </Stack>
@@ -238,7 +240,7 @@ function AdminMeetingDetailsPage() {
         open={Boolean(pendingAction)}
         title={pendingAction?.title || ""}
         description={pendingAction?.description || ""}
-        confirmLabel={pendingAction?.confirmLabel || "אישור"}
+        confirmLabel={pendingAction?.confirmLabel || t("common.confirm")}
         confirmColor={pendingAction?.confirmColor || "primary"}
         onClose={() => setPendingAction(null)}
         onConfirm={confirmPendingAction}

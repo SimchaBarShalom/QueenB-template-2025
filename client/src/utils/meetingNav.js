@@ -3,11 +3,11 @@ export const MENTOR_MEETINGS_PATH = "/mentor/meetings";
 export const MENTOR_MEETING_TAB_QUERY = "tab";
 
 export const MENTOR_MEETING_TABS = [
-  { id: "past", label: "פגישות שהתקיימו" },
-  { id: "upcoming", label: "פגישות קרובות" },
-  { id: "pending", label: "בקשות שממתינות לך" },
-  { id: "offered", label: "זמנים שהצעת" },
-  { id: "closed", label: "בקשות שנסגרו" },
+  { id: "past", labelKey: "meetings.tabPast" },
+  { id: "upcoming", labelKey: "meetings.tabUpcoming" },
+  { id: "pending", labelKey: "meetings.tabPending" },
+  { id: "offered", labelKey: "meetings.tabOffered" },
+  { id: "closed", labelKey: "meetings.tabClosed" },
 ];
 
 export const DEFAULT_MENTOR_MEETING_TAB = "upcoming";

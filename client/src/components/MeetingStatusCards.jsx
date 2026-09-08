@@ -4,6 +4,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { queenbColors } from "../theme";
 import { AppSurface } from "./AppPrimitives";
+import { useLanguage } from "../i18n/LanguageContext";
 
 // Four status-specific meeting cards for MenteeMeetingsPage. Kept in one
 // file since they share the same card shell and are only ever used
@@ -26,13 +27,14 @@ function InfoRow({ children }) {
 }
 
 export function CompletedMeetingCard({ meeting, loading, onConfirm, onAddFeedback }) {
+  const { t } = useLanguage();
   return (
     <CardShell>
       <Typography variant="h6" component="h3">
         {meeting.mentorName}
       </Typography>
       <InfoRow>
-        {meeting.date} | {meeting.time} | {meeting.durationMinutes} דקות
+        {t("meetings.durationRow", { date: meeting.date, time: meeting.time, minutes: meeting.durationMinutes })}
       </InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{meeting.topic}</Typography>
 
@@ -45,7 +47,7 @@ export function CompletedMeetingCard({ meeting, loading, onConfirm, onAddFeedbac
             onClick={() => onConfirm(meeting, true)}
             sx={{ borderRadius: 999 }}
           >
-            התקיימה
+            {t("meetings.occurred")}
           </Button>
           <Button
             size="small"
@@ -55,7 +57,7 @@ export function CompletedMeetingCard({ meeting, loading, onConfirm, onAddFeedbac
             onClick={() => onConfirm(meeting, false)}
             sx={{ borderRadius: 999 }}
           >
-            לא התקיימה
+            {t("meetings.didNotOccur")}
           </Button>
         </Stack>
       ) : (
@@ -70,7 +72,7 @@ export function CompletedMeetingCard({ meeting, loading, onConfirm, onAddFeedbac
             <Stack direction="row" spacing={0.75} alignItems="center">
               <CheckCircleIcon sx={{ fontSize: 18, color: "success.main" }} />
               <Typography variant="body2" sx={{ color: "success.main", fontWeight: 700 }}>
-                המשוב הוגש
+                {t("meetings.feedbackSubmitted")}
               </Typography>
             </Stack>
           ) : (
@@ -78,7 +80,7 @@ export function CompletedMeetingCard({ meeting, loading, onConfirm, onAddFeedbac
               <Stack direction="row" spacing={0.75} alignItems="center">
                 <RadioButtonUncheckedIcon sx={{ fontSize: 18, color: "text.disabled" }} />
                 <Typography variant="body2" color="text.secondary">
-                  טרם הוגש משוב
+                  {t("meetings.feedbackPending")}
                 </Typography>
               </Stack>
               <Button
@@ -87,7 +89,7 @@ export function CompletedMeetingCard({ meeting, loading, onConfirm, onAddFeedbac
                 onClick={() => onAddFeedback(meeting)}
                 sx={{ borderRadius: 999 }}
               >
-                הוספת משוב
+                {t("meetings.addFeedback")}
               </Button>
             </>
           )}
@@ -98,6 +100,7 @@ export function CompletedMeetingCard({ meeting, loading, onConfirm, onAddFeedbac
 }
 
 export function ScheduledMeetingCard({ meeting, onReschedule, onCancel }) {
+  const { t } = useLanguage();
   return (
     <CardShell>
       <Typography variant="h6" component="h3">
@@ -110,7 +113,7 @@ export function ScheduledMeetingCard({ meeting, onReschedule, onCancel }) {
 
       <Stack direction="row" spacing={1.5} sx={{ mt: 1 }}>
         <Button size="small" variant="outlined" onClick={() => onReschedule(meeting)} sx={{ borderRadius: 999 }}>
-          שינוי מועד
+          {t("meetings.reschedule")}
         </Button>
         <Button
           size="small"
@@ -119,7 +122,7 @@ export function ScheduledMeetingCard({ meeting, onReschedule, onCancel }) {
           onClick={() => onCancel(meeting)}
           sx={{ borderRadius: 999 }}
         >
-          ביטול פגישה
+          {t("meetings.cancelMeeting")}
         </Button>
       </Stack>
     </CardShell>
@@ -127,12 +130,13 @@ export function ScheduledMeetingCard({ meeting, onReschedule, onCancel }) {
 }
 
 export function PendingSlotsMeetingCard({ request, onCancel }) {
+  const { t } = useLanguage();
   return (
     <CardShell>
       <Typography variant="h6" component="h3">
         {request.mentorName}
       </Typography>
-      <InfoRow>תאריך הבקשה: {request.requestDate}</InfoRow>
+      <InfoRow>{t("meetings.requestDate", { date: request.requestDate })}</InfoRow>
       <Typography sx={{ fontWeight: 600 }}>{request.topic}</Typography>
 
       <Box
@@ -147,7 +151,7 @@ export function PendingSlotsMeetingCard({ request, onCancel }) {
           py: 0.5,
         }}
       >
-        ממתינה להצעת זמנים
+        {t("meetings.waitingForSlots")}
       </Box>
 
       <Button
@@ -157,7 +161,7 @@ export function PendingSlotsMeetingCard({ request, onCancel }) {
         onClick={() => onCancel(request)}
         sx={{ borderRadius: 999, alignSelf: "flex-start" }}
       >
-        ביטול הבקשה
+        {t("meetings.cancelRequest")}
       </Button>
     </CardShell>
   );
@@ -169,6 +173,7 @@ export function SlotsToChooseMeetingCard({
   onTimesDontWork,
   onCancel,
 }) {
+  const { t } = useLanguage();
   return (
     <CardShell>
       <Typography variant="h6" component="h3">
@@ -176,7 +181,7 @@ export function SlotsToChooseMeetingCard({
       </Typography>
       <Typography sx={{ fontWeight: 600 }}>{request.topic}</Typography>
       <InfoRow>
-        תאריך הבקשה: {request.requestDate} | תאריך המענה: {request.respondedDate}
+        {t("meetings.requestAndResponse", { requestDate: request.requestDate, respondedDate: request.respondedDate })}
       </InfoRow>
 
       <Stack direction="row" spacing={1.5} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
@@ -186,7 +191,7 @@ export function SlotsToChooseMeetingCard({
           onClick={() => onChooseTime(request)}
           sx={{ borderRadius: 999 }}
         >
-          בחירת מועד
+          {t("meetings.chooseTime")}
         </Button>
         <Button
           size="small"
@@ -194,7 +199,7 @@ export function SlotsToChooseMeetingCard({
           onClick={() => onTimesDontWork(request)}
           sx={{ borderRadius: 999 }}
         >
-          {request.extraSlotsUsed ? "הזמנים לא מתאימים" : "בקשת זמנים חדשים"}
+          {request.extraSlotsUsed ? t("meetings.timesDontWork") : t("meetings.requestNewTimes")}
         </Button>
         <Button
           size="small"
@@ -203,7 +208,7 @@ export function SlotsToChooseMeetingCard({
           onClick={() => onCancel(request)}
           sx={{ borderRadius: 999 }}
         >
-          ביטול הבקשה
+          {t("meetings.cancelRequest")}
         </Button>
       </Stack>
     </CardShell>
