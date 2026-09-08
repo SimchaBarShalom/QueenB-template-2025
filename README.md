@@ -170,15 +170,20 @@ GOOGLE_CALENDAR_TOKEN_ENCRYPTION_KEY="replace-with-a-base64-encoded-32-byte-key"
 
 For email delivery, also set `SMTP_USER` and `SMTP_PASSWORD`. Keep `.env` out of version control.
 
-For Google Calendar, place an OAuth client credentials file at `server/secrets/credentials.json` or set `GOOGLE_CALENDAR_CREDENTIALS_PATH`. The OAuth redirect URI must match the Google Cloud project configuration.
+Google Calendar setup:
+
+- Enable the Google Calendar API and configure the OAuth consent screen in Google Cloud.
+- Add this redirect URI: `http://localhost:5000/api/google-calendar/oauth2/callback`.
+- Copy the provided credentials file to `server/secrets/credentials.json`.
+- Keep PostgreSQL running on `localhost:5432`.
 
 Initialize the database:
 
 ```bash
 cd server
-npm run prisma:generate
-npm run prisma:migrate
-npm run prisma:seed
+npx prisma generate
+npx prisma migrate deploy
+npx prisma db seed
 cd ..
 ```
 
@@ -198,6 +203,8 @@ GET http://localhost:5000/api/health
 ```
 
 The seed script creates local demo users and mentoring data. Use the credentials defined in `server/prisma/seed.js` only for local development.
+
+Mentors must connect Google Calendar from the mentor navbar before meetings can be scheduled with Google Meet links.
 
 ## 📁 Project structure
 
