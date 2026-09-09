@@ -6,9 +6,15 @@ jest.mock("../lib/prisma", () => ({
   $transaction: jest.fn(),
 }));
 
-jest.mock("../services/emailService", () => ({ sendEmail: jest.fn().mockResolvedValue() }));
+jest.mock("../queues/emailQueue", () => ({ emailQueue: { add: jest.fn().mockResolvedValue() } }));
+
+jest.mock("../services/googleCalendarService", () => ({
+  isConnected: jest.fn().mockResolvedValue(true),
+  createCalendarEvent: jest.fn().mockResolvedValue({ id: "evt-1", calendarLink: "https://calendar.example.com/evt-1", meetLink: "https://meet.example.com/evt-1" }),
+}));
 
 const prisma = require("../lib/prisma");
+const { emailQueue } = require("../queues/emailQueue");
 const { createMeetingFromSlot, cancelMeeting, requestMeetingReschedule } = require("../services/meetingsService");
 
 describe("scheduled-meeting participant actions", () => {
@@ -47,6 +53,70 @@ describe("scheduled-meeting participant actions", () => {
     await expect(cancelMeeting({ meetingId: 7, userId: 99 })).rejects.toThrow("Meeting cannot be cancelled");
   });
 
+  it("enqueues a meeting-cancelled email job with a deterministic jobId when the mentor cancels", async () => {
+    const scheduledStart = new Date(Date.now() + 60 * 60 * 1000);
+    prisma.meeting.findFirst.mockResolvedValue({
+      id: 7,
+      requestId: 4,
+      scheduledStart,
+      request: {
+        mentee: { id: 11, fullName: "Mentee", email: "mentee@example.com" },
+        mentorProfile: { user: { id: 22, fullName: "Mentor", email: "mentor@example.com" } },
+      },
+    });
+    prisma.meeting.update.mockResolvedValue({ id: 7, status: "CANCELLED" });
+
+    await cancelMeeting({ meetingId: 7, userId: 22 });
+
+    expect(emailQueue.add).toHaveBeenCalledWith(
+      "meeting-cancelled",
+      expect.objectContaining({
+        to: "mentee@example.com",
+        menteeName: "Mentee",
+        mentorName: "Mentor",
+        scheduledStart,
+      }),
+      expect.objectContaining({
+        jobId: "meeting-cancelled-7",
+        attempts: 3,
+        backoff: { type: "exponential", delay: 2000 },
+      })
+    );
+  });
+
+  it("does not fail cancellation when enqueueing the email job fails", async () => {
+    emailQueue.add.mockRejectedValueOnce(new Error("Redis unavailable"));
+    prisma.meeting.findFirst.mockResolvedValue({
+      id: 7,
+      requestId: 4,
+      scheduledStart: new Date(),
+      request: {
+        mentee: { id: 11, fullName: "Mentee", email: "mentee@example.com" },
+        mentorProfile: { user: { id: 22, fullName: "Mentor", email: "mentor@example.com" } },
+      },
+    });
+    prisma.meeting.update.mockResolvedValue({ id: 7, status: "CANCELLED" });
+
+    await expect(cancelMeeting({ meetingId: 7, userId: 22 })).resolves.toEqual({ id: 7, status: "CANCELLED" });
+  });
+
+  it("does not enqueue a cancellation email when the mentee cancels", async () => {
+    prisma.meeting.findFirst.mockResolvedValue({
+      id: 7,
+      requestId: 4,
+      scheduledStart: new Date(),
+      request: {
+        mentee: { id: 11, fullName: "Mentee", email: "mentee@example.com" },
+        mentorProfile: { user: { id: 22, fullName: "Mentor", email: "mentor@example.com" } },
+      },
+    });
+    prisma.meeting.update.mockResolvedValue({ id: 7, status: "CANCELLED" });
+
+    await cancelMeeting({ meetingId: 7, userId: 11 });
+
+    expect(emailQueue.add).not.toHaveBeenCalled();
+  });
+
   it("allows a mentee participant to request rescheduling and notifies only her mentor", async () => {
     prisma.meeting.findFirst.mockResolvedValue({
       id: 7,
@@ -81,6 +151,7 @@ describe("scheduled-meeting participant actions", () => {
     prisma.meeting.findFirst.mockResolvedValue(null);
     prisma.mentoringRequest.updateMany.mockResolvedValue({ count: 1 });
     prisma.meeting.create.mockResolvedValue({ id: 7, requestId: 4, status: "SCHEDULED", scheduledStart: start, scheduledEnd: end });
+    prisma.meeting.update.mockResolvedValue({ id: 7, requestId: 4, status: "SCHEDULED", scheduledStart: start, scheduledEnd: end });
 
     const result = await createMeetingFromSlot({ requestId: 4, slotId: 9, menteeId: 11 });
 
@@ -89,5 +160,37 @@ describe("scheduled-meeting participant actions", () => {
     expect(prisma.meeting.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ requestId: 4, selectedSlotId: 9, status: "SCHEDULED" }),
     }));
+    expect(emailQueue.add).toHaveBeenCalledWith(
+      "meeting-scheduled-mentor",
+      expect.objectContaining({ to: "mentor@example.com", mentorName: "Mentor", menteeName: "Mentee" }),
+      expect.objectContaining({ jobId: "meeting-scheduled-mentor-7", attempts: 3 })
+    );
+    expect(emailQueue.add).toHaveBeenCalledWith(
+      "meeting-scheduled-mentee",
+      expect.objectContaining({ to: "mentee@example.com", mentorName: "Mentor", menteeName: "Mentee" }),
+      expect.objectContaining({ jobId: "meeting-scheduled-mentee-7", attempts: 3 })
+    );
+  });
+
+  it("still creates the meeting successfully when enqueueing the scheduled-meeting emails fails", async () => {
+    const start = new Date(Date.now() + 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    emailQueue.add.mockRejectedValue(new Error("Redis unavailable"));
+    prisma.mentoringRequest.findFirst.mockResolvedValue({
+      id: 4,
+      capacityOverride: true,
+      mentee: { id: 11, fullName: "Mentee", email: "mentee@example.com" },
+      mentorProfile: { id: 3, userId: 22, meetingCapacity: 2, user: { fullName: "Mentor", email: "mentor@example.com" } },
+      schedulingRounds: [{ offeredSlots: [{ id: 9, startTime: start, endTime: end }] }],
+      meetings: [],
+    });
+    prisma.meeting.findFirst.mockResolvedValue(null);
+    prisma.mentoringRequest.updateMany.mockResolvedValue({ count: 1 });
+    prisma.meeting.create.mockResolvedValue({ id: 7, requestId: 4, status: "SCHEDULED", scheduledStart: start, scheduledEnd: end });
+    prisma.meeting.update.mockResolvedValue({ id: 7, requestId: 4, status: "SCHEDULED", scheduledStart: start, scheduledEnd: end });
+
+    const result = await createMeetingFromSlot({ requestId: 4, slotId: 9, menteeId: 11 });
+
+    expect(result.id).toBe(7);
   });
 });

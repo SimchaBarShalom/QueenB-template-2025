@@ -24,6 +24,11 @@ jest.mock("../lib/prisma", () => ({
 }));
 
 jest.mock("../services/emailService");
+jest.mock("../queues/emailQueue", () => ({ emailQueue: { add: jest.fn().mockResolvedValue() } }));
+jest.mock("../services/googleCalendarService", () => ({
+  isConnected: jest.fn().mockResolvedValue(true),
+  createCalendarEvent: jest.fn().mockResolvedValue({ id: "evt-1", calendarLink: "https://calendar.example.com/evt-1", meetLink: "https://meet.example.com/evt-1" }),
+}));
 
 const prisma = require("../lib/prisma");
 const meetingsService = require("../services/meetingsService");
@@ -239,6 +244,7 @@ describe("meetingsService", () => {
       prisma.mentoringRequest.count.mockResolvedValue(0);
       prisma.mentoringRequest.updateMany.mockResolvedValue({ count: 1 });
       prisma.meeting.create.mockResolvedValue(createdMeeting);
+      prisma.meeting.update.mockResolvedValue(createdMeeting);
       prisma.notification.create.mockResolvedValue({ id: 1 });
 
       const result = await meetingsService.createMeetingFromSlot({

@@ -15,7 +15,7 @@ function configuredClient() {
   let clientId = process.env.GOOGLE_AUTH_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
   let clientSecret = process.env.GOOGLE_AUTH_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    const credentialsPath = process.env.GOOGLE_AUTH_CREDENTIALS_PATH || path.join(__dirname, "..", "secrets", "google_auth_credentials.json");
+    const credentialsPath = process.env.GOOGLE_AUTH_CREDENTIALS_PATH || path.join(__dirname, "..", "secrets", "credentials.json");
     try {
       const credentials = JSON.parse(fs.readFileSync(credentialsPath, "utf8"));
       const client = credentials.web || credentials.installed;

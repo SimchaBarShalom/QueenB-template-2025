@@ -1,7 +1,12 @@
 const prisma = require("../lib/prisma");
 const { countUsedCapacity } = require("../lib/capacity");
-const { sendEmail } = require("./emailService");
+const { emailQueue } = require("../queues/emailQueue");
 const { createCalendarEvent, isConnected: isGoogleCalendarConnected } = require("./googleCalendarService");
+
+const EMAIL_JOB_OPTIONS = {
+  attempts: 3,
+  backoff: { type: "exponential", delay: 2000 },
+};
 
 function createServiceError(message, statusCode) {
   const error = new Error(message);
@@ -25,95 +30,41 @@ const MEETING_INCLUDE = {
   feedback: true,
 };
 
-async function sendMeetingScheduledEmails({ mentor, mentee, meeting }) {
-  try {
-    const meetingDate = new Date(meeting.scheduledStart).toLocaleDateString(
-      "he-IL",
-      { timeZone: "Asia/Jerusalem" }
-    );
-    const timeOptions = {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Asia/Jerusalem",
-    };
-    const startTime = new Date(meeting.scheduledStart).toLocaleTimeString(
-      "he-IL",
-      timeOptions
-    );
-    const endTime = new Date(meeting.scheduledEnd).toLocaleTimeString(
-      "he-IL",
-      timeOptions
-    );
-
-    const results = await Promise.allSettled([
-      sendEmail({
+// מכניסה שני jobs נפרדים לתור המיילים (למנטורית ולמנטית) במקום לשלוח
+// את המיילים ישירות. ה-worker אחראי לבנות ולשלוח את המייל בפועל, כדי
+// שבקשת ה-API לא תחכה לספק המיילים.
+async function enqueueMeetingScheduledEmails({ mentor, mentee, meeting }) {
+  const jobs = [
+    [
+      "meeting-scheduled-mentor",
+      {
         to: mentor.email,
-        subject: "נקבעה פגישה חדשה ב-Queen Match",
-        text: `
-היי ${mentor.fullName},
-
-${mentee.fullName} בחרה מועד לפגישה, והפגישה נקבעה בהצלחה.
-
-תאריך הפגישה: ${meetingDate}
-שעת התחלה: ${startTime}
-שעת סיום: ${endTime}
-
-צוות Queen Match
-        `,
-        html: `
-          <div dir="rtl" style="font-family: Arial, sans-serif;">
-            <h2>נקבעה פגישה חדשה 🎉</h2>
-            <p>היי ${mentor.fullName},</p>
-            <p><strong>${mentee.fullName}</strong> בחרה מועד לפגישה, והפגישה נקבעה בהצלחה.</p>
-            <p>
-              <strong>תאריך הפגישה:</strong> ${meetingDate}<br />
-              <strong>שעת התחלה:</strong> ${startTime}<br />
-              <strong>שעת סיום:</strong> ${endTime}
-            </p>
-            <p>צוות Queen Match</p>
-          </div>
-        `,
-      }),
-      sendEmail({
+        mentorName: mentor.fullName,
+        menteeName: mentee.fullName,
+        scheduledStart: meeting.scheduledStart,
+        scheduledEnd: meeting.scheduledEnd,
+      },
+      `meeting-scheduled-mentor-${meeting.id}`,
+    ],
+    [
+      "meeting-scheduled-mentee",
+      {
         to: mentee.email,
-        subject: "הפגישה שלך נקבעה ב-Queen Match",
-        text: `
-היי ${mentee.fullName},
+        mentorName: mentor.fullName,
+        menteeName: mentee.fullName,
+        scheduledStart: meeting.scheduledStart,
+        scheduledEnd: meeting.scheduledEnd,
+      },
+      `meeting-scheduled-mentee-${meeting.id}`,
+    ],
+  ];
 
-הפגישה שלך עם ${mentor.fullName} נקבעה בהצלחה.
-
-תאריך הפגישה: ${meetingDate}
-שעת התחלה: ${startTime}
-שעת סיום: ${endTime}
-
-צוות Queen Match
-        `,
-        html: `
-          <div dir="rtl" style="font-family: Arial, sans-serif;">
-            <h2>הפגישה שלך נקבעה 🎉</h2>
-            <p>היי ${mentee.fullName},</p>
-            <p>הפגישה שלך עם <strong>${mentor.fullName}</strong> נקבעה בהצלחה.</p>
-            <p>
-              <strong>תאריך הפגישה:</strong> ${meetingDate}<br />
-              <strong>שעת התחלה:</strong> ${startTime}<br />
-              <strong>שעת סיום:</strong> ${endTime}
-            </p>
-            <p>צוות Queen Match</p>
-          </div>
-        `,
-      }),
-    ]);
-
-    results.forEach((result, index) => {
-      if (result.status === "rejected") {
-        console.error(
-          `שליחת המייל ${index === 0 ? "למנטורית" : "למנטית"} על קביעת הפגישה נכשלה:`,
-          result.reason
-        );
-      }
-    });
-  } catch (error) {
-    console.error("שגיאה בשליחת מיילים על קביעת הפגישה:", error);
+  for (const [jobName, data, jobId] of jobs) {
+    try {
+      await emailQueue.add(jobName, data, { jobId, ...EMAIL_JOB_OPTIONS });
+    } catch (error) {
+      console.error(`Failed to enqueue "${jobName}" email:`, error);
+    }
   }
 }
 
@@ -265,7 +216,7 @@ async function createMeetingFromSlot({ requestId, slotId, menteeId }) {
     console.error("Google Calendar event creation failed for meeting", meeting.id, error);
   }
 
-  await sendMeetingScheduledEmails({
+  await enqueueMeetingScheduledEmails({
     mentor: request.mentorProfile.user,
     mentee: request.mentee,
     meeting,
@@ -328,17 +279,19 @@ async function cancelMeeting({ meetingId, userId }) {
   if (actorIsMentor) {
     const mentor = meeting.request.mentorProfile.user;
     const mentee = meeting.request.mentee;
-    const date = new Date(meeting.scheduledStart).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" });
-    const time = new Date(meeting.scheduledStart).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
     try {
-      await sendEmail({
-        to: mentee.email,
-        subject: "הפגישה בוטלה | Queen Match",
-        text: `היי ${mentee.fullName},\n\n${mentor.fullName} ביטלה את הפגישה שלכם.\nתאריך: ${date}\nשעה: ${time}\n\nצוות Queen Match`,
-        html: `<div dir="rtl"><p>היי ${mentee.fullName},</p><p><strong>${mentor.fullName}</strong> ביטלה את הפגישה שלכם.</p><p>תאריך: ${date}<br />שעה: ${time}</p><p>צוות Queen Match</p></div>`,
-      });
+      await emailQueue.add(
+        "meeting-cancelled",
+        {
+          to: mentee.email,
+          menteeName: mentee.fullName,
+          mentorName: mentor.fullName,
+          scheduledStart: meeting.scheduledStart,
+        },
+        { jobId: `meeting-cancelled-${meeting.id}`, ...EMAIL_JOB_OPTIONS }
+      );
     } catch (error) {
-      console.error("Mentor cancellation email delivery failed:", error);
+      console.error("Failed to enqueue meeting cancellation email:", error);
     }
   }
 

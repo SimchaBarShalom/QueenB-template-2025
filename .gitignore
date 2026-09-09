@@ -124,4 +124,6 @@ Desktop.ini
 
 # Local Google OAuth credentials
 server/secrets/credentials*.json
-server/secrets/google_auth_credentials.json
+server/secrets/credentials.json
+
+google_auth_credentials.json
